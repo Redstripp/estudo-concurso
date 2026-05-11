@@ -1,0 +1,15 @@
+--- .gitignore (原始)
+# Configuracao local
+js/config.local.js
+
+# Dependencias e caches opcionais
+node_modules/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
++++ .gitignore (修改后)
+Nothing should be ignored based on the provided file changes, as they only include source files (.css and .js) without any build artifacts, dependencies, or temporary files.

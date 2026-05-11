@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111827">
+  <title>Estudo Concurso</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/variaveis.css">
+  <link rel="stylesheet" href="css/estilo.css">
+</head>
+<body class="tema-claro">
+
+  <!-- =============================
+       SIDEBAR
+  ============================== -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <span class="logo-icone">📚</span>
+      <span class="logo-texto">Estudo Concurso</span>
+    </div>
+
+    <!-- Navegação -->
+    <nav class="sidebar-nav">
+      <button class="nav-item ativo" data-secao="dashboard">
+        <span class="nav-icone">📊</span>
+        <span class="nav-texto">Dashboard</span>
+      </button>
+      <button class="nav-item" data-secao="materias">
+        <span class="nav-icone">📚</span>
+        <span class="nav-texto">Matérias</span>
+      </button>
+      <button class="nav-item" data-secao="edital" data-interface-avancada>
+        <span class="nav-icone" aria-hidden="true">&#128220;</span>
+        <span class="nav-texto">Edital</span>
+      </button>
+      <button class="nav-item" data-secao="plano" data-interface-avancada>
+        <span class="nav-icone">🗓️</span>
+        <span class="nav-texto">Plano do Dia</span>
+      </button>
+      <button class="nav-item" data-secao="planejamento" data-interface-avancada>
+        <span class="nav-icone">IA</span>
+        <span class="nav-texto">Planejamento</span>
+      </button>
+      <button class="nav-item" data-secao="questoes">
+        <span class="nav-icone">⚠️</span>
+        <span class="nav-texto">Caderno de Erros</span>
+      </button>
+      <button class="nav-item" data-secao="simulados" data-interface-avancada>
+        <span class="nav-icone">📝</span>
+        <span class="nav-texto">Simulados</span>
+      </button>
+      <button class="nav-item" data-secao="desempenho" data-interface-avancada>
+        <span class="nav-icone">📅</span>
+        <span class="nav-texto">Desempenho Diário</span>
+      </button>
+      <button class="nav-item" data-secao="revisao">
+        <span class="nav-icone">📖</span>
+        <span class="nav-texto">Revisão Inteligente</span>
+      </button>
+      <button class="nav-item" data-secao="estatisticas" data-interface-avancada>
+        <span class="nav-icone">📈</span>
+        <span class="nav-texto">Estatísticas</span>
+      </button>
+      <button class="nav-item" data-secao="perfil">
+        <span class="nav-icone">👤</span>
+        <span class="nav-texto">Perfil</span>
+      </button>
+    </nav>
+
+    <!-- Rodapé da sidebar -->
+    <div class="sidebar-footer">
+      <!-- Tema -->
+      <button class="btn-tema" id="btn-tema" title="Alternar tema">
+        <span id="icone-tema">🌙</span>
+        <span id="texto-tema">Tema escuro</span>
+      </button>
+
+      <!-- Usuário logado -->
+      <div class="modo-interface-card" id="modo-interface-card">
+        <span class="modo-interface-label" id="modo-interface-label">Modo Essencial</span>
+        <small id="modo-interface-descricao">Mostra apenas o fluxo principal.</small>
+        <button class="btn-modo-interface" id="btn-alternar-modo-interface" type="button">
+          Ver sistema completo
+        </button>
+      </div>
+
+      <div class="usuario-info">
+        <div class="usuario-avatar" id="usuario-avatar">?</div>
+        <div class="usuario-dados">
+          <span class="usuario-nome" id="usuario-nome">Carregando...</span>
+          <button class="btn-logout" id="btn-logout">Sair</button>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- =============================
+       CONTEÚDO PRINCIPAL
+  ============================== -->
+  <main class="conteudo-principal">
+
+    <!-- Cabeçalho mobile -->
+    <header class="header-mobile">
+      <button class="btn-menu" id="btn-menu" type="button" aria-controls="sidebar" aria-expanded="false">☰</button>
+      <span class="header-titulo">📚 Estudo Concurso</span>
+    </header>
+
+    <!-- SEÇÃO: Dashboard -->
+        <section id="secao-dashboard" class="secao">
+      <h2>Dashboard</h2>
+      <div class="modo-essencial-banner" id="modo-essencial-banner" hidden>
+        <div>
+          <strong>Modo Essencial ativado</strong>
+          <p>Para começar sem se perder, o sistema mostra só o fluxo principal: matérias, caderno de erros, revisão e perfil.</p>
+        </div>
+        <button class="btn-secundario" id="btn-ativar-completo-dashboard" type="button">Ver sistema completo</button>
+      </div>
+      <div id="dashboard-central-hoje" class="dashboard-central-hoje-container">
+        <p class="texto-placeholder">Seu resumo do dia aparece aqui.</p>
+      </div>
+      <div id="dashboard-cards" class="dash-cards-grid">
+        <p>Os principais números aparecem aqui.</p>
+      </div>
+      <div id="dashboard-arquivamento" class="dashboard-arquivamento-container interface-avancada">
+        <p class="texto-placeholder">O ciclo mensal aparece aqui quando houver registros.</p>
+      </div>
+      <div id="dashboard-grafico" class="dashboard-grafico-container interface-avancada">
+        <p>Seu histórico aparece aqui após os primeiros registros.</p>
+      </div>
+      <div id="dashboard-relatorio-erros" class="dashboard-relatorio-container interface-avancada">
+        <p class="texto-placeholder">O treinador de padrões aparece aqui após seus diagnósticos.</p>
+      </div>
+    </section>
+
+    <!-- SEÇÃO: Matérias -->
+<section class="secao escondido" id="secao-materias">
+  <div class="secao-header">
+    <h2 class="secao-titulo">Matérias</h2>
+    <p class="secao-subtitulo">Organize seus estudos por matéria</p>
+  </div>
+  <div class="secao-corpo">
+
+    <!-- Formulário para adicionar matéria -->
+    <div class="card-form">
+      <h3 class="card-form-titulo">Nova Matéria</h3>
+      <div class="form-linha">
+        <input
+          type="text"
+          id="input-materia"
+          class="input-texto"
+          placeholder="Ex: Português, Matemática, Direito..."
+          maxlength="80"
+        />
+        <button class="btn-primario btn-adicionar" id="btn-adicionar-materia">
+          + Adicionar
+        </button>
+      </div>
+      <p class="msg-materia" id="msg-materia"></p>
+    </div>
+
+    <!-- Lista de matérias -->
+    <div class="lista-cards" id="lista-materias">
+      <p class="texto-placeholder" id="placeholder-materias">
+        📚 Nenhuma matéria cadastrada ainda.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<section class="secao escondido" id="secao-edital">
+  <div class="secao-header">
+    <h2 class="secao-titulo">Edital Verticalizado</h2>
+    <p class="secao-subtitulo">Controle assuntos do edital, reta final e pegadinhas da banca</p>
+  </div>
+  <div class="secao-corpo">
+
+    <div class="card-form">
+      <h3 class="card-form-titulo">Reta final</h3>
+      <div class="edital-form-grid">
+        <div class="campo-form">
+          <label class="campo-label" for="edital-concurso">Concurso alvo</label>
+          <input type="text" id="edital-concurso" class="input-texto" placeholder="Ex: Caixa, INSS, TJ..." maxlength="120">
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="edital-data-prova">Data da prova</label>
+          <input type="date" id="edital-data-prova" class="input-texto">
+        </div>
+        <div class="campo-form">
+          <span class="campo-label">Meta da reta final</span>
+          <p class="meta-central-info" id="edital-meta-central-info">Usa a meta central por matéria definida no Planejamento.</p>
+        </div>
+        <button class="btn-primario" id="btn-salvar-edital-config" type="button">Salvar reta final</button>
+      </div>
+      <p class="msg-materia" id="msg-edital-config"></p>
+      <div id="edital-reta-final-resumo" class="edital-reta-final-resumo">
+        <p class="texto-placeholder">Cadastre a data da prova para ver prioridades.</p>
+      </div>
+    </div>
+
+    <div class="card-form">
+      <h3 class="card-form-titulo">Novo assunto do edital</h3>
+      <div class="edital-form-grid edital-form-grid--topico">
+        <div class="campo-form">
+          <label class="campo-label" for="edital-materia">Matéria</label>
+          <select id="edital-materia" class="input-texto">
+            <option value="">Carregando matérias...</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="edital-topico-titulo">Assunto</label>
+          <input type="text" id="edital-topico-titulo" class="input-texto" placeholder="Ex: COPOM, crase, atos administrativos..." maxlength="160">
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="edital-topico-status">Status</label>
+          <select id="edital-topico-status" class="input-texto">
+            <option value="nao_estudado">Não estudado</option>
+            <option value="estudado">Estudado</option>
+            <option value="revisar">Revisar</option>
+            <option value="dominado">Dominado</option>
+            <option value="dificuldade">Muita dificuldade</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="edital-topico-peso">Peso</label>
+          <select id="edital-topico-peso" class="input-texto">
+            <option value="1">1 - baixo</option>
+            <option value="2">2</option>
+            <option value="3" selected>3 - médio</option>
+            <option value="4">4</option>
+            <option value="5">5 - alto</option>
+          </select>
+        </div>
+        <div class="campo-form edital-grid-full">
+          <label class="campo-label" for="edital-topico-observacoes">Observações</label>
+          <textarea id="edital-topico-observacoes" class="input-texto input-textarea" rows="2" placeholder="Ponto do edital, lei seca, aula ou detalhe para lembrar..."></textarea>
+        </div>
+        <button class="btn-primario" id="btn-salvar-edital-topico" type="button">Adicionar assunto</button>
+      </div>
+      <p class="msg-materia" id="msg-edital-topico"></p>
+    </div>
+
+    <div id="edital-painel" class="edital-painel">
+      <p class="texto-placeholder">Carregando edital...</p>
+    </div>
+
+    <div class="card-form">
+      <h3 class="card-form-titulo">Caderno de pegadinhas da banca</h3>
+      <div class="edital-form-grid edital-form-grid--pegadinha">
+        <div class="campo-form">
+          <label class="campo-label" for="pegadinha-materia">Matéria</label>
+          <select id="pegadinha-materia" class="input-texto">
+            <option value="">Todas / sem matéria</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="pegadinha-topico">Assunto do edital</label>
+          <select id="pegadinha-topico" class="input-texto">
+            <option value="">Sem assunto específico</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="pegadinha-banca">Banca</label>
+          <input type="text" id="pegadinha-banca" class="input-texto" placeholder="Ex: Cebraspe, FGV..." maxlength="80">
+        </div>
+        <div class="campo-form edital-grid-full">
+          <label class="campo-label" for="pegadinha-padrao">Padrão da pegadinha</label>
+          <textarea id="pegadinha-padrao" class="input-texto input-textarea" rows="2" placeholder="Ex: troca competência do CMN com Banco Central..."></textarea>
+        </div>
+        <div class="campo-form edital-grid-full">
+          <label class="campo-label" for="pegadinha-acao">Como se proteger</label>
+          <textarea id="pegadinha-acao" class="input-texto input-textarea" rows="2" placeholder="Ex: antes de marcar, conferir quem é o órgão competente..."></textarea>
+        </div>
+        <button class="btn-primario" id="btn-salvar-pegadinha" type="button">Salvar pegadinha</button>
+      </div>
+      <p class="msg-materia" id="msg-pegadinha"></p>
+      <div id="lista-pegadinhas" class="lista-pegadinhas">
+        <p class="texto-placeholder">Nenhuma pegadinha cadastrada ainda.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+    <!-- SEÇÃO: Caderno de Erros -->
+    <!-- SEÇÃO: Plano do Dia -->
+<section class="secao escondido" id="secao-plano">
+  <div class="secao-header">
+    <h2 class="secao-titulo">🗓️ Plano do Dia</h2>
+    <p class="secao-subtitulo">Escolha as matérias do dia; a meta padrão vem do Planejamento e pode ser ajustada por matéria</p>
+  </div>
+  <div class="secao-corpo">
+    <div class="card-form">
+      <h3 class="card-form-titulo">Matérias do dia</h3>
+      <div class="plano-form-grid">
+        <div class="campo-form">
+          <label class="campo-label" for="plano-data">Data</label>
+          <input type="date" id="plano-data" class="input-texto">
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="plano-materia">Matéria</label>
+          <select id="plano-materia" class="input-texto">
+            <option value="">Carregando matérias...</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="plano-meta">Questões nessa matéria</label>
+          <input type="number" id="plano-meta" class="input-texto" min="1" max="999" value="10">
+        </div>
+        <button class="btn-primario" id="btn-adicionar-plano" type="button">Adicionar</button>
+        <button class="btn-secundario" id="btn-gerar-plano-semanal" type="button">Gerar pelo planejamento semanal</button>
+      </div>
+      <p class="msg-materia" id="msg-plano"></p>
+    </div>
+
+    <div class="plano-resumo" id="plano-resumo"></div>
+    <div id="lista-plano-dia">
+      <p class="texto-placeholder">Selecione uma data para montar seu plano.</p>
+    </div>
+  </div>
+</section>
+
+<section class="secao escondido" id="secao-planejamento">
+  <div class="secao-header">
+    <h2 class="secao-titulo">Planejamento Semanal de Estudos</h2>
+    <p class="secao-subtitulo">Monte sua semana e deixe o sistema priorizar o estudo do dia</p>
+  </div>
+  <div class="secao-corpo">
+
+    <div class="card-form card-meta-central">
+      <h3 class="card-form-titulo">Meta central por matéria</h3>
+      <p class="card-form-descricao">
+        Defina quantas questões valem para cada matéria planejada. Se a meta for 30 e o dia tiver 3 matérias, o total do dia será 90.
+      </p>
+      <div class="meta-central-linha">
+        <div class="campo-form">
+          <label class="campo-label" for="meta-central-materia">Questões por matéria</label>
+          <input type="number" id="meta-central-materia" class="input-texto" min="1" max="999" value="30">
+        </div>
+        <button class="btn-primario" id="btn-salvar-meta-central" type="button">Salvar meta central</button>
+      </div>
+      <p class="meta-central-preview" id="meta-central-preview">Exemplo: 3 matérias no dia = 90 questões.</p>
+      <p class="msg-materia" id="msg-meta-central"></p>
+    </div>
+
+    <div class="card-form">
+      <h3 class="card-form-titulo">Grade semanal</h3>
+      <div class="planejamento-form-grid">
+        <div class="campo-form">
+          <label class="campo-label" for="planejamento-dia">Dia</label>
+          <select id="planejamento-dia" class="input-texto">
+            <option value="1">Segunda-feira</option>
+            <option value="2">Terça-feira</option>
+            <option value="3">Quarta-feira</option>
+            <option value="4">Quinta-feira</option>
+            <option value="5">Sexta-feira</option>
+            <option value="6">Sábado</option>
+            <option value="7">Domingo</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="planejamento-materia">Matéria</label>
+          <select id="planejamento-materia" class="input-texto">
+            <option value="">Carregando matérias...</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="planejamento-tipo">Tipo</label>
+          <select id="planejamento-tipo" class="input-texto">
+            <option value="misto">Misto</option>
+            <option value="teoria">Teoria</option>
+            <option value="questoes">Questões</option>
+            <option value="revisao">Revisão</option>
+            <option value="lei_seca">Lei Seca</option>
+          </select>
+        </div>
+        <button class="btn-primario" id="btn-salvar-planejamento" type="button">Adicionar à semana</button>
+        <button class="btn-secundario" id="btn-aplicar-planejamento-hoje" type="button">Gerar Plano do Dia</button>
+      </div>
+      <p class="msg-materia" id="msg-planejamento"></p>
+      <div id="planejamento-semanal-grade" class="planejamento-semanal-grade">
+        <p class="texto-placeholder">Carregando planejamento semanal...</p>
+      </div>
+    </div>
+
+    <div class="card-form">
+      <h3 class="card-form-titulo">Fila diária inteligente</h3>
+      <div class="planejamento-acoes-linha">
+        <input type="date" id="fila-data" class="input-texto">
+        <button class="btn-primario" id="btn-gerar-fila-inteligente" type="button">Gerar fila inteligente</button>
+      </div>
+      <div id="fila-inteligente-resultado" class="fila-inteligente-resultado">
+        <p class="texto-placeholder">Gere a fila para ver prioridades de teoria, questões, revisão e Lei Seca.</p>
+      </div>
+    </div>
+
+    <div class="card-form">
+      <h3 class="card-form-titulo">Simulado por assunto do edital</h3>
+      <div class="planejamento-form-grid planejamento-form-grid--simulado">
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-assunto-materia">Matéria</label>
+          <select id="simulado-assunto-materia" class="input-texto">
+            <option value="">Todas as matérias</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-assunto-topico">Assunto</label>
+          <select id="simulado-assunto-topico" class="input-texto">
+            <option value="">Selecione um assunto</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-assunto-limite">Quantidade</label>
+          <input type="number" id="simulado-assunto-limite" class="input-texto" min="1" max="100" value="10">
+        </div>
+        <button class="btn-primario" id="btn-gerar-simulado-assunto" type="button">Gerar simulado</button>
+      </div>
+      <p class="msg-materia" id="msg-simulado-assunto"></p>
+      <div id="simulado-assunto-resultado" class="simulado-revisao-gerado">
+        <p class="texto-placeholder">Escolha um assunto do edital para gerar um simulado focado.</p>
+      </div>
+    </div>
+
+    <div class="card-form">
+      <h3 class="card-form-titulo">Relatório Pronto para a Prova</h3>
+      <button class="btn-secundario" id="btn-atualizar-pronto-prova" type="button">Atualizar relatório</button>
+      <div id="relatorio-pronto-prova" class="relatorio-pronto-prova">
+        <p class="texto-placeholder">O relatório será calculado com base no edital, questões, revisões e Lei Seca.</p>
+      </div>
+    </div>
+
+    <div class="card-form">
+      <h3 class="card-form-titulo">Modo Lei Seca</h3>
+      <div class="planejamento-form-grid planejamento-form-grid--lei">
+        <div class="campo-form">
+          <label class="campo-label" for="lei-materia">Matéria</label>
+          <select id="lei-materia" class="input-texto">
+            <option value="">Sem matéria</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="lei-topico">Assunto do edital</label>
+          <select id="lei-topico" class="input-texto">
+            <option value="">Sem assunto</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="lei-norma">Norma</label>
+          <input type="text" id="lei-norma" class="input-texto" placeholder="Ex: Constituição Federal, Lei 8.112..." maxlength="120">
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="lei-artigo">Artigo / dispositivo</label>
+          <input type="text" id="lei-artigo" class="input-texto" placeholder="Ex: art. 37, § 6º" maxlength="80">
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="lei-importancia">Importância</label>
+          <select id="lei-importancia" class="input-texto">
+            <option value="1">1 - baixa</option>
+            <option value="2">2</option>
+            <option value="3" selected>3 - média</option>
+            <option value="4">4</option>
+            <option value="5">5 - alta</option>
+          </select>
+        </div>
+        <div class="campo-form planejamento-grid-full">
+          <label class="campo-label" for="lei-texto">Texto literal</label>
+          <textarea id="lei-texto" class="input-texto input-textarea" rows="3" placeholder="Cole o artigo, inciso, súmula ou trecho literal aqui..."></textarea>
+        </div>
+        <div class="campo-form planejamento-grid-full">
+          <label class="campo-label" for="lei-anotacoes">Anotações</label>
+          <textarea id="lei-anotacoes" class="input-texto input-textarea" rows="2" placeholder="Palavras-chave, exceções, prazos ou pegadinhas de literalidade..."></textarea>
+        </div>
+        <button class="btn-primario" id="btn-salvar-lei-seca" type="button">Salvar item de Lei Seca</button>
+      </div>
+      <p class="msg-materia" id="msg-lei-seca"></p>
+      <div id="lista-lei-seca" class="lista-lei-seca">
+        <p class="texto-placeholder">Nenhum item de Lei Seca cadastrado ainda.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="secao escondido" id="secao-questoes">
+  <div class="secao-header">
+    <h2 class="secao-titulo">Caderno de Erros</h2>
+    <p class="secao-subtitulo">Registre erros, entenda o motivo e alimente suas revisões inteligentes</p>
+  </div>
+  <div class="secao-corpo">
+
+    <!-- Formulário de Acertos -->
+    <div class="card-form interface-avancada" id="card-acertos">
+      <h3 class="card-form-titulo">✅ Registrar acertos com confiança</h3>
+
+      <div id="linhas-acertos">
+        <!-- linhas geradas dinamicamente -->
+      </div>
+
+      <button class="btn-secundario" id="btn-add-linha-acerto" type="button">
+        + Adicionar matéria
+      </button>
+
+      <div style="margin-top: 1rem;">
+        <button class="btn-primario" id="btn-salvar-acertos" type="button">
+          💾 Salvar acertos
+        </button>
+        <p class="msg-materia" id="msg-acertos"></p>
+      </div>
+    </div>
+
+    <!-- Formulário -->
+    <div class="card-form">
+      <h3 class="card-form-titulo">Nova entrada no caderno</h3>
+      <div class="registro-modo" id="registro-modo-questao" role="group" aria-label="Modo de registro da questão">
+        <button class="registro-modo-opcao ativo" type="button" data-modo-registro="rapido">
+          Registro rápido
+          <span>Salva o essencial agora</span>
+        </button>
+        <button class="registro-modo-opcao" type="button" data-modo-registro="completo">
+          Diagnóstico completo
+          <span>Preenche revisão detalhada</span>
+        </button>
+      </div>
+      <p class="texto-apoio registro-modo-info" id="registro-modo-info">
+        Use o modo rápido para registrar a questão sem travar o estudo. O sistema sinaliza depois o que precisa completar.
+      </p>
+      <div class="diagnostico-minimo-box" id="diagnostico-minimo-box" aria-live="polite">
+        Preencha matéria, enunciado, alternativas e gabarito. O resto melhora a revisão, mas pode ser completado depois.
+      </div>
+
+      <!-- Matéria -->
+      <div class="campo-form">
+        <label class="campo-label" for="q-materia">Matéria</label>
+        <select id="q-materia" class="input-texto">
+          <option value="">Selecione uma matéria...</option>
+        </select>
+      </div>
+
+      <div class="form-grid-duas-colunas">
+        <div class="campo-form">
+          <label class="campo-label" for="q-edital-topico">Assunto do edital</label>
+          <select id="q-edital-topico" class="input-texto">
+            <option value="">Sem assunto específico</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="q-banca">Banca</label>
+          <input type="text" id="q-banca" class="input-texto" placeholder="Ex: Cebraspe, FGV..." maxlength="80">
+        </div>
+      </div>
+
+      <!-- Enunciado -->
+      <div class="campo-form">
+        <label class="campo-label" for="q-enunciado">Enunciado da questão</label>
+        <textarea
+          id="q-enunciado"
+          class="input-texto input-textarea"
+          placeholder="Cole ou digite o enunciado aqui..."
+          rows="4"
+        ></textarea>
+      </div>
+
+      <!-- Número de alternativas -->
+      <div class="campo-form">
+        <label class="campo-label">Número de alternativas</label>
+        <div class="grupo-botoes" id="grupo-num-alternativas">
+          <button class="btn-num ativo-num" data-num="2" type="button">2</button>
+          <button class="btn-num" data-num="3" type="button">3</button>
+          <button class="btn-num" data-num="4" type="button">4</button>
+          <button class="btn-num" data-num="5" type="button">5</button>
+        </div>
+      </div>
+
+      <!-- Campos de texto das alternativas (gerados dinamicamente) -->
+      <div class="campo-form" id="container-alternativas">
+        <label class="campo-label">Texto de cada alternativa</label>
+        <div id="campos-alternativas"></div>
+      </div>
+
+      <!-- Alternativa marcada -->
+      <div class="campo-form">
+        <label class="campo-label" id="label-alternativa-marcada">Qual alternativa você marcou?</label>
+        <div class="grupo-botoes" id="grupo-marcada"></div>
+      </div>
+
+      <!-- Alternativa correta -->
+      <div class="campo-form">
+        <label class="campo-label">Qual era a alternativa correta?</label>
+        <div class="grupo-botoes" id="grupo-correta"></div>
+      </div>
+
+      <div class="campo-form">
+        <label class="campo-label">Tipo da questão</label>
+        <div class="grupo-botoes grupo-tipo-questao" id="grupo-tipo-questao">
+          <button class="btn-tipo-questao ativo-tipo" data-tipo="Errada" type="button">Errada realmente</button>
+          <button class="btn-tipo-questao" data-tipo="Chutada" type="button">Chutada / baixa confiança</button>
+        </div>
+      </div>
+
+      <div class="form-grid-duas-colunas">
+        <div class="campo-form">
+          <label class="campo-label" for="q-motivo-erro" id="label-motivo-questao">Motivo do erro</label>
+          <select id="q-motivo-erro" class="input-texto">
+            <option value="">Selecione...</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="q-nivel-confianca" id="label-confianca-questao">Nível de confiança</label>
+          <select id="q-nivel-confianca" class="input-texto">
+            <option value="">Selecione...</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Comentário -->
+      <div class="campo-form">
+        <label class="campo-label" for="q-comentario">Comentário / Observação (opcional)</label>
+        <textarea
+          id="q-comentario"
+          class="input-texto input-textarea"
+          placeholder="Cole o comentário do professor/alunos ou anote o que aconteceu..."
+          rows="2"
+        ></textarea>
+      </div>
+
+      <div class="campo-form">
+        <label class="campo-label" for="q-pegadinha-banca">Pegadinhas da Questão (opcional)</label>
+        <div class="pegadinha-chips" id="q-pegadinha-chips" aria-label="Pegadinhas rápidas"></div>
+        <textarea
+          id="q-pegadinha-banca"
+          class="input-texto input-textarea"
+          placeholder="Ex: palavra absoluta, exceção escondida, alternativa parcialmente correta, troca de conceito..."
+          rows="2"
+        ></textarea>
+      </div>
+
+      <div class="assistente-prompt">
+        <button class="btn-primario btn-ia-analise" id="btn-analisar-ia" type="button" hidden>
+          Analisar com IA e sugerir preenchimento
+        </button>
+        <button class="btn-secundario btn-prompt-chatgpt" id="btn-gerar-prompt-chatgpt" type="button">
+          Prompt para a IA preencher campos e pegadinhas
+        </button>
+        <button class="btn-secundario btn-prompt-chatgpt" id="btn-colar-resposta-chatgpt" type="button">
+          Colar resposta da IA e preencher os campos
+        </button>
+        <p class="assistente-ia-info" hidden>A análise integrada usa uma função segura do Supabase. Se ainda não estiver configurada, use o prompt e cole a resposta da IA.</p>
+      </div>
+
+      <div class="caderno-erros-grid caderno-erros-detalhes" id="registro-diagnostico-detalhado">
+        <div class="campo-form">
+          <label class="campo-label" for="q-conceito-chave">Conceito ou regra que resolve</label>
+          <textarea
+            id="q-conceito-chave"
+            class="input-texto input-textarea"
+            placeholder="Qual ideia, regra ou fórmula faltou aqui?"
+            rows="2"
+          ></textarea>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="q-como-reconhecer">Como reconhecer na próxima vez</label>
+          <textarea
+            id="q-como-reconhecer"
+            class="input-texto input-textarea"
+            placeholder="Que pista no enunciado indicava esse caminho?"
+            rows="2"
+          ></textarea>
+        </div>
+        <div class="campo-form caderno-erros-grid-full">
+          <label class="campo-label" for="q-acao-corretiva">Ação corretiva</label>
+          <textarea
+            id="q-acao-corretiva"
+            class="input-texto input-textarea"
+            placeholder="O que você vai fazer antes de encarar uma questão parecida?"
+            rows="2"
+          ></textarea>
+        </div>
+      </div>
+
+      <button class="btn-primario" id="btn-salvar-questao" type="button">💾 Salvar Questão</button>
+      <p class="msg-materia" id="msg-questao"></p>
+    </div>
+
+    <div id="caderno-erros-acoes" class="caderno-erros-acoes"></div>
+
+    <!-- Lista -->
+    <div id="lista-questoes">
+      <p class="texto-placeholder" id="placeholder-questoes">
+        ❌ Nenhuma questão cadastrada ainda.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+    <!-- SEÇÃO: Desempenho Diário -->
+<section class="secao escondido" id="secao-simulados">
+  <div class="secao-header">
+    <h2 class="secao-titulo">📝 Simulados</h2>
+    <p class="secao-subtitulo">Monte revisões com suas questões críticas e registre sua evolução</p>
+  </div>
+  <div class="secao-corpo">
+    <div class="card-form">
+      <h3 class="card-form-titulo">Simulado de revisão do fim de semana</h3>
+      <div class="simulado-revisao-form-grid">
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-revisao-periodo">Período</label>
+          <select id="simulado-revisao-periodo" class="input-texto">
+            <option value="semana">Fila desta semana</option>
+            <option value="30">Próximas 4 semanas</option>
+            <option value="all">Todas pendentes</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-revisao-tipo">Tipo</label>
+          <select id="simulado-revisao-tipo" class="input-texto">
+            <option value="all">Erros e baixa confiança</option>
+            <option value="Errada">Só erros reais</option>
+            <option value="Chutada">Só baixa confiança</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-revisao-limite">Quantidade</label>
+          <input type="number" id="simulado-revisao-limite" class="input-texto" min="1" max="100" value="20">
+        </div>
+        <button class="btn-primario" id="btn-gerar-simulado-revisao" type="button">Gerar simulado</button>
+      </div>
+      <p class="msg-materia" id="msg-simulado-revisao"></p>
+      <div id="simulado-revisao-gerado" class="simulado-revisao-gerado">
+        <p class="texto-placeholder">Gere um simulado com as questões marcadas para revisão.</p>
+      </div>
+      <div id="simulado-recuperadas" class="simulado-recuperadas">
+        <p class="texto-placeholder">As questões acertadas no simulado aparecerão separadas aqui.</p>
+      </div>
+    </div>
+
+    <div class="card-form">
+      <h3 class="card-form-titulo">Novo simulado</h3>
+      <div class="simulado-form-grid">
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-data">Data</label>
+          <input type="date" id="simulado-data" class="input-texto">
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-nome">Nome / prova</label>
+          <input type="text" id="simulado-nome" class="input-texto" placeholder="Ex: Simulado TJ 01">
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-banca">Banca</label>
+          <input type="text" id="simulado-banca" class="input-texto" placeholder="Ex: Cebraspe, FGV...">
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-total">Total</label>
+          <input type="number" id="simulado-total" class="input-texto" min="1" max="999">
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-certas">Certas</label>
+          <input type="number" id="simulado-certas" class="input-texto" min="0" max="999">
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-erradas">Erradas</label>
+          <input type="number" id="simulado-erradas" class="input-texto" min="0" max="999">
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-tempo">Tempo (min)</label>
+          <input type="number" id="simulado-tempo" class="input-texto" min="0" max="999">
+        </div>
+      </div>
+      <div class="campo-form">
+        <label class="campo-label" for="simulado-comentario">Observações</label>
+        <textarea id="simulado-comentario" class="input-texto input-textarea" rows="2" placeholder="O que pesou no resultado?"></textarea>
+      </div>
+      <button class="btn-primario" id="btn-salvar-simulado" type="button">Salvar Simulado</button>
+      <p class="msg-materia" id="msg-simulado"></p>
+    </div>
+
+    <div class="resumo-topo" id="simulados-resumo"></div>
+    <div id="lista-simulados">
+      <p class="texto-placeholder">Nenhum simulado registrado ainda.</p>
+    </div>
+  </div>
+</section>
+
+<section class="secao escondido" id="secao-desempenho">
+  <div class="secao-header">
+    <h2 class="secao-titulo">Desempenho Diário</h2>
+    <p class="secao-subtitulo">Acompanhe sua evolução dia a dia</p>
+  </div>
+  <div class="secao-corpo">
+
+    <!-- Resumo rápido -->
+    <div class="resumo-topo">
+      <div class="resumo-card">
+        <span class="resumo-numero" id="total-dias">-</span>
+        <span class="resumo-label">Dias estudados</span>
+      </div>
+      <div class="resumo-card">
+        <span class="resumo-numero" id="total-questoes-geral">-</span>
+        <span class="resumo-label">Total de questões</span>
+      </div>
+      <div class="resumo-card">
+        <span class="resumo-numero" id="media-dia">-</span>
+        <span class="resumo-label">Média por dia</span>
+      </div>
+    </div>
+
+    <!-- Lista de sessões -->
+    <div id="lista-sessoes">
+      <p class="texto-placeholder" id="placeholder-sessoes">
+        📅 Nenhuma sessão de estudo registrada ainda.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+    <!-- SEÇÃO: Revisão -->
+<section class="secao escondido" id="secao-revisao">
+  <div class="secao-header">
+    <h2 class="secao-titulo">📖 Revisão Inteligente</h2>
+    <p class="secao-subtitulo">Veja o que revisar hoje, por que revisar e treine sem ver o gabarito primeiro</p>
+  </div>
+  <div class="secao-corpo">
+
+    <!-- Configuracao e fila inteligente -->
+    <div class="card-form revisao-configuracao">
+      <div class="revisao-configuracao-topo">
+        <div>
+          <h3 class="card-form-titulo">Dias de revisão</h3>
+          <p class="texto-apoio">Escolha quando o sistema deve transformar seus erros acumulados em uma fila inteligente.</p>
+        </div>
+        <span class="tag-estudo" id="revisao-config-status">Carregando...</span>
+      </div>
+
+      <div class="revisao-dias-grid" id="revisao-dias-config">
+        <label class="revisao-dia-opcao"><input type="checkbox" value="1"> Seg</label>
+        <label class="revisao-dia-opcao"><input type="checkbox" value="2"> Ter</label>
+        <label class="revisao-dia-opcao"><input type="checkbox" value="3"> Qua</label>
+        <label class="revisao-dia-opcao"><input type="checkbox" value="4"> Qui</label>
+        <label class="revisao-dia-opcao"><input type="checkbox" value="5"> Sex</label>
+        <label class="revisao-dia-opcao"><input type="checkbox" value="6"> Sab</label>
+        <label class="revisao-dia-opcao"><input type="checkbox" value="7"> Dom</label>
+      </div>
+
+      <div class="revisao-configuracao-acoes">
+        <div class="campo-form revisao-tempo-campo">
+          <label class="campo-label" for="revisao-tempo-minutos">Tempo disponivel na revisão</label>
+          <input id="revisao-tempo-minutos" class="input-texto" type="number" min="10" max="240" step="5" value="60">
+        </div>
+        <button class="btn-primario" id="btn-salvar-config-revisao" type="button">Salvar dias</button>
+        <button class="btn-secundario" id="btn-gerar-fila-revisao" type="button">Gerar fila inteligente</button>
+        <button class="btn-secundario" id="btn-treino-pegadinhas" type="button">Treinar pegadinhas</button>
+        <button class="btn-secundario" id="btn-finalizar-ciclo-revisao" type="button">Marcar revisão concluida</button>
+      </div>
+      <p class="msg-materia" id="msg-config-revisao"></p>
+    </div>
+
+    <div id="revisao-relatorio-inteligente" class="revisao-relatorio-inteligente">
+      <p class="texto-placeholder">Configure seus dias e gere a fila para saber o que revisar hoje.</p>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card-form revisao-filtros">
+      <div class="filtros-linha">
+        <div class="campo-form" style="flex:1; margin-bottom:0;">
+          <label class="campo-label">Semana</label>
+          <select id="filtro-semana" class="input-texto">
+            <option value="due">Para revisar hoje</option>
+            <option value="0">Esta semana</option>
+            <option value="1">Semana passada</option>
+            <option value="2">Há 2 semanas</option>
+            <option value="3">Há 3 semanas</option>
+            <option value="all">Todas as semanas</option>
+          </select>
+        </div>
+        <div class="campo-form" style="flex:1; margin-bottom:0;">
+          <label class="campo-label">Matéria</label>
+          <select id="filtro-materia-revisao" class="input-texto">
+            <option value="all">Todas as matérias</option>
+          </select>
+        </div>
+        <button class="btn-primario" id="btn-filtrar-revisao" type="button"
+          style="align-self:flex-end; width:auto; padding: 0.6rem 1.5rem;">
+          🔍 Filtrar
+        </button>
+        <button class="btn-secundario" id="btn-iniciar-treino-revisao" type="button"
+          style="align-self:flex-end; width:auto; padding: 0.6rem 1.5rem;">
+          Flashcards
+        </button>
+      </div>
+    </div>
+
+    <!-- Resultado -->
+    <div id="revisao-contador" class="revisao-contador" style="display:none;"></div>
+    <div id="lista-revisao">
+      <p class="texto-placeholder">
+        Selecione os filtros acima e clique em Filtrar para ver as questões.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- SEÇÃO: Estatísticas por Matéria -->
+<section class="secao escondido" id="secao-estatisticas">
+  <div class="secao-header">
+    <h2 class="secao-titulo">📈 Estatísticas por Matéria</h2>
+    <p class="secao-subtitulo">Veja seu desempenho detalhado em cada matéria</p>
+  </div>
+  <div class="secao-corpo">
+    <div class="estatisticas-controles" role="tablist" aria-label="Periodo das estatisticas">
+      <button
+        class="estatisticas-aba"
+        type="button"
+        data-periodo-estatisticas="hoje"
+        role="tab"
+        aria-selected="false"
+      >
+        Hoje
+      </button>
+      <button
+        class="estatisticas-aba"
+        type="button"
+        data-periodo-estatisticas="semana"
+        role="tab"
+        aria-selected="false"
+      >
+        Semana
+      </button>
+      <button
+        class="estatisticas-aba ativa"
+        type="button"
+        data-periodo-estatisticas="geral"
+        role="tab"
+        aria-selected="true"
+      >
+        Geral
+      </button>
+      <button
+        class="estatisticas-aba"
+        type="button"
+        data-periodo-estatisticas="personalizado"
+        role="tab"
+        aria-selected="false"
+      >
+        Personalizado
+      </button>
+    </div>
+    <div class="estatisticas-filtro-personalizado escondido" id="estatisticas-filtro-personalizado">
+      <div class="campo-form">
+        <label class="campo-label" for="estatisticas-data-inicio">Início</label>
+        <input type="date" id="estatisticas-data-inicio" class="input-texto">
+      </div>
+      <div class="campo-form">
+        <label class="campo-label" for="estatisticas-data-fim">Fim</label>
+        <input type="date" id="estatisticas-data-fim" class="input-texto">
+      </div>
+      <button class="btn-primario" id="btn-aplicar-periodo-estatisticas" type="button">
+        Aplicar
+      </button>
+    </div>
+    <div id="lista-estatisticas">
+      <p class="texto-placeholder">⏳ Carregando estatísticas...</p>
+    </div>
+  </div>
+</section>    
+
+<!-- SEÇÃO: Perfil -->
+    <section class="secao escondido" id="secao-perfil">
+      <div class="secao-header">
+        <h2 class="secao-titulo">👤 Perfil</h2>
+        <p class="secao-subtitulo">Gerencie suas informações</p>
+      </div>
+      <div class="secao-corpo">
+        <div class="card-form" style="max-width: 480px;">
+          <h3 class="card-form-titulo">🔒 Alterar Senha</h3>
+          <div class="campo-form">
+            <label class="campo-label">Nova senha</label>
+            <input type="password" id="nova-senha" class="input-texto" placeholder="mínimo 6 caracteres">
+          </div>
+          <div class="campo-form">
+            <label class="campo-label">Confirmar nova senha</label>
+            <input type="password" id="confirmar-senha" class="input-texto" placeholder="repita a senha">
+          </div>
+          <button class="btn-primario" id="btn-alterar-senha" type="button">💾 Salvar nova senha</button>
+          <p class="msg-materia" id="msg-senha"></p>
+        </div>
+        <div class="card-form" style="max-width: 480px;">
+          <h3 class="card-form-titulo">📦 Backup dos Dados</h3>
+          <p class="texto-backup">
+            Exporte uma cópia dos seus dados em JSON para guardar no computador.
+          </p>
+          <button class="btn-secundario" id="btn-exportar-backup" type="button">Exportar backup</button>
+          <p class="msg-materia" id="msg-backup"></p>
+        </div>
+        <div class="card-form" style="max-width: 480px;">
+          <h3 class="card-form-titulo">Manual do Sistema</h3>
+          <p class="texto-backup">
+            Manual de Uso: veja como registrar seus erros, configurar revisões e acompanhar sua evolução.
+          </p>
+          <a class="btn-secundario btn-link-manual" href="manual-uso.html?print=1" target="_blank" rel="noopener">
+            Baixar Manual
+          </a>
+        </div>
+        <div class="card-form" style="max-width: 480px;">
+          <h3 class="card-form-titulo">Modo de Uso</h3>
+          <p class="texto-backup" id="perfil-modo-interface-texto">
+            O Modo Essencial deixa a plataforma mais simples para começar. O sistema completo mostra todas as abas e relatórios avançados.
+          </p>
+          <button class="btn-secundario" id="btn-modo-interface-perfil" type="button">
+            Ver sistema completo
+          </button>
+        </div>
+        <div class="card-form perfil-conquistas-card">
+          <h3 class="card-form-titulo">Conquistas</h3>
+          <p class="texto-backup">
+            Acompanhe marcos do seu caderno de erros, revisões e diagnósticos.
+          </p>
+          <div class="conquistas-grid" id="perfil-conquistas-grid">
+            <p class="texto-placeholder">As conquistas aparecem aqui.</p>
+          </div>
+        </div>
+      </div>
+    </section>    
+
+  </main>
+
+  <!-- Overlay para mobile (escurece o fundo quando sidebar abre) -->
+  <div class="overlay" id="overlay"></div>
+  <button class="btn-acao-flutuante" id="btn-acao-flutuante" type="button" title="Registrar erro">
+    Registrar erro
+  </button>
+
+ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/materias.js"></script>
+  <script src="js/edital.js"></script>
+  <script src="js/questoes.js"></script>
+  <script src="js/sessoes.js"></script>
+  <script src="js/gamificacao.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/revisao.js"></script>
+  <script src="js/estatisticas.js"></script>
+  <script src="js/plano.js"></script>
+  <script src="js/simulados.js"></script>
+  <script src="js/planejamento.js"></script>
+  <script src="js/app.js"></script>
+  
+
+</body>
+</html>

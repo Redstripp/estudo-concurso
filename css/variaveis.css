@@ -1,0 +1,90 @@
+/* css/variaveis.css */
+
+/* ================================
+   VARIÁVEIS GLOBAIS
+   (sempre disponíveis, independem do tema)
+================================ */
+:root {
+  --fonte-principal: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --raio-borda:      12px;
+  --raio-borda-sm:   8px;
+  --raio-borda-lg:   16px;
+  --transicao:       all 0.2s ease;
+  --largura-sidebar: 260px;
+
+  /* Tema claro como padrão no :root
+     (evita tela sem estilo enquanto JS carrega) */
+  --cor-fundo:         #f0f2f5;
+  --cor-fundo-card:    #ffffff;
+  --cor-fundo-input:   #f7f8fa;
+  --cor-fundo-sidebar: #ffffff;
+
+  --cor-texto:         #1a1a2e;
+  --cor-texto-suave:   #6b7280;
+  --cor-texto-inverso: #ffffff;
+
+  --cor-primaria:      #3b82f6;
+  --cor-primaria-hover:#2563eb;
+  --cor-primaria-suave:#eff6ff;
+
+  --cor-sucesso:       #22c55e;
+  --cor-erro:          #ef4444;
+  --cor-aviso:         #f59e0b;
+
+  --cor-borda:         #e5e7eb;
+  --sombra-card:       0 2px 8px rgba(0,0,0,0.08);
+  --sombra-hover:      0 4px 16px rgba(0,0,0,0.12);
+}
+
+/* ================================
+   TEMA CLARO
+   (reforça o padrão quando classe ativa)
+================================ */
+.tema-claro {
+  --cor-fundo:         #f0f2f5;
+  --cor-fundo-card:    #ffffff;
+  --cor-fundo-input:   #f7f8fa;
+  --cor-fundo-sidebar: #ffffff;
+
+  --cor-texto:         #1a1a2e;
+  --cor-texto-suave:   #6b7280;
+  --cor-texto-inverso: #ffffff;
+
+  --cor-primaria:      #3b82f6;
+  --cor-primaria-hover:#2563eb;
+  --cor-primaria-suave:#eff6ff;
+
+  --cor-sucesso:       #22c55e;
+  --cor-erro:          #ef4444;
+  --cor-aviso:         #f59e0b;
+
+  --cor-borda:         #e5e7eb;
+  --sombra-card:       0 2px 8px rgba(0,0,0,0.08);
+  --sombra-hover:      0 4px 16px rgba(0,0,0,0.12);
+}
+
+/* ================================
+   TEMA ESCURO
+================================ */
+.tema-escuro {
+  --cor-fundo:         #0f1117;
+  --cor-fundo-card:    #1a1d27;
+  --cor-fundo-input:   #22263a;
+  --cor-fundo-sidebar: #1a1d27;
+
+  --cor-texto:         #e2e8f0;
+  --cor-texto-suave:   #94a3b8;
+  --cor-texto-inverso: #ffffff;
+
+  --cor-primaria:      #3b82f6;
+  --cor-primaria-hover:#60a5fa;
+  --cor-primaria-suave:#1e3a5f;
+
+  --cor-sucesso:       #4ade80;
+  --cor-erro:          #f87171;
+  --cor-aviso:         #fbbf24;
+
+  --cor-borda:         #2d3148;
+  --sombra-card:       0 2px 8px rgba(0,0,0,0.4);
+  --sombra-hover:      0 4px 16px rgba(0,0,0,0.5);
+}

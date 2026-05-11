@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111827">
+  <title>Manual de Uso - Estudo Concurso</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <style>
+    :root {
+      color-scheme: light;
+      --azul: #2563eb;
+      --azul-escuro: #1d4ed8;
+      --verde: #16a34a;
+      --amarelo: #d97706;
+      --vermelho: #dc2626;
+      --texto: #111827;
+      --suave: #4b5563;
+      --borda: #d7dde8;
+      --fundo: #f8fafc;
+      --card: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--fundo);
+      color: var(--texto);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    .barra-manual {
+      align-items: center;
+      background: #111827;
+      color: #fff;
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      padding: 14px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .barra-manual strong {
+      font-size: 0.95rem;
+    }
+
+    .barra-acoes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn-manual {
+      background: var(--azul);
+      border: 0;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      display: inline-block;
+      font-size: 0.9rem;
+      font-weight: 700;
+      padding: 9px 13px;
+      text-decoration: none;
+    }
+
+    .btn-manual.secundario {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .pagina {
+      margin: 0 auto;
+      max-width: 980px;
+      padding: 32px 20px 64px;
+    }
+
+    .capa {
+      background: linear-gradient(135deg, #111827, #1f2937);
+      border-radius: 18px;
+      color: #fff;
+      margin-bottom: 22px;
+      padding: 34px;
+    }
+
+    .capa h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      line-height: 1.05;
+      margin: 0 0 12px;
+    }
+
+    .capa p {
+      color: #dbeafe;
+      font-size: 1.05rem;
+      margin: 0;
+      max-width: 760px;
+    }
+
+    .selo {
+      background: rgba(37, 99, 235, 0.18);
+      border: 1px solid rgba(147, 197, 253, 0.45);
+      border-radius: 999px;
+      color: #bfdbfe;
+      display: inline-block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+      padding: 6px 10px;
+      text-transform: uppercase;
+    }
+
+    .indice,
+    section {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
+      margin-bottom: 18px;
+      padding: 24px;
+    }
+
+    h2 {
+      color: #0f172a;
+      font-size: 1.45rem;
+      margin: 0 0 12px;
+    }
+
+    h3 {
+      color: #1f2937;
+      font-size: 1.08rem;
+      margin: 20px 0 8px;
+    }
+
+    p {
+      margin: 0 0 10px;
+    }
+
+    a {
+      color: var(--azul-escuro);
+      font-weight: 700;
+    }
+
+    ul,
+    ol {
+      margin: 8px 0 14px;
+      padding-left: 22px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    .grade {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .card-menor {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .card-menor strong {
+      color: var(--azul-escuro);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .destaque {
+      background: #eff6ff;
+      border-left: 4px solid var(--azul);
+      border-radius: 10px;
+      color: #1e3a8a;
+      margin: 14px 0;
+      padding: 14px;
+    }
+
+    .alerta {
+      background: #fffbeb;
+      border-left: 4px solid var(--amarelo);
+      border-radius: 10px;
+      color: #78350f;
+      margin: 14px 0;
+      padding: 14px;
+    }
+
+    .ok {
+      background: #ecfdf5;
+      border-left: 4px solid var(--verde);
+      border-radius: 10px;
+      color: #064e3b;
+      margin: 14px 0;
+      padding: 14px;
+    }
+
+    .tabela {
+      border-collapse: collapse;
+      margin: 12px 0;
+      width: 100%;
+    }
+
+    .tabela th,
+    .tabela td {
+      border: 1px solid #e5e7eb;
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .tabela th {
+      background: #f1f5f9;
+    }
+
+    .rodape {
+      color: var(--suave);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    @media (max-width: 720px) {
+      .barra-manual {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .grade {
+        grid-template-columns: 1fr;
+      }
+
+      .capa,
+      section,
+      .indice {
+        border-radius: 12px;
+        padding: 18px;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .barra-manual {
+        display: none;
+      }
+
+      .pagina {
+        max-width: none;
+        padding: 0;
+      }
+
+      .capa,
+      section,
+      .indice {
+        box-shadow: none;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      a {
+        color: #111827;
+        text-decoration: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="barra-manual">
+    <strong>Manual de Uso - Estudo Concurso</strong>
+    <div class="barra-acoes">
+      <button class="btn-manual" type="button" onclick="window.print()">Baixar em PDF</button>
+      <a class="btn-manual secundario" href="app.html">Voltar ao sistema</a>
+    </div>
+  </div>
+
+  <main class="pagina">
+    <header class="capa">
+      <span class="selo">Guia do usuário</span>
+      <h1>Manual de Uso do Estudo Concurso</h1>
+      <p>Aprenda a registrar seus erros, identificar padrões, configurar revisões e transformar seu caderno de erros em uma rotina inteligente de aprovação.</p>
+    </header>
+
+    <div class="indice">
+      <h2>Como usar este manual</h2>
+      <p>Leia primeiro as seções de apresentação, primeiros passos, Caderno de Erros e Revisão Inteligente. Depois consulte as abas específicas conforme for usando o sistema.</p>
+      <div class="destaque">
+        A lógica principal é simples: estudar, resolver questões, registrar os erros, entender por que errou e revisar no dia escolhido por você.
+      </div>
+    </div>
+
+    <section>
+      <h2>1. Apresentação do sistema</h2>
+      <p>O Estudo Concurso é um sistema para organizar seus estudos a partir dos erros. Ele não foi feito para ser apenas uma agenda. A proposta principal é registrar questões erradas com rapidez, entender por que você errou e transformar esses erros em revisões inteligentes no dia configurado por você.</p>
+      <p>O sistema funciona como um caderno de erros inteligente. Quanto melhor você registra o erro, melhor ele consegue mostrar quais matérias, assuntos, tipos de erro e pegadinhas estão se repetindo.</p>
+      <div class="ok">
+        Use o sistema principalmente depois de resolver questões. O erro é o material mais valioso para ajustar sua revisão.
+      </div>
+    </section>
+
+    <section>
+      <h2>2. Primeiros passos</h2>
+      <ol>
+        <li>Entre no sistema e confira suas <strong>Matérias</strong>.</li>
+        <li>Abra <strong>Revisão Inteligente</strong> e configure seus dias de revisão.</li>
+        <li>Abra <strong>Edital</strong> e cadastre os assuntos principais, pesos e status.</li>
+        <li>Depois de estudar uma aula ou assunto, resolva questões.</li>
+        <li>Quando errar ou chutar, registre a questão no <strong>Caderno de Erros</strong>.</li>
+        <li>Use o botão fixo <strong>Registrar erro</strong> quando quiser abrir rapidamente o cadastro da questão.</li>
+        <li>Acompanhe a <strong>Central de Hoje</strong> no Dashboard para saber o que fazer agora.</li>
+      </ol>
+      <p>Usuários novos podem começar pelo <strong>Modo Essencial</strong>, que mostra apenas o fluxo principal. Quando quiser usar edital, planejamento, simulados, desempenho e estatísticas avançadas, clique em <strong>Ver sistema completo</strong>.</p>
+      <p>Você não precisa preencher tudo perfeitamente no primeiro dia. No registro rápido, o sistema aceita o essencial e marca o que precisa ser diagnosticado depois.</p>
+    </section>
+
+    <section>
+      <h2>3. Fluxo ideal de uso</h2>
+      <ol>
+        <li>Estude uma aula, lei, resumo ou assunto do edital.</li>
+        <li>Resolva questões sobre aquele conteúdo.</li>
+        <li>Registre as questões erradas, chutadas ou feitas com baixa confiança.</li>
+        <li>Escolha o motivo do erro: interpretação, desatenção, falta de conteúdo, pegadinha, esquecimento, confusão entre conceitos ou outro motivo disponível.</li>
+        <li>Preencha as pegadinhas e o diagnóstico quando possível.</li>
+        <li>Deixe o sistema acumular os erros até o próximo dia de revisão.</li>
+        <li>No dia configurado, abra a Revisão Inteligente e siga a fila.</li>
+        <li>Acompanhe relatórios, estatísticas e padrões de erro ao longo do tempo.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>4. Dashboard e Central de Hoje</h2>
+      <p>O Dashboard é a tela inicial do sistema. Ele mostra um resumo geral dos seus estudos e ajuda você a decidir a próxima ação.</p>
+      <h3>Central de Hoje</h3>
+      <p>Mostra o que estudar hoje, quantas questões foram registradas, quantas revisões estão pendentes, qual é a próxima revisão e quais erros estão acumulados para o ciclo.</p>
+      <p>A meta de qualidade mostra se os erros do ciclo estão bem diagnosticados. Ela ajuda você a corrigir registros fracos antes de buscar apenas mais quantidade.</p>
+      <h3>Cards principais</h3>
+      <p>Mostram total de questões feitas, acertos, erros, aproveitamento, matérias estudadas e dias seguidos estudando.</p>
+      <h3>Ciclo mensal de revisão</h3>
+      <p>Ajuda a arquivar questões antigas, gerar PDF mensal e proteger o limite do banco de dados. O objetivo é manter o sistema leve sem perder estatísticas gerais.</p>
+      <h3>Treinador de padrões de erro</h3>
+      <p>Analisa seus erros e mostra padrões repetidos: matéria mais problemática, motivo frequente, pegadinhas recorrentes e quantidade de diagnósticos fracos ou incompletos.</p>
+    </section>
+
+    <section>
+      <h2>5. Matérias</h2>
+      <p>A aba Matérias serve para cadastrar as disciplinas que você estuda. Essas matérias aparecem no Caderno de Erros, Plano do Dia, Edital, Simulados e Estatísticas.</p>
+      <p>Use nomes simples e claros, como Português, Matemática Financeira, Informática, Vendas, Direito Administrativo ou Conhecimentos Bancários.</p>
+      <div class="alerta">
+        Evite cadastrar a mesma matéria com nomes muito parecidos, porque isso pode dividir suas estatísticas.
+      </div>
+    </section>
+
+    <section>
+      <h2>6. Caderno de Erros</h2>
+      <p>O Caderno de Erros é a parte mais importante do sistema. É aqui que você registra as questões erradas, chutadas ou respondidas com baixa confiança.</p>
+      <h3>Registrar acertos com confiança</h3>
+      <p>Use esse bloco para informar quantas questões você acertou com segurança em cada matéria. Isso ajuda o sistema a calcular aproveitamento e evolução.</p>
+      <h3>Nova entrada no caderno</h3>
+      <p>Preencha os dados da questão para que ela possa virar revisão depois. Use <strong>Registro rápido</strong> quando quiser salvar o essencial sem interromper o estudo; use <strong>Diagnóstico completo</strong> quando já souber a regra, a pista de reconhecimento e a ação corretiva.</p>
+      <table class="tabela">
+        <tr><th>Campo</th><th>Como usar</th></tr>
+        <tr><td>Matéria</td><td>Escolha a disciplina da questão.</td></tr>
+        <tr><td>Assunto do edital</td><td>Vincule a questão a um tópico do edital quando possível.</td></tr>
+        <tr><td>Banca</td><td>Informe a banca, como Cebraspe, FGV, Cesgranrio ou outra.</td></tr>
+        <tr><td>Enunciado</td><td>Cole o texto da questão.</td></tr>
+        <tr><td>Alternativas</td><td>Escolha a quantidade de alternativas e preencha cada uma.</td></tr>
+        <tr><td>Alternativa marcada</td><td>Informe o que você marcou.</td></tr>
+        <tr><td>Alternativa correta</td><td>Informe o gabarito correto.</td></tr>
+        <tr><td>Tipo da questão</td><td>Marque se foi errada realmente ou chutada/baixa confiança.</td></tr>
+        <tr><td>Motivo do erro</td><td>Escolha a causa mais provável do erro.</td></tr>
+        <tr><td>Nível de confiança</td><td>Informe se você estava inseguro, em dúvida ou confiante.</td></tr>
+        <tr><td>Comentário/observação</td><td>Cole comentário do professor, alunos ou sua própria anotação.</td></tr>
+        <tr><td>Pegadinhas da questão</td><td>Marque os chips de pegadinhas ou escreva detalhes próprios. Isso alimenta treino, relatórios e revisão inteligente.</td></tr>
+        <tr><td>Conceito ou regra</td><td>Explique a regra que resolve a questão.</td></tr>
+        <tr><td>Como reconhecer</td><td>Anote a pista que ajudaria a acertar uma questão parecida.</td></tr>
+        <tr><td>Ação corretiva</td><td>Defina o que fazer para não repetir o erro.</td></tr>
+      </table>
+      <h3>Assistente de IA</h3>
+      <p>Se você não souber preencher pegadinhas, conceito, como reconhecer ou ação corretiva, use o prompt neutro para colar em uma IA gratuita. Depois cole a resposta no sistema para preencher os campos. A integração paga pode ficar oculta sem prejudicar esse fluxo.</p>
+      <h3>Atalhos do caderno</h3>
+      <p>Use os atalhos para encontrar questões com diagnóstico incompleto, sem assunto do edital ou com pegadinhas registradas. Esses ajustes melhoram a qualidade da fila de revisão.</p>
+      <h3>Qualidade do diagnóstico</h3>
+      <p>Cada questão pode aparecer como diagnóstico forte, fraco ou incompleto. Isso indica se há dados suficientes para o sistema entender o padrão do seu erro.</p>
+      <h3>Alerta de cadastro fraco</h3>
+      <p>Quando uma questão estiver com poucos dados úteis, o sistema mostra um aviso como “Pouco útil para revisão” ou “Cadastro pode melhorar”. Complete assunto, motivo, confiança, conceito, reconhecimento ou ação corretiva para melhorar a prioridade da revisão.</p>
+      <div class="ok">
+        Quanto melhor o diagnóstico, melhor a Revisão Inteligente consegue responder o que revisar e por quê.
+      </div>
+    </section>
+
+    <section>
+      <h2>7. Revisão Inteligente</h2>
+      <p>A Revisão Inteligente transforma seus erros acumulados em uma fila prática. Ela serve para responder: <strong>o que devo revisar hoje e por quê?</strong></p>
+      <h3>Dias de revisão</h3>
+      <p>Você escolhe seus próprios dias de revisão: sábado, domingo, quarta e sábado, todos os dias ou qualquer combinação. Também pode informar o tempo disponível para revisar.</p>
+      <h3>Fila inteligente</h3>
+      <p>A fila considera erros acumulados, revisões vencidas, matérias com mais erros, assuntos recorrentes, tipos de erro, pegadinhas, peso do edital, dificuldade e tempo sem contato.</p>
+      <h3>Assuntos críticos e ritual semanal</h3>
+      <p>O painel mostra os assuntos do edital que mais se repetiram nos erros e sugere um ritual curto para fechar o ciclo: refazer o assunto crítico, observar a causa raiz, treinar pegadinhas e melhorar diagnósticos fracos. O botão Revisar assunto crítico inicia um treino focado no assunto do edital que mais apareceu na fila.</p>
+      <h3>Calibração de confiança</h3>
+      <p>Antes de revelar o gabarito, marque se você chutou, ficou em dúvida ou estava confiante. Depois o sistema compara confiança e resultado para mostrar se você está errando por insegurança, excesso de confiança ou falta de domínio.</p>
+      <h3>Treino por causa raiz</h3>
+      <p>Use os botões de causa raiz para revisar apenas erros de interpretação, falta de atenção, pegadinha, falta de conteúdo ou outros motivos que estejam se repetindo.</p>
+      <h3>Histórico do ciclo</h3>
+      <p>Mostra a evolução das revisões já registradas, comparando acertos e erros para indicar se o ciclo está melhorando, estável ou exigindo ajuste.</p>
+      <h3>Flashcards</h3>
+      <p>Nos flashcards, você escreve uma frase com o conceito que acredita resolver a questão, marca o checklist antes de responder, escolhe uma alternativa, confirma e só depois vê o gabarito. Isso evita a falsa sensação de que sabia a resposta e treina leitura ativa.</p>
+      <h3>Resumo automático do fim da revisão</h3>
+      <p>Ao terminar os flashcards, o sistema mostra aproveitamento, matéria que mais gerou erro, causa raiz principal, assunto crítico, calibração de confiança e próxima ação sugerida.</p>
+      <h3>Treino de pegadinhas</h3>
+      <p>Mostra a questão e pergunta qual era a pegadinha. Depois revela a explicação. Use esse treino para melhorar interpretação e atenção aos detalhes.</p>
+      <h3>Marcar revisão concluída</h3>
+      <p>Use esse botão quando terminar o ciclo de revisão. Assim o sistema passa a considerar os próximos erros como um novo ciclo.</p>
+    </section>
+
+    <section>
+      <h2>8. Revisão por tipo de erro</h2>
+      <p>O sistema agrupa os erros por causa raiz, como interpretação, falta de atenção, pegadinha, esquecimento, falta de domínio teórico, confusão entre conceitos ou chute.</p>
+      <p>Isso é importante porque nem sempre o problema é a matéria. Às vezes o problema é um padrão de comportamento: ler rápido demais, cair em palavras absolutas, confundir conceitos ou responder com baixa confiança.</p>
+    </section>
+
+    <section>
+      <h2>9. Edital Verticalizado</h2>
+      <p>A aba Edital ajuda você a transformar o edital em um mapa de estudo.</p>
+      <h3>Reta final</h3>
+      <p>Cadastre o concurso alvo e a data da prova. Isso ajuda o sistema a entender proximidade da prova e prioridades.</p>
+      <h3>Assuntos do edital</h3>
+      <p>Cadastre matéria, título do assunto, status, peso e observações. O peso indica a importância do assunto para sua preparação.</p>
+      <h3>Status do assunto</h3>
+      <ul>
+        <li><strong>Não estudado:</strong> assunto ainda não visto.</li>
+        <li><strong>Estudado:</strong> já teve contato.</li>
+        <li><strong>Revisar:</strong> precisa voltar.</li>
+        <li><strong>Dominado:</strong> está bem.</li>
+        <li><strong>Muita dificuldade:</strong> precisa de atenção especial.</li>
+      </ul>
+      <h3>Mapa simples do edital</h3>
+      <p>Cada assunto pode mostrar questões vinculadas, pendências, recuperação, última revisão e se deve entrar na próxima revisão.</p>
+      <h3>Pegadinhas da banca</h3>
+      <p>Registre padrões da banca, exemplos e ações preventivas. Isso é útil para revisar armadilhas recorrentes.</p>
+    </section>
+
+    <section>
+      <h2>10. Plano do Dia</h2>
+      <p>O Plano do Dia mostra quais matérias estudar em uma data específica. Você pode adicionar matérias manualmente ou gerar o plano com base no Planejamento Semanal.</p>
+      <p>A meta padrão vem do Planejamento, mas pode ser ajustada por matéria. Se a meta central for 30 e você colocar três matérias no dia, cada matéria recebe 30 questões, totalizando 90.</p>
+    </section>
+
+    <section>
+      <h2>11. Planejamento Semanal</h2>
+      <p>Essa aba serve para montar sua rotina semanal e alimentar o Plano do Dia.</p>
+      <h3>Grade semanal</h3>
+      <p>Escolha o dia da semana, a matéria e o tipo de estudo: teoria, questões, revisão ou Lei Seca.</p>
+      <h3>Fila diária inteligente</h3>
+      <p>Ajuda a priorizar o que estudar hoje considerando planejamento, erros, edital, revisões e Lei Seca.</p>
+      <h3>Simulado por assunto</h3>
+      <p>Permite gerar um treino apenas com questões vinculadas a um assunto do edital.</p>
+      <h3>Relatório Pronto para a Prova</h3>
+      <p>Mostra uma visão geral de preparação, pontos fortes, pendências e alertas.</p>
+      <h3>Modo Lei Seca</h3>
+      <p>Guarda artigos, normas, trechos literais, importância e anotações. Use para revisar texto de lei, prazos, exceções e literalidade.</p>
+    </section>
+
+    <section>
+      <h2>12. Simulados</h2>
+      <p>A aba Simulados tem duas funções principais: gerar simulados de revisão com questões críticas e registrar resultados de simulados completos.</p>
+      <h3>Simulado de revisão</h3>
+      <p>Escolha período, tipo e limite de questões. O sistema monta uma revisão com base no seu caderno.</p>
+      <p>Antes de marcar a alternativa, use o modo pré-resposta: escreva o conceito ou pista que resolve a questão e confirme o checklist de leitura. Esse pequeno ritual reduz erros por pressa, desatenção e interpretação induzida.</p>
+      <h3>Novo simulado</h3>
+      <p>Registre data, nome, banca, total de questões, acertos, erros, tempo e comentário. Isso ajuda a acompanhar evolução em provas completas.</p>
+    </section>
+
+    <section>
+      <h2>13. Desempenho Diário</h2>
+      <p>Mostra sua produção por dia: sessões registradas, total de questões e média diária. Use para acompanhar constância.</p>
+      <p>Essa aba ajuda a responder se você está estudando com regularidade ou deixando muitos dias sem prática.</p>
+    </section>
+
+    <section>
+      <h2>14. Estatísticas</h2>
+      <p>Mostra desempenho por matéria e período. Você pode alternar entre hoje, semana, geral ou intervalo personalizado.</p>
+      <p>Use as estatísticas para identificar matérias fracas, matérias fortes, aproveitamento e evolução. O sistema também considera histórico arquivado quando disponível.</p>
+    </section>
+
+    <section>
+      <h2>15. Perfil</h2>
+      <p>No Perfil você pode alterar sua senha, exportar backup em JSON e baixar este manual de uso.</p>
+      <h3>Backup dos dados</h3>
+      <p>Use o backup para guardar uma cópia local das suas informações fora do Supabase.</p>
+      <h3>Manual do sistema</h3>
+      <p>Use o botão Baixar Manual para abrir este guia e salvar em PDF pelo navegador.</p>
+    </section>
+
+    <section>
+      <h2>16. Manual dos relatórios</h2>
+      <div class="grade">
+        <div class="card-menor"><strong>Matérias com mais erros</strong>Mostram onde você deve concentrar revisão.</div>
+        <div class="card-menor"><strong>Assuntos críticos</strong>Indicam tópicos do edital que precisam voltar para a fila.</div>
+        <div class="card-menor"><strong>Tipos de erro</strong>Mostram se o problema é conteúdo, atenção, interpretação, pegadinha ou chute.</div>
+        <div class="card-menor"><strong>Pegadinhas recorrentes</strong>Ajudam a treinar leitura crítica e evitar armadilhas parecidas.</div>
+        <div class="card-menor"><strong>Diagnóstico fraco</strong>Mostra questões que precisam de mais informação para melhorar a inteligência do sistema.</div>
+        <div class="card-menor"><strong>Prontidão para a prova</strong>Ajuda a enxergar se ainda existem pontos fortes, fracos e pendências relevantes.</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>17. Dicas de uso estratégico</h2>
+      <ul>
+        <li>Registre os erros logo após resolver questões.</li>
+        <li>Não deixe muitas questões sem diagnóstico.</li>
+        <li>Use o campo de pegadinhas sempre que a banca tentar confundir.</li>
+        <li>Vincule as questões ao assunto do edital quando possível.</li>
+        <li>Revise no dia configurado, mesmo que seja uma revisão curta.</li>
+        <li>Observe padrões de erro, não apenas matérias.</li>
+        <li>Priorize assuntos com maior peso e maior erro.</li>
+        <li>Antes de responder revisões e simulados, escreva uma hipótese curta do conceito que resolve a questão.</li>
+        <li>Use a meta de qualidade para melhorar diagnósticos, não apenas aumentar quantidade de questões.</li>
+        <li>Faça um ritual semanal: assunto crítico, causa raiz, pegadinha recorrente e diagnósticos pendentes.</li>
+        <li>Use o treino de pegadinhas para melhorar interpretação.</li>
+        <li>Veja relatórios semanalmente para ajustar sua estratégia.</li>
+        <li>Gere backup periodicamente.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>18. Perguntas frequentes</h2>
+      <h3>Preciso registrar todas as questões?</h3>
+      <p>Não. Registre principalmente erradas, chutadas e questões em que você acertou sem segurança. Acertos seguros podem ser registrados em quantidade.</p>
+      <h3>Posso mudar meus dias de revisão?</h3>
+      <p>Sim. Abra Revisão Inteligente, escolha os dias e salve novamente.</p>
+      <h3>O que fazer se eu não souber o motivo do erro?</h3>
+      <p>Use o comentário do professor ou alunos, gere o prompt para a IA ou use a análise integrada e preencha o diagnóstico depois.</p>
+      <h3>Como usar se estudo todos os dias?</h3>
+      <p>Configure revisão todos os dias ou em dias alternados. Registre erros diariamente e revise em blocos curtos.</p>
+      <h3>Como usar se reviso só uma vez por semana?</h3>
+      <p>Configure um único dia, como sábado ou domingo. Durante a semana, alimente o Caderno de Erros.</p>
+      <h3>Como interpretar a fila inteligente?</h3>
+      <p>A fila mostra as questões mais importantes para revisar primeiro. A prioridade considera recorrência, dificuldade, pegadinhas, edital e revisão vencida.</p>
+      <h3>Como saber se estou evoluindo?</h3>
+      <p>Acompanhe queda nos erros repetidos, aumento de diagnósticos fortes, melhora nas estatísticas, menos questões pendentes e mais assuntos dominados.</p>
+      <h3>O PDF mensal apaga minhas estatísticas?</h3>
+      <p>Não. O arquivamento limpa questões detalhadas antigas, mas preserva resumos estatísticos quando a função está configurada corretamente.</p>
+    </section>
+
+    <section>
+      <h2>19. Resumo final</h2>
+      <p>O Estudo Concurso funciona melhor quando você usa o erro como ponto de partida. Não basta saber que errou: o ganho real vem de entender por que errou e transformar isso em revisão direcionada.</p>
+      <div class="destaque">
+        Método recomendado: estude, resolva questões, registre erros, diagnostique causas, revise no dia escolhido e acompanhe os padrões.
+      </div>
+    </section>
+
+    <p class="rodape">Manual de Uso do Estudo Concurso. Para salvar em PDF, clique em "Baixar em PDF" e escolha "Salvar como PDF" no navegador.</p>
+  </main>
+
+  <script>
+    if (new URLSearchParams(window.location.search).get('print') === '1') {
+      window.addEventListener('load', () => {
+        setTimeout(() => window.print(), 450)
+      })
+    }
+  </script>
+</body>
+</html>
