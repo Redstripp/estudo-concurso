@@ -1,15 +1,52 @@
---- .gitignore (原始)
-# Configuracao local
-js/config.local.js
+```
+# Directories
+estudo-concurso/
 
-# Dependencias e caches opcionais
+# Dependencies
 node_modules/
+__pycache__/
+*.egg-info/
+.venv/
+venv/
+.env
+.env.local
+.env.*
+
+# Build artifacts
+dist/
+build/
+target/
+*.pyc
+*.class
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.out
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# System files
 .DS_Store
 Thumbs.db
 
 # Logs
 *.log
-npm-debug.log*
 
-+++ .gitignore (修改后)
-Nothing should be ignored based on the provided file changes, as they only include source files (.css and .js) without any build artifacts, dependencies, or temporary files.
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Cache
+.mypy_cache/
+.pytest_cache/
+.gradle/
+```
