@@ -245,7 +245,7 @@ async function carregarCentralHoje(userId) {
     ? montarRelatorioFilaRevisao(questoes, config, editalConfig)
     : montarResumoCentralHojeBasico(questoes)
 
-  // --- ETAPA 6: Sobrescreve os totais pelo valor real do banco ---
+  // --- Sobrescreve os totais pelo valor real do banco ---
   if (relatorio) {
     relatorio.totalPendente = totalReal
     relatorio.totalCiclo = totalReal
