@@ -182,15 +182,20 @@ async function carregarCentralHoje(userId) {
     ? obterConfiguracaoRevisaoUsuario(userId)
     : Promise.resolve({ dias_revisao: [6], tempo_revisao_minutos: 60, ultima_revisao_geral: null })
 
-  const [config, questoesResp, planoResp, editalResp, planejamentoResp] = await Promise.all([
+  const [config, questoesCountResp, questoesResp, planoResp, editalResp, planejamentoResp] = await Promise.all([
     configPromessa,
+    db
+      .from('questoes')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status_revisao', 'pendente'),
     db
       .from('questoes')
       .select('id, materia_id, edital_topico_id, tipo_questao, status_revisao, revisar_novamente_em, revisao_ultima_data, revisao_total_erros, motivo_erro, nivel_confianca, pegadinha_banca, conceito_chave, como_reconhecer, acao_corretiva, criado_em, materias(nome), edital_topicos(titulo, status, peso)')
       .eq('user_id', userId)
       .eq('status_revisao', 'pendente')
       .order('criado_em', { ascending: false })
-      .limit(700),
+      .limit(50),
     db
       .from('plano_dia_materias')
       .select('id, data, meta_questoes, materias(nome)')
@@ -210,8 +215,10 @@ async function carregarCentralHoje(userId) {
       .order('ordem', { ascending: true })
   ])
 
+  if (questoesCountResp.error) throw criarErroConsultaDashboard('Não foi possível buscar suas revisões pendentes.', questoesCountResp.error)
   if (questoesResp.error) throw criarErroConsultaDashboard('Não foi possível buscar suas revisões pendentes.', questoesResp.error)
 
+  const totalRealDoBanco = questoesCountResp.count || 0
   const questoes = questoesResp.data || []
   const planoGerado = planoResp.error ? [] : (planoResp.data || [])
   const planejamentoHoje = planejamentoResp.error ? [] : (planejamentoResp.data || [])
@@ -231,6 +238,10 @@ async function carregarCentralHoje(userId) {
   const relatorio = typeof montarRelatorioFilaRevisao === 'function'
     ? montarRelatorioFilaRevisao(questoes, config, editalConfig)
     : montarResumoCentralHojeBasico(questoes)
+  
+  relatorio.totalPendente = totalRealDoBanco
+  relatorio.totalCiclo = totalRealDoBanco
+  
   const ehRevisao = typeof ehDiaDeRevisaoHoje === 'function' ? ehDiaDeRevisaoHoje(config) : false
   const proxima = typeof calcularProximaDataRevisao === 'function' ? calcularProximaDataRevisao(config.dias_revisao) : hoje
   const questoesHoje = questoes.filter(q => String(q.criado_em || '').substring(0, 10) === hoje).length
