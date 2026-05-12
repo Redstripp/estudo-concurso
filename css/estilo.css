@@ -5801,3 +5801,92 @@ select.input-texto option {
     align-self: flex-start;
   }
 }
+
+/* ================================
+   ANIMAÇÕES E FEEDBACK (Etapas 3+)
+================================ */
+@keyframes piscar-sucesso {
+  0%   { border-color: var(--cor-sucesso); box-shadow: 0 0 0 3px rgba(34,197,94,0.3); }
+  100% { border-color: var(--cor-borda);   box-shadow: none; }
+}
+
+.card-questao--novo {
+  animation: piscar-sucesso 1s ease-out;
+}
+
+/* Caderno de Erros - Busca e Ordenação */
+.caderno-busca {
+  margin-bottom: 16px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.caderno-busca .input-texto {
+  flex: 1;
+  min-width: 200px;
+}
+
+#resultado-busca-info {
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+/* Progresso na Revisão */
+.revisao-progresso {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+}
+
+.revisao-progresso-barra {
+  flex: 1;
+  height: 6px;
+  background: var(--cor-fundo-input);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.revisao-progresso-fill {
+  height: 100%;
+  background: var(--cor-primaria);
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+/* Modo Foco */
+body.modo-foco .sidebar { display: none; }
+body.modo-foco .header-mobile { display: none; }
+body.modo-foco .conteudo-principal {
+  margin-left: 0;
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+/* Tooltip no Sidebar */
+.nav-item {
+  position: relative;
+}
+
+.nav-item[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--cor-texto);
+  color: var(--cor-fundo-card);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--raio-borda-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 200;
+  opacity: 0.95;
+}

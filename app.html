@@ -688,6 +688,25 @@
 
     <div id="caderno-erros-acoes" class="caderno-erros-acoes"></div>
 
+    <!-- Busca e Ordenação -->
+    <div class="caderno-busca">
+      <input
+        type="search"
+        id="busca-caderno"
+        class="input-texto"
+        placeholder="🔍 Buscar por enunciado, matéria ou motivo..."
+        maxlength="120"
+      />
+      <select id="ordenacao-caderno" class="input-texto">
+        <option value="recente">Mais recentes primeiro</option>
+        <option value="antigas">Mais antigas primeiro</option>
+        <option value="materia">Por matéria (A-Z)</option>
+        <option value="diagnostico">Diagnóstico mais fraco primeiro</option>
+        <option value="revisao">Revisão vencida primeiro</option>
+      </select>
+    </div>
+    <div id="resultado-busca-info"></div>
+
     <!-- Lista -->
     <div id="lista-questoes">
       <p class="texto-placeholder" id="placeholder-questoes">
