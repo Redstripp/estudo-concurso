@@ -2388,6 +2388,30 @@ select.input-texto option {
   padding: 2px 8px;
   border-radius: 20px;
 }
+
+.revisao-progresso {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+}
+
+.revisao-progresso-barra {
+  flex: 1;
+  height: 6px;
+  background: var(--cor-fundo-input);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.revisao-progresso-fill {
+  height: 100%;
+  background: var(--cor-primaria);
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
  
 .revisao-tags {
   display: flex;

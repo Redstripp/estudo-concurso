@@ -1425,8 +1425,17 @@ function criarCardTreinoRevisao(q, gabaritoVisivel) {
   const alternativas = criarAlternativasTreino(q, gabaritoVisivel, respostaSelecionada)
   const diagnostico = gabaritoVisivel ? criarDiagnosticoTreino(q) : ''
   const opcoesConfianca = renderizarOptionsConfiancaTreino(treinoRevisaoConfianca)
+  const totalQuestoes = treinoRevisaoQuestoes.length
+  const questaoAtual = treinoRevisaoIndice + 1
+  const percentualProgresso = totalQuestoes > 0 ? (questaoAtual / totalQuestoes) * 100 : 0
 
   card.innerHTML = `
+    <div class="revisao-progresso">
+      <span>Questão ${questaoAtual} de ${totalQuestoes}</span>
+      <div class="revisao-progresso-barra">
+        <div class="revisao-progresso-fill" style="width: ${percentualProgresso}%"></div>
+      </div>
+    </div>
     <div class="treino-revisao-topo">
       <div>
         <span class="tag-materia">${escaparHtmlSeguro(nomeMateria)}</span>
