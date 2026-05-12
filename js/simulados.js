@@ -611,7 +611,7 @@ async function carregarQuestoesRecuperadas() {
   const container = document.getElementById('simulado-recuperadas')
   if (!container) return
 
-  container.innerHTML = '<p class="texto-placeholder">⏳ Carregando questões recuperadas...</p>'
+  container.innerHTML = '<p class="texto-placeholder">⏳ Buscando questões recuperadas...</p>'
 
   const { data, error } = await db
     .from('questoes')
@@ -729,7 +729,7 @@ async function carregarSimulados() {
   const lista = document.getElementById('lista-simulados')
   if (!lista) return
 
-  lista.innerHTML = '<p class="texto-placeholder">⏳ Carregando simulados...</p>'
+  lista.innerHTML = '<p class="texto-placeholder">⏳ Buscando seus simulados...</p>'
 
   const { data, error } = await db
     .from('simulados')

@@ -1,10 +1,9 @@
-```gitignore
+```
 # Compiled and build artifacts
 *.pyc
 __pycache__/
 *.o
 *.obj
-*.class
 *.exe
 *.dll
 *.so
@@ -19,16 +18,26 @@ venv/
 .env.local
 .env.*
 
+# Build directories
+dist/
+build/
+target/
+.gradle/
+
+# Python specific
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+.PyInstaller/
+
 # Logs and temp files
 *.log
 *.tmp
 *.swp
 *.swo
-
-# Coverage reports
-coverage/
-htmlcov/
-.coverage
 
 # Editors
 .vscode/
@@ -38,15 +47,10 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Build directories
-dist/
-build/
-target/
-.gradle/
-
-# Python cache
-.mypy_cache/
-.pytest_cache/
+# Coverage
+coverage/
+htmlcov/
+.coverage
 
 # Compressed files
 *.zip

@@ -96,7 +96,7 @@ async function carregarEstatisticas() {
   const lista = document.getElementById('lista-estatisticas')
   if (!lista) return
 
-  lista.innerHTML = '<p class="texto-placeholder">⏳ Carregando...</p>'
+  lista.innerHTML = '<p class="texto-placeholder">⏳ Calculando suas estatísticas...</p>'
 
   try {
     const userId = window.usuarioAtual.id

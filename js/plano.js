@@ -42,7 +42,7 @@ async function carregarMateriasPlano() {
   const select = document.getElementById('plano-materia')
   if (!select) return
 
-  select.innerHTML = '<option value="">Carregando matérias...</option>'
+  select.innerHTML = '<option value="">Buscando lista de matérias...</option>'
 
   const { data, error } = await db
     .from('materias')
@@ -111,7 +111,7 @@ async function carregarPlanoDia() {
   const data = document.getElementById('plano-data')?.value || dataISOHoje()
   if (!lista) return
 
-  lista.innerHTML = '<p class="texto-placeholder">⏳ Carregando plano...</p>'
+  lista.innerHTML = '<p class="texto-placeholder">⏳ Buscando seu plano do dia...</p>'
   if (resumo) resumo.innerHTML = ''
 
   const { data: plano, error } = await db

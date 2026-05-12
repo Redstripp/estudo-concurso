@@ -33,7 +33,7 @@ async function carregarMaterias() {
   const placeholder = document.getElementById('placeholder-materias')
 
   // Mostra estado de carregando
-  placeholder.textContent = '⏳ Carregando matérias...'
+  placeholder.textContent = '⏳ Buscando suas matérias...'
   placeholder.style.display = 'block'
 
   const { data, error } = await db

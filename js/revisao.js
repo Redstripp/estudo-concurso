@@ -385,7 +385,7 @@ async function filtrarRevisao() {
   // Esconder botão de modo foco quando voltar para lista
   if (btnModoFoco) btnModoFoco.style.display = 'none'
   
-  lista.innerHTML = '<p class="texto-placeholder">⏳ Buscando questões...</p>'
+  lista.innerHTML = '<p class="texto-placeholder">⏳ Buscando suas revisões pendentes...</p>'
   contador.style.display = 'none'
 
   const { data, error } = await buscarQuestoesRevisao()
@@ -449,7 +449,7 @@ async function buscarQuestoesRevisao() {
 // ============================================
 async function gerarFilaRevisaoInteligente(opcoes = {}) {
   const container = document.getElementById('revisao-relatorio-inteligente')
-  if (container) container.innerHTML = '<p class="texto-placeholder">Montando fila inteligente...</p>'
+  if (container) container.innerHTML = '<p class="texto-placeholder">Montando sua fila inteligente...</p>'
 
   try {
     const userId = window.usuarioAtual.id
@@ -1178,7 +1178,7 @@ async function iniciarTreinoRevisao() {
   const contador = document.getElementById('revisao-contador')
   const btnModoFoco = document.getElementById('btn-modo-foco-revisao')
 
-  lista.innerHTML = '<p class="texto-placeholder">⏳ Preparando treino...</p>'
+  lista.innerHTML = '<p class="texto-placeholder">⏳ Preparando seu treino de revisão...</p>'
   contador.style.display = 'none'
 
   // Mostrar botão de modo foco durante o treino
@@ -1214,7 +1214,7 @@ async function iniciarTreinoPegadinhas() {
   const lista = document.getElementById('lista-revisao')
   const contador = document.getElementById('revisao-contador')
 
-  if (lista) lista.innerHTML = '<p class="texto-placeholder">Preparando treino de pegadinhas...</p>'
+  if (lista) lista.innerHTML = '<p class="texto-placeholder">⏳ Preparando treino de pegadinhas...</p>'
   if (contador) contador.style.display = 'none'
 
   try {

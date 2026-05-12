@@ -34,7 +34,7 @@ async function inicializarEdital() {
 
 async function carregarEdital() {
   const painel = document.getElementById('edital-painel')
-  if (painel) painel.innerHTML = '<p class="texto-placeholder">Carregando edital...</p>'
+  if (painel) painel.innerHTML = '<p class="texto-placeholder">Buscando estrutura do edital...</p>'
 
   try {
     const userId = window.usuarioAtual.id
@@ -101,7 +101,7 @@ async function carregarTopicosEditalParaSelect(selectId, materiaId = '', topicoA
   const select = document.getElementById(selectId)
   if (!select) return
 
-  select.innerHTML = '<option value="">Carregando assuntos...</option>'
+  select.innerHTML = '<option value="">Buscando lista de assuntos do edital...</option>'
 
   try {
     let query = db
