@@ -160,6 +160,7 @@ async function inicializar() {
   inicializarMenu()
   inicializarLogout()
   inicializarAcaoFlutuante()
+  inicializarAtalhoTeclado()
   navegarPara(redefinicaoSenha.ehRecuperacao ? 'perfil' : obterSecaoInicial())
 
   if (redefinicaoSenha.ehRecuperacao) {
@@ -818,6 +819,17 @@ function inicializarAcaoFlutuante() {
     setTimeout(() => {
       document.getElementById('card-acertos')?.nextElementSibling?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 80)
+  })
+}
+
+function inicializarAtalhoTeclado() {
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey && e.key === 'e') {
+      const foco = document.activeElement?.tagName?.toLowerCase()
+      if (['input', 'textarea', 'select'].includes(foco)) return
+      e.preventDefault()
+      abrirCadastroRapido()
+    }
   })
 }
 
