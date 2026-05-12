@@ -7,6 +7,8 @@ let tipoQuestaoAtual    = 'Errada'
 let modoRegistroQuestao = 'rapido'
 let questoesInicializado = false
 let filtroCadernoErrosAtual = 'todos'
+let questoesEmMemoria = []
+let timeoutBusca
 
 const LETRAS = ['A', 'B', 'C', 'D', 'E']
 const TIPOS_QUESTAO = ['Errada', 'Chutada']
@@ -1807,7 +1809,9 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
 
   placeholder.style.display = 'none'
   lista.appendChild(placeholder)
+  questoesEmMemoria = data
   const dadosFiltrados = filtrarQuestoesCadernoErros(data)
+  renderizarListaQuestoes(dadosFiltrados)
 
   if (dadosFiltrados.length === 0) {
     placeholder.textContent = obterMensagemFiltroCadernoErros()
@@ -1933,11 +1937,60 @@ function filtrarQuestoesCadernoErros(questoes) {
   return lista
 }
 
+function renderizarListaQuestoes(listaParaExibir) {
+  const container = document.getElementById('lista-questoes');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (listaParaExibir.length === 0) {
+    container.innerHTML = `
+      <div class="estado-vazio">
+        <p>Nenhuma questão encontrada com este filtro.</p>
+      </div>`;
+    return;
+  }
+
+  // Reutiliza a lógica de criação dos cards que já existe no seu código
+  // (Ajuste o nome da função abaixo se a sua tiver outro nome, ex: criarCardQuestao)
+  listaParaExibir.forEach(item => {
+    const card = criarCardQuestao(item); 
+    container.appendChild(card);
+  });
+}
+
 function obterMensagemFiltroCadernoErros() {
   if (filtroCadernoErrosAtual === 'diagnostico') return '✅ Nenhuma questão com diagnóstico incompleto ou fraco.'
   if (filtroCadernoErrosAtual === 'sem-assunto') return '✅ Todas as questões estão vinculadas a algum assunto do edital.'
   if (filtroCadernoErrosAtual === 'pegadinhas') return 'Nenhuma questão com pegadinha registrada ainda.'
   return 'Nenhuma questão encontrada para este filtro.'
+}
+
+function filtrarQuestoesBusca(termo) {
+  const termoNormalizado = termo.toLowerCase().trim();
+  const infoElemento = document.getElementById('resultado-busca-info');
+  
+  if (!termoNormalizado) {
+    renderizarListaQuestoes(questoesEmMemoria);
+    if (infoElemento) infoElemento.textContent = '';
+    return;
+  }
+
+  const filtradas = questoesEmMemoria.filter(q => {
+    const enunciado = (q.enunciado || '').toLowerCase();
+    const motivo = (q.motivo_erro || '').toLowerCase();
+    const materia = (q.materias?.nome || '').toLowerCase();
+    
+    return enunciado.includes(termoNormalizado) || 
+           motivo.includes(termoNormalizado) || 
+           materia.includes(termoNormalizado);
+  });
+
+  renderizarListaQuestoes(filtradas);
+  
+  if (infoElemento) {
+    infoElemento.textContent = `${filtradas.length} resultado(s) encontrado(s)`;
+  }
 }
 
 function criarCabecalhoGrupoQuestoes(titulo, resumo) {
