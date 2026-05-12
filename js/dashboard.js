@@ -73,12 +73,6 @@ function criarCardsDashboardVazios() {
   `
 }
 
-function agendarCargaDashboard(tarefa, atraso = 0) {
-  setTimeout(() => {
-    tarefa()
-  }, atraso)
-}
-
 async function carregarCardsDashboardComErro(userId) {
   try {
     await carregarCardsDashboard(userId)
