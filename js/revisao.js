@@ -429,6 +429,8 @@ async function buscarQuestoesRevisao() {
     query = query.gte('criado_em', inicio).lte('criado_em', fim + 'T23:59:59')
   }
 
+  query = query.limit(300)
+
   return query
 }
 

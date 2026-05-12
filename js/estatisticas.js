@@ -340,6 +340,7 @@ async function buscarQuestoesRelatorioEvolucao(userId) {
     .from('questoes')
     .select('status_revisao, tipo_questao, motivo_erro, nivel_confianca, revisao_total_acertos, revisao_total_erros, conceito_chave, acao_corretiva, materias(nome)')
     .eq('user_id', userId)
+    .limit(500)
 
   if (!consultaCompleta.error) return consultaCompleta
 
@@ -347,6 +348,7 @@ async function buscarQuestoesRelatorioEvolucao(userId) {
     .from('questoes')
     .select('status_revisao, tipo_questao, motivo_erro, nivel_confianca, revisao_total_acertos, revisao_total_erros, materias(nome)')
     .eq('user_id', userId)
+    .limit(500)
 }
 
 function montarRelatorioEvolucao({ simulados, revisoes, questoes }) {
