@@ -34,9 +34,11 @@ async function inicializarDashboard() {
 
   if (window.modoInterfaceAtual === 'essencial') return
 
-  agendarCargaDashboard(() => carregarArquivamentoMensalComErro(data.user.id), 80)
-  agendarCargaDashboard(() => carregarGraficoDashboardComErro(data.user.id), 160)
-  agendarCargaDashboard(() => carregarRelatorioErrosRecorrentesComErro(data.user.id), 240)
+  await Promise.all([
+    carregarArquivamentoMensalComErro(data.user.id),
+    carregarGraficoDashboardComErro(data.user.id),
+    carregarRelatorioErrosRecorrentesComErro(data.user.id)
+  ])
 }
 
 function criarEstadoVazioDashboard(titulo, texto) {
