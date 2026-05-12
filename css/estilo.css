@@ -612,8 +612,8 @@ body[data-modo-interface="completo"] .modo-essencial-banner {
   .header-mobile { display: flex; }
  
   .sidebar {
-    left: 0;
-    transform: translateX(-100%);
+  left: 0;
+  transform: translateX(-100%);
   }
  
   .sidebar.aberta {
