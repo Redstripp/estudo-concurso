@@ -202,7 +202,7 @@ async function carregarCentralHoje(userId) {
   // 2. Cria a promessa para trazer apenas 50 itens leves para a tela
   const questoesPromessa = db
     .from('questoes')
-    .select('id, criado_em, materias(nome), enunciado') 
+    .select('id, criado_em, materias(nome)') 
     .eq('user_id', userId)
     .eq('status_revisao', 'pendente')
     .order('criado_em', { ascending: false })
@@ -223,7 +223,6 @@ async function carregarCentralHoje(userId) {
 
   const questoes = questoesResp.data || []
   
-  // Restante da lógica original...
   const planoGerado = planoResp.error ? [] : (planoResp.data || [])
   const planejamentoHoje = planejamentoResp.error ? [] : (planejamentoResp.data || [])
   
