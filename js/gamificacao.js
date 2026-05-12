@@ -96,20 +96,24 @@ async function obterResumoStreakGamificacao(userId = window.usuarioAtual?.id) {
 
 async function buscarDatasAtividadeGamificacao(userId) {
   const datas = new Set()
+  const hoje = dataHojeGamificacao()
+  const dataLimite = adicionarDiasGamificacao(hoje, -120)
 
   const [questoesResp, certasResp, configResp] = await Promise.all([
     db
       .from('questoes')
       .select('criado_em')
       .eq('user_id', userId)
+      .gte('criado_em', dataLimite)
       .order('criado_em', { ascending: true })
-      .limit(5000),
+      .limit(2000),
     db
       .from('questoes_certas')
       .select('criado_em')
       .eq('user_id', userId)
+      .gte('criado_em', dataLimite)
       .order('criado_em', { ascending: true })
-      .limit(5000),
+      .limit(2000),
     db
       .from('configuracoes_revisao')
       .select('ultima_revisao_geral')
