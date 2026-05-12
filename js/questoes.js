@@ -1659,8 +1659,17 @@ async function salvarQuestao(opcoes = {}) {
   if (erroQuestao) {
     console.error(erroQuestao)
     mostrarMsgQuestao('Erro ao salvar questão. Execute os SQLs de melhoria e do edital no Supabase se ainda não fez.', 'erro')
-    btn.disabled    = false
-    btn.textContent = '💾 Salvar Questão'
+
+    // Feedback visual de erro no botão
+    const textoOriginalErro = btn.textContent
+    btn.style.background = 'var(--cor-erro)'
+    btn.textContent = '✗ Erro ao salvar'
+
+    setTimeout(() => {
+      btn.style.background = ''
+      btn.textContent = '💾 Salvar Questão'
+    }, 3000)
+
     return
   }
 
@@ -1699,9 +1708,24 @@ async function salvarQuestao(opcoes = {}) {
   gerarBotoesAlternativas(numAlternativas)
   atualizarAssistenteDiagnosticoMinimo()
 
-  btn.disabled    = false
-  btn.textContent = '💾 Salvar Questão'
+  // Feedback visual de sucesso no botão
+  const textoOriginal = btn.textContent
+  btn.style.background = 'var(--cor-sucesso)'
+  btn.textContent = '✓ Salvo!'
 
+  setTimeout(() => {
+    btn.style.background = ''
+    btn.textContent = textoOriginal
+  }, 2000)
+
+  mostrarMsgQuestao('Questão salva com sucesso!', 'sucesso')
+  setTimeout(() => mostrarMsgQuestao('', ''), 3000)
+
+  // Carrega questões e marca o primeiro card como novo
+  await carregarQuestoes(true)
+  if (typeof avaliarConquistasUsuario === 'function') {
+    await avaliarConquistasUsuario({ atualizarPerfil: true })
+  }
   mostrarMsgQuestao('Questão salva com sucesso!', 'sucesso')
   setTimeout(() => mostrarMsgQuestao('', ''), 3000)
 
@@ -1752,7 +1776,7 @@ async function atualizarTelasAposRegistro() {
 // ============================================
 // CARREGAR LISTA DE QUESTÕES
 // ============================================
-async function carregarQuestoes() {
+async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
   const lista       = document.getElementById('lista-questoes')
   const placeholder = document.getElementById('placeholder-questoes')
 
@@ -1801,12 +1825,21 @@ async function carregarQuestoes() {
   )
   const recuperadas = dadosFiltrados.filter(q => normalizarStatusRevisao(q) === 'recuperada')
 
+  let primeiroCardAdicionado = false
+
   if (pendentesErradas.length > 0) {
     lista.appendChild(criarCabecalhoGrupoQuestoes(
       'Erros por falta de domínio',
       `${formatarQuantidadeQuestoes(pendentesErradas.length)} com correção obrigatória`
     ))
-    pendentesErradas.forEach(q => lista.appendChild(criarCardQuestao(q)))
+    pendentesErradas.forEach(q => {
+      const card = criarCardQuestao(q)
+      if (marcarPrimeiroComoNovo && !primeiroCardAdicionado) {
+        card.classList.add('card-questao--novo')
+        primeiroCardAdicionado = true
+      }
+      lista.appendChild(card)
+    })
   }
 
   if (pendentesChutadas.length > 0) {
@@ -1814,7 +1847,14 @@ async function carregarQuestoes() {
       'Acertos no chute e baixa confiança',
       `${formatarQuantidadeQuestoes(pendentesChutadas.length)} para confirmar domínio`
     ))
-    pendentesChutadas.forEach(q => lista.appendChild(criarCardQuestao(q)))
+    pendentesChutadas.forEach(q => {
+      const card = criarCardQuestao(q)
+      if (marcarPrimeiroComoNovo && !primeiroCardAdicionado) {
+        card.classList.add('card-questao--novo')
+        primeiroCardAdicionado = true
+      }
+      lista.appendChild(card)
+    })
   }
 
   if (recuperadas.length > 0) {
@@ -1822,7 +1862,14 @@ async function carregarQuestoes() {
       'Questões recuperadas',
       `${formatarQuantidadeQuestoes(recuperadas.length)} fora da fila crítica`
     ))
-    recuperadas.forEach(q => lista.appendChild(criarCardQuestao(q)))
+    recuperadas.forEach(q => {
+      const card = criarCardQuestao(q)
+      if (marcarPrimeiroComoNovo && !primeiroCardAdicionado) {
+        card.classList.add('card-questao--novo')
+        primeiroCardAdicionado = true
+      }
+      lista.appendChild(card)
+    })
   }
 }
 
