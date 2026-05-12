@@ -828,7 +828,11 @@ function inicializarAtalhoTeclado() {
       const foco = document.activeElement?.tagName?.toLowerCase()
       if (['input', 'textarea', 'select'].includes(foco)) return
       e.preventDefault()
-      abrirCadastroRapido()
+      // Mesma ação do botão flutuante: ir para questões e focar no formulário
+      navegarPara('questoes')
+      setTimeout(() => {
+        document.getElementById('q-enunciado')?.focus()
+      }, 100)
     }
   })
 }
