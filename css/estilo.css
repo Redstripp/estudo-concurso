@@ -269,6 +269,28 @@ button {
  
 .nav-icone { font-size: 1.1rem; }
 
+/* Tooltip no sidebar */
+.nav-item {
+  position: relative;
+}
+.nav-item[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--cor-texto);
+  color: var(--cor-fundo-card);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--raio-borda-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 200;
+  opacity: 0.95;
+}
+
 body[data-modo-interface="essencial"] [data-interface-avancada],
 body[data-modo-interface="essencial"] .interface-avancada {
   display: none !important;
