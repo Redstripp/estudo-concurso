@@ -178,61 +178,82 @@ async function carregarCentralHoje(userId) {
 
   const hoje = dataISOArquivamento(new Date())
   const diaSemanaHoje = calcularDiaSemanaCentralHoje(hoje)
+  
+  // Configuração base
   const configPromessa = typeof obterConfiguracaoRevisaoUsuario === 'function'
     ? obterConfiguracaoRevisaoUsuario(userId)
     : Promise.resolve({ dias_revisao: [6], tempo_revisao_minutos: 60, ultima_revisao_geral: null })
 
-  const [config, questoesResp, planoResp, editalResp, planejamentoResp] = await Promise.all([
+  // --- ETAPA 6: Separação da Contagem (Total Real) dos Dados (Exibição) ---
+  
+  // 1. Cria a promessa apenas para contar (não traz dados, só o número)
+  const countPromessa = db
+    .from('questoes')
+    .select('*', { head: true, count: 'exact' })
+    .eq('user_id', userId)
+    .eq('status_revisao', 'pendente')
+    .then(({ count, error }) => {
+      if (error) throw error
+      return count || 0
+    })
+
+  // 2. Cria a promessa para trazer apenas 50 itens leves para a tela
+  const questoesPromessa = db
+    .from('questoes')
+    .select('id, criado_em, materias(nome), enunciado') 
+    .eq('user_id', userId)
+    .eq('status_revisao', 'pendente')
+    .order('criado_em', { ascending: false })
+    .limit(50)
+
+  // Executa tudo em paralelo junto com as outras consultas originais
+  const [config, totalReal, questoesResp, planoResp, editalResp, planejamentoResp] = await Promise.all([
     configPromessa,
-    db
-      .from('questoes')
-      .select('id, materia_id, edital_topico_id, tipo_questao, status_revisao, revisar_novamente_em, revisao_ultima_data, revisao_total_erros, motivo_erro, nivel_confianca, pegadinha_banca, conceito_chave, como_reconhecer, acao_corretiva, criado_em, materias(nome), edital_topicos(titulo, status, peso)')
-      .eq('user_id', userId)
-      .eq('status_revisao', 'pendente')
-      .order('criado_em', { ascending: false })
-      .limit(700),
-    db
-      .from('plano_dia_materias')
-      .select('id, data, meta_questoes, materias(nome)')
-      .eq('user_id', userId)
-      .eq('data', hoje)
-      .order('criado_em', { ascending: true }),
-    db
-      .from('edital_config')
-      .select('data_prova, concurso_alvo')
-      .eq('user_id', userId)
-      .maybeSingle(),
-    db
-      .from('planejamento_semanal')
-      .select('id, dia_semana, materia_id, meta_questoes, tipo_estudo, materias(nome)')
-      .eq('user_id', userId)
-      .eq('dia_semana', diaSemanaHoje)
-      .order('ordem', { ascending: true })
+    countPromessa,       // <-- Novo: Total real
+    questoesPromessa,    // <-- Modificado: Apenas 50 itens
+    db.from('plano_dia_materias').select('id, data, meta_questoes, materias(nome)').eq('user_id', userId).eq('data', hoje).order('criado_em', { ascending: true }),
+    db.from('edital_config').select('data_prova, concurso_alvo').eq('user_id', userId).maybeSingle(),
+    db.from('planejamento_semanal').select('id, dia_semana, materia_id, meta_questoes, tipo_estudo, materias(nome)').eq('user_id', userId).eq('dia_semana', diaSemanaHoje).order('ordem', { ascending: true })
   ])
 
+  // Tratamento de erro específico da consulta de questões
   if (questoesResp.error) throw criarErroConsultaDashboard('Não foi possível buscar suas revisões pendentes.', questoesResp.error)
 
   const questoes = questoesResp.data || []
+  
+  // Restante da lógica original...
   const planoGerado = planoResp.error ? [] : (planoResp.data || [])
   const planejamentoHoje = planejamentoResp.error ? [] : (planejamentoResp.data || [])
+  
   const plano = planoGerado.length > 0
     ? planoGerado
     : planejamentoHoje.map(item => ({
-      ...item,
-      data: hoje,
-      origem_planejamento: true
-    }))
+        ...item,
+        data: hoje,
+        origem_planejamento: true
+      }))
+      
   const planoOrigem = planoGerado.length > 0
     ? 'plano-dia'
     : planejamentoHoje.length > 0
       ? 'planejamento-semanal'
       : 'vazio'
+      
   const editalConfig = editalResp.error ? null : editalResp.data
+  
   const relatorio = typeof montarRelatorioFilaRevisao === 'function'
     ? montarRelatorioFilaRevisao(questoes, config, editalConfig)
     : montarResumoCentralHojeBasico(questoes)
+
+  // --- ETAPA 6: Sobrescreve os totais pelo valor real do banco ---
+  if (relatorio) {
+    relatorio.totalPendente = totalReal
+    relatorio.totalCiclo = totalReal
+  }
+
   const ehRevisao = typeof ehDiaDeRevisaoHoje === 'function' ? ehDiaDeRevisaoHoje(config) : false
   const proxima = typeof calcularProximaDataRevisao === 'function' ? calcularProximaDataRevisao(config.dias_revisao) : hoje
+  
   const questoesHoje = questoes.filter(q => String(q.criado_em || '').substring(0, 10) === hoje).length
   const errosHoje = questoes.filter(q => String(q.criado_em || '').substring(0, 10) === hoje && normalizarTipoArquivamento(q) !== 'Chutada').length
 
