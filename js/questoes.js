@@ -2675,3 +2675,10 @@ function mostrarMsgAcertos(texto, tipo) {
   msg.textContent = texto
   msg.className   = `msg-materia ${tipo}`
 }
+
+function formularioQuestaoTemConteudo() {
+  const enunciado = document.getElementById('q-enunciado')?.value?.trim()
+  const marcada = alternativaMarcada
+  const correta = alternativaCorreta
+  return Boolean(enunciado || marcada || correta)
+}
