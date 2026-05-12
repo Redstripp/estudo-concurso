@@ -12,6 +12,7 @@ let filaRevisaoInteligenteAtual = []
 let filaRevisaoCompletaAtual = []
 let treinoRevisaoConfianca = ''
 let treinoRevisaoResultados = []
+let modoFocoAtivo = false
 const NIVEIS_CONFIANCA_TREINO_REVISAO = ['Chutei', 'Dúvida', 'Confiante']
 let treinoPegadinhasQuestoes = []
 let treinoPegadinhasIndice = 0
@@ -41,6 +42,8 @@ async function inicializarRevisao() {
       .addEventListener('click', filtrarRevisao)
     document.getElementById('btn-iniciar-treino-revisao')
       .addEventListener('click', iniciarTreinoRevisao)
+    document.getElementById('btn-modo-foco-revisao')
+      ?.addEventListener('click', alternarModoFoco)
     document.getElementById('btn-salvar-config-revisao')
       ?.addEventListener('click', salvarConfiguracaoRevisaoTela)
     document.getElementById('btn-gerar-fila-revisao')
@@ -374,7 +377,14 @@ function calcularIntervaloSemana(semanaAtras) {
 async function filtrarRevisao() {
   const lista      = document.getElementById('lista-revisao')
   const contador   = document.getElementById('revisao-contador')
-
+  const btnModoFoco = document.getElementById('btn-modo-foco-revisao')
+  
+  // Desativar modo foco ao sair do treino
+  if (modoFocoAtivo) desativarModoFoco()
+  
+  // Esconder botão de modo foco quando voltar para lista
+  if (btnModoFoco) btnModoFoco.style.display = 'none'
+  
   lista.innerHTML = '<p class="texto-placeholder">⏳ Buscando questões...</p>'
   contador.style.display = 'none'
 
@@ -1166,19 +1176,25 @@ async function iniciarTreinoFilaInteligente() {
 async function iniciarTreinoRevisao() {
   const lista = document.getElementById('lista-revisao')
   const contador = document.getElementById('revisao-contador')
+  const btnModoFoco = document.getElementById('btn-modo-foco-revisao')
 
   lista.innerHTML = '<p class="texto-placeholder">⏳ Preparando treino...</p>'
   contador.style.display = 'none'
+
+  // Mostrar botão de modo foco durante o treino
+  if (btnModoFoco) btnModoFoco.style.display = 'inline-block'
 
   const { data, error } = await buscarQuestoesRevisao()
 
   if (error) {
     lista.innerHTML = '<p class="texto-placeholder">❌ Erro ao preparar o treino.</p>'
+    if (btnModoFoco) btnModoFoco.style.display = 'none'
     return
   }
 
   if (!data || data.length === 0) {
     lista.innerHTML = '<p class="texto-placeholder">📭 Nenhuma questão pendente para treinar com esses filtros.</p>'
+    if (btnModoFoco) btnModoFoco.style.display = 'none'
     return
   }
 
