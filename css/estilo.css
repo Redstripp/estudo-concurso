@@ -2412,6 +2412,21 @@ select.input-texto option {
   border-radius: 99px;
   transition: width 0.3s ease;
 }
+
+/* Modo Foco na Revisão */
+body.modo-foco .sidebar {
+  display: none;
+}
+
+body.modo-foco .header-mobile {
+  display: none;
+}
+
+body.modo-foco .conteudo-principal {
+  margin-left: 0;
+  max-width: 720px;
+  margin-inline: auto;
+}
  
 .revisao-tags {
   display: flex;
