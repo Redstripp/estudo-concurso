@@ -1,1 +1,5 @@
-Nothing should be ignored based on the provided file changes, as they only include JavaScript source files (.js) which are not build artifacts, dependencies, or temporary files.
+(css/estilo.css, js/revisao.js are source code files, no build artifacts, dependencies, or temp files detected in changes)
+
+```gitignore
+
+```
