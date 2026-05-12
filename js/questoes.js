@@ -1747,13 +1747,6 @@ async function salvarQuestao(opcoes = {}) {
   if (typeof avaliarConquistasUsuario === 'function') {
     await avaliarConquistasUsuario({ atualizarPerfil: true })
   }
-  mostrarMsgQuestao('Questão salva com sucesso!', 'sucesso')
-  setTimeout(() => mostrarMsgQuestao('', ''), 3000)
-
-  carregarQuestoes()
-  if (typeof avaliarConquistasUsuario === 'function') {
-    await avaliarConquistasUsuario({ atualizarPerfil: true })
-  }
   atualizarTelasAposRegistro()
 }
 
