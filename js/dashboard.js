@@ -333,7 +333,7 @@ function criarPainelCentralHoje(dados) {
   const temRevisaoPendente = totalPendente > 0
   const totalMetaDia = dados.plano.reduce((acc, item) => acc + (Number(item.meta_questoes) || 0), 0)
   const metaDiaTexto = dados.plano.length
-    ? `${totalMetaDia} questão${totalMetaDia !== 1 ? 'ões' : ''} previstas no plano`
+    ? `${totalMetaDia} ${totalMetaDia === 1 ? 'questão' : 'questões'} previstas no plano`
     : 'Sem meta configurada para hoje'
   const acaoPrincipal = temRevisaoPendente
     ? { texto: 'Abrir Revisão Inteligente', secao: 'revisao' }
@@ -364,14 +364,14 @@ function criarPainelCentralHoje(dados) {
           <span class="central-hoje-visual-icone">${temRevisaoPendente ? '&#11036;' : '&#9989;'}</span>
           <div>
             <strong>Revisão do dia</strong>
-            <p>${temRevisaoPendente ? `${totalPendente} questão${totalPendente !== 1 ? 'ões' : ''} para revisar` : 'Nada para revisar hoje'}</p>
+            <p>${temRevisaoPendente ? `${totalPendente} ${totalPendente === 1 ? 'questão' : 'questões'} para revisar` : 'Nada para revisar hoje'}</p>
           </div>
         </div>
         <div class="central-hoje-visual-item">
           <span class="central-hoje-visual-icone">&#128221;</span>
           <div>
             <strong>Registro de hoje</strong>
-            <p>${dados.questoesHoje} questão${dados.questoesHoje !== 1 ? 'ões' : ''} registrada${dados.questoesHoje !== 1 ? 's' : ''} hoje</p>
+            <p>${dados.questoesHoje} ${dados.questoesHoje === 1 ? 'questão' : 'questões'} registrada${dados.questoesHoje !== 1 ? 's' : ''} hoje</p>
           </div>
         </div>
         <div class="central-hoje-visual-item">
@@ -452,7 +452,7 @@ function obterProximoPassoCentral(dados) {
   if (diagnosticosAjustar > 0) {
     return {
       titulo: 'Melhorar diagnósticos fracos',
-      texto: `${diagnosticosAjustar} questão${diagnosticosAjustar !== 1 ? 'ões precisam' : ' precisa'} de mais contexto para gerar revisões melhores.`,
+      texto: `${diagnosticosAjustar} ${diagnosticosAjustar === 1 ? 'questão precisa' : 'questões precisam'} de mais contexto para gerar revisões melhores.`,
       acao: 'Completar diagnósticos',
       secao: 'questoes',
       primario: true
@@ -2143,7 +2143,7 @@ async function carregarGrafico(userId) {
         <h3 class="grafico-titulo">Atividade semanal</h3>
         <p>Questões registradas nos últimos 7 dias.</p>
       </div>
-      <span>${totalPeriodo} questão${totalPeriodo !== 1 ? 'ões' : ''}</span>
+      <span>${totalPeriodo} ${totalPeriodo === 1 ? 'questão' : 'questões'}</span>
     </div>
     ${totalPeriodo > 0
       ? `<div class="grafico-svg-wrap">${criarSvgAtividadeSemanalDashboard(dias, labels, valores)}</div>`
