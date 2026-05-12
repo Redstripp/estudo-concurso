@@ -1963,12 +1963,51 @@ function renderizarListaQuestoes(listaParaExibir) {
     return;
   }
 
-  // Reutiliza a lógica de criação dos cards que já existe no seu código
-  // (Ajuste o nome da função abaixo se a sua tiver outro nome, ex: criarCardQuestao)
-  listaParaExibir.forEach(item => {
-    const card = criarCardQuestao(item); 
-    container.appendChild(card);
-  });
+  // Agrupar questões
+  const pendentesErradas = listaParaExibir.filter(q =>
+    normalizarStatusRevisao(q) !== 'recuperada' &&
+    normalizarTipoQuestao(q) === 'Errada'
+  );
+  const pendentesChutadas = listaParaExibir.filter(q =>
+    normalizarStatusRevisao(q) !== 'recuperada' &&
+    normalizarTipoQuestao(q) === 'Chutada'
+  );
+  const recuperadas = listaParaExibir.filter(q => normalizarStatusRevisao(q) === 'recuperada');
+
+  let primeiroCardAdicionado = false;
+
+  if (pendentesErradas.length > 0) {
+    container.appendChild(criarCabecalhoGrupoQuestoes(
+      'Erros por falta de domínio',
+      `${formatarQuantidadeQuestoes(pendentesErradas.length)} com correção obrigatória`
+    ));
+    pendentesErradas.forEach(q => {
+      const card = criarCardQuestao(q);
+      container.appendChild(card);
+    });
+  }
+
+  if (pendentesChutadas.length > 0) {
+    container.appendChild(criarCabecalhoGrupoQuestoes(
+      'Acertos no chute e baixa confiança',
+      `${formatarQuantidadeQuestoes(pendentesChutadas.length)} para confirmar domínio`
+    ));
+    pendentesChutadas.forEach(q => {
+      const card = criarCardQuestao(q);
+      container.appendChild(card);
+    });
+  }
+
+  if (recuperadas.length > 0) {
+    container.appendChild(criarCabecalhoGrupoQuestoes(
+      'Questões recuperadas',
+      `${formatarQuantidadeQuestoes(recuperadas.length)} fora da fila crítica`
+    ));
+    recuperadas.forEach(q => {
+      const card = criarCardQuestao(q);
+      container.appendChild(card);
+    });
+  }
 }
 
 function obterMensagemFiltroCadernoErros() {
