@@ -5809,3 +5809,11 @@ select.input-texto option {
 .card-questao--novo {
   animation: piscar-sucesso 1s ease-out;
 }
+
+.caderno-busca {
+  margin-bottom: 16px;
+}
+.caderno-busca .input-texto {
+  width: 100%;
+  box-sizing: border-box;
+}
