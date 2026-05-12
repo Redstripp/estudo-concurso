@@ -21,7 +21,7 @@ async function carregarDesempenho() {
   const lista       = document.getElementById('lista-sessoes')
   const placeholder = document.getElementById('placeholder-sessoes')
 
-  placeholder.textContent   = '⏳ Carregando histórico...'
+  placeholder.textContent   = '⏳ Buscando seu histórico de sessões...'
   placeholder.style.display = 'block'
   lista.innerHTML           = ''
   lista.appendChild(placeholder)

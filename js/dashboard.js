@@ -11,9 +11,9 @@ async function inicializarDashboard() {
 
   if (centralHoje) centralHoje.innerHTML = criarEstadoVazioDashboard('Central de Hoje', 'Seu resumo do dia aparece aqui assim que os dados forem lidos.')
   if (cards) cards.innerHTML = criarCardsDashboardVazios()
-  if (grafico) grafico.innerHTML = criarEstadoVazioDashboard('Atividade semanal', 'Seu histórico aparece aqui após os primeiros registros.')
+  if (grafico) grafico.innerHTML = criarEstadoVazioDashboard('Atividade semanal', 'Seu gráfico de atividade aparece após o primeiro registro. Comece pelo Caderno de Erros.')
   if (arquivamento) arquivamento.innerHTML = criarEstadoVazioDashboard('Ciclo mensal', 'O ciclo mensal aparece aqui quando houver questões registradas no período.')
-  if (relatorioErros) relatorioErros.innerHTML = criarEstadoVazioDashboard('Treinador de padrões', 'Registre erros com diagnóstico para enxergar padrões recorrentes.')
+  if (relatorioErros) relatorioErros.innerHTML = criarEstadoVazioDashboard('Treinador de padrões', 'Preencha o motivo do erro e o conceito ao registrar questões — o sistema vai mostrar aqui o que está se repetindo.')
 
   const { data, error } = await db.auth.getUser()
 
@@ -2149,7 +2149,7 @@ async function carregarGrafico(userId) {
     </div>
     ${totalPeriodo > 0
       ? `<div class="grafico-svg-wrap">${criarSvgAtividadeSemanalDashboard(dias, labels, valores)}</div>`
-      : '<div class="grafico-placeholder">Seu histórico aparece aqui após os primeiros registros.</div>'}
+      : '<div class="grafico-placeholder">Seu gráfico de atividade aparece após o primeiro registro. Comece pelo Caderno de Erros.</div>'}
   `
 }
 

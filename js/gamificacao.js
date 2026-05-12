@@ -267,7 +267,7 @@ async function carregarConquistasPerfil(opcoes = {}) {
   const container = document.getElementById('perfil-conquistas-grid')
   if (!container || !window.usuarioAtual?.id) return
 
-  container.innerHTML = '<p class="texto-placeholder">Carregando conquistas...</p>'
+  container.innerHTML = '<p class="texto-placeholder">Buscando suas conquistas...</p>'
 
   try {
     if (opcoes.avaliar !== false) {

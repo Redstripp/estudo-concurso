@@ -182,7 +182,7 @@ function inicializarQuestoes() {
 async function carregarMateriasNoSelect() {
   const select = document.getElementById('q-materia')
 
-  select.innerHTML = '<option value="">Carregando...</option>'
+  select.innerHTML = '<option value="">⏳ Buscando opções...</option>'
 
   const { data, error } = await db
     .from('materias')
@@ -1801,7 +1801,7 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
   const lista       = document.getElementById('lista-questoes')
   const placeholder = document.getElementById('placeholder-questoes')
 
-  placeholder.textContent   = '⏳ Carregando questões...'
+  placeholder.textContent   = '⏳ Buscando suas questões...'
   placeholder.style.display = 'block'
 
   const { data, error } = await db
@@ -1820,7 +1820,7 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
   renderizarAcoesCadernoErros(data || [])
 
   if (!data || data.length === 0) {
-    placeholder.textContent   = '❌ Nenhuma questão cadastrada ainda.'
+    placeholder.textContent   = 'Resolva exercícios e registre seu primeiro erro aqui. Quanto mais cedo começar, mais rápido o sistema aprende seus padrões.'
     placeholder.style.display = 'block'
     lista.appendChild(placeholder)
     return
@@ -2267,7 +2267,7 @@ function abrirModalEdicao(q) {
       <div class="campo-form">
         <label class="campo-label">Matéria</label>
         <select id="edit-materia" class="input-texto">
-          <option value="">Carregando...</option>
+          <option value="">⏳ Buscando opções...</option>
         </select>
       </div>
 
