@@ -1139,10 +1139,67 @@ function fecharSidebar() {
 // ============================================
 // LOGOUT ✅ agora é uma função separada
 // ============================================
-function inicializarLogout() {
-  document.getElementById('btn-logout').addEventListener('click', async () => {
+async function realizarLogout() {
+  try {
+    const userId = window.usuarioAtual?.id
+    const hojeInicio = new Date()
+    hojeInicio.setHours(0, 0, 0, 0)
+    const hojeFim = new Date()
+    hojeFim.setHours(23, 59, 59, 999)
+
+    // Buscar questões registradas hoje
+    let questoesHoje = 0
+    let revisoesHoje = 0
+
+    if (userId) {
+      const { data: questoesData } = await db
+        .from('questoes')
+        .select('id', { count: 'exact' })
+        .eq('user_id', userId)
+        .gte('criado_em', hojeInicio.toISOString())
+        .lte('criado_em', hojeFim.toISOString())
+      
+      questoesHoje = questoesData?.length || 0
+
+      // Buscar revisões feitas hoje (tabela de histórico de revisão ou sessões)
+      const { data: sessoesData } = await db
+        .from('sessoes')
+        .select('id', { count: 'exact' })
+        .eq('user_id', userId)
+        .gte('criado_em', hojeInicio.toISOString())
+        .lte('criado_em', hojeFim.toISOString())
+      
+      revisoesHoje = sessoesData?.length || 0
+    }
+
+    // Buscar streak
+    let streakInfo = ''
+    if (typeof obterResumoStreakGamificacao === 'function') {
+      const resumo = await obterResumoStreakGamificacao(userId)
+      const diasSeguidos = resumo?.diasSeguidos || 0
+      streakInfo = `${diasSeguidos}º dia${diasSeguidos !== 1 ? 's' : ''} seguido${diasSeguidos !== 1 ? 's' : ''}`
+    } else {
+      streakInfo = 'sequência em andamento'
+    }
+
+    const mensagem = `Você registrou ${questoesHoje} erro${questoesHoje !== 1 ? 's' : ''} hoje, revisou ${revisoesHoje} questão${revisoesHoje !== 1 ? 'ões' : ''} e está no ${streakInfo}. Deseja sair?`
+    
+    const confirmou = confirm(mensagem)
+    if (!confirmou) return
+
     await db.auth.signOut()
     window.location.href = 'index.html'
+  } catch (erro) {
+    console.error('Erro ao preparar logout:', erro)
+    // Em caso de erro, ainda permite o logout
+    await db.auth.signOut()
+    window.location.href = 'index.html'
+  }
+}
+
+function inicializarLogout() {
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await realizarLogout()
   })
 }
 
