@@ -154,6 +154,16 @@ function inicializarQuestoes() {
       atualizarAssistenteDiagnosticoMinimo()
     })
 
+  const inputBusca = document.getElementById('busca-caderno');
+  if (inputBusca) {
+    inputBusca.addEventListener('input', (e) => {
+      clearTimeout(timeoutBusca);
+      timeoutBusca = setTimeout(() => {
+        filtrarQuestoesBusca(e.target.value);
+      }, 300);
+    });
+  }
+
   inicializarAssistenteDiagnosticoMinimo()
 }
 
