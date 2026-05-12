@@ -134,6 +134,26 @@ function inicializarQuestoes() {
   carregarQuestoes()
   inicializarAcertos() // ✅ adicionado aqui
 
+  // Busca e ordenação no Caderno de Erros
+  const inputBusca = document.getElementById('busca-caderno')
+  const selectOrdenacao = document.getElementById('ordenacao-caderno')
+  
+  if (inputBusca) {
+    let timeoutBusca
+    inputBusca.addEventListener('input', () => {
+      clearTimeout(timeoutBusca)
+      timeoutBusca = setTimeout(() => {
+        filtrarQuestoesCadernoErrosManual()
+      }, 300)
+    })
+  }
+  
+  if (selectOrdenacao) {
+    selectOrdenacao.addEventListener('change', () => {
+      filtrarQuestoesCadernoErrosManual()
+    })
+  }
+
   document.getElementById('btn-salvar-questao')
     .addEventListener('click', salvarQuestao)
 
@@ -1874,16 +1894,75 @@ function renderizarAcoesCadernoErros(questoes) {
 
 function filtrarQuestoesCadernoErros(questoes) {
   const lista = questoes || []
+  
+  // Filtro por busca textual
+  const termoBusca = (document.getElementById('busca-caderno')?.value || '').toLowerCase().trim()
+  
+  // Filtro por ordenação
+  const ordenacao = document.getElementById('ordenacao-caderno')?.value || 'recente'
+  
+  let resultado = lista
+  
+  // Aplica filtro de texto se houver
+  if (termoBusca) {
+    resultado = resultado.filter(q => {
+      const enunciado = (q.enunciado || '').toLowerCase()
+      const materia = (q.materias?.nome || '').toLowerCase()
+      const motivo = (q.motivo_erro || '').toLowerCase()
+      return enunciado.includes(termoBusca) || materia.includes(termoBusca) || motivo.includes(termoBusca)
+    })
+    
+    // Atualiza contador de resultados
+    const infoEl = document.getElementById('resultado-busca-info')
+    if (infoEl) {
+      infoEl.textContent = `${resultado.length} resultado(s) encontrado(s)`
+    }
+  } else {
+    const infoEl = document.getElementById('resultado-busca-info')
+    if (infoEl) infoEl.textContent = ''
+  }
+  
+  // Aplica filtros existentes
   if (filtroCadernoErrosAtual === 'diagnostico') {
-    return lista.filter(q => avaliarQualidadeDiagnosticoQuestao(q).status !== 'completo')
+    resultado = resultado.filter(q => avaliarQualidadeDiagnosticoQuestao(q).status !== 'completo')
   }
   if (filtroCadernoErrosAtual === 'sem-assunto') {
-    return lista.filter(q => !q.edital_topico_id)
+    resultado = resultado.filter(q => !q.edital_topico_id)
   }
   if (filtroCadernoErrosAtual === 'pegadinhas') {
-    return lista.filter(q => String(q.pegadinha_banca || '').trim())
+    resultado = resultado.filter(q => String(q.pegadinha_banca || '').trim())
   }
-  return lista
+  
+  // Aplica ordenação
+  if (ordenacao === 'antigas') {
+    resultado = [...resultado].sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em))
+  } else if (ordenacao === 'materia') {
+    resultado = [...resultado].sort((a, b) => (a.materias?.nome || '').localeCompare(b.materias?.nome || ''))
+  } else if (ordenacao === 'diagnostico') {
+    resultado = [...resultado].sort((a, b) => {
+      const qualA = avaliarQualidadeDiagnosticoQuestao(a).status
+      const qualB = avaliarQualidadeDiagnosticoQuestao(b).status
+      const ordem = { 'incompleto': 0, 'fraco': 1, 'completo': 2 }
+      return ordem[qualA] - ordem[qualB]
+    })
+  } else if (ordenacao === 'revisao') {
+    resultado = [...resultado].sort((a, b) => {
+      if (!a.revisar_novamente_em && !b.revisar_novamente_em) return 0
+      if (!a.revisar_novamente_em) return 1
+      if (!b.revisar_novamente_em) return -1
+      return new Date(a.revisar_novamente_em) - new Date(b.revisar_novamente_em)
+    })
+  } else {
+    // recente (padrão)
+    resultado = [...resultado].sort((a, b) => new Date(b.criado_em) - new Date(a.criado_em))
+  }
+  
+  return resultado
+}
+
+// Função chamada manualmente pelos eventos de busca/ordenação
+function filtrarQuestoesCadernoErrosManual() {
+  carregarQuestoes()
 }
 
 function obterMensagemFiltroCadernoErros() {
