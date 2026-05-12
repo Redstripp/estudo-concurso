@@ -32,9 +32,7 @@ node_modules/
 *.swp
 *.swo
 
-# System files
-.DS_Store
-Thumbs.db
+```gitignore
 
 # Coverage
 coverage/
