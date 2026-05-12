@@ -633,7 +633,7 @@ async function gerarSimuladoPorAssunto() {
     <div class="simulado-revisao-resumo">
       <div>
         <h3 class="simulado-revisao-titulo">Simulado por assunto</h3>
-        <p class="simulado-revisao-subtitulo">${questoes.length} questão${questoes.length !== 1 ? 'ões' : ''} do edital</p>
+        <p class="simulado-revisao-subtitulo">${questoes.length} ${questoes.length === 1 ? 'questão' : 'questões'} do edital</p>
       </div>
     </div>
     <div class="simulado-revisao-lista"></div>
@@ -719,7 +719,7 @@ function renderizarRelatorioProntoProva(relatorio) {
       </div>
       <div class="relatorio-prova-bloco"><h4>Edital</h4><p>${relatorio.dominio}% dos assuntos dominados.</p></div>
       <div class="relatorio-prova-bloco"><h4>Desempenho</h4><p>${relatorio.aproveitamento}% de aproveitamento geral estimado.</p></div>
-      <div class="relatorio-prova-bloco"><h4>Revisões</h4><p>${relatorio.vencidas} questão${relatorio.vencidas !== 1 ? 'ões' : ''} vencida${relatorio.vencidas !== 1 ? 's' : ''}.</p></div>
+      <div class="relatorio-prova-bloco"><h4>Revisões</h4><p>${relatorio.vencidas} ${relatorio.vencidas === 1 ? 'questão vencida' : 'questões vencidas'}.</p></div>
       <div class="relatorio-prova-bloco"><h4>Lei Seca</h4><p>${relatorio.leiPendentes} item${relatorio.leiPendentes !== 1 ? 's' : ''} pendente${relatorio.leiPendentes !== 1 ? 's' : ''}.</p></div>
     </div>
     <div class="relatorio-prova-bloco">

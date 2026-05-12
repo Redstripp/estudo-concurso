@@ -453,7 +453,7 @@ function criarCardTopicoEdital(topico, stats) {
       <h4>${escaparHtmlSeguro(topico.titulo)}</h4>
       ${topico.observacoes ? `<p class="edital-topico-observacao">${escaparHtmlSeguro(topico.observacoes)}</p>` : ''}
       <div class="edital-topico-metricas">
-        <span>${stats.total} questão${stats.total !== 1 ? 'ões' : ''}</span>
+        <span>${stats.total} ${stats.total === 1 ? 'questão' : 'questões'}</span>
         <span>${stats.pendentes} pendente${stats.pendentes !== 1 ? 's' : ''}</span>
         <span>${percentualRecuperacao === null ? '-' : `${percentualRecuperacao}%`} recuperação</span>
         <span>Última revisão: ${escaparHtmlSeguro(ultimaRevisao)}</span>
