@@ -164,6 +164,15 @@ function inicializarQuestoes() {
     });
   }
 
+  const selectOrdenacao = document.getElementById('ordenacao-caderno');
+  if (selectOrdenacao) {
+    selectOrdenacao.addEventListener('change', () => {
+      // Reaplica o filtro atual com a nova ordenação
+      const termo = document.getElementById('busca-caderno')?.value || '';
+      filtrarQuestoesBusca(termo);
+    });
+  }
+
   inicializarAssistenteDiagnosticoMinimo()
 }
 
@@ -1996,11 +2005,50 @@ function filtrarQuestoesBusca(termo) {
            materia.includes(termoNormalizado);
   });
 
-  renderizarListaQuestoes(filtradas);
+  const criterio = document.getElementById('ordenacao-caderno')?.value || 'recente';
+  const ordenadas = ordenarQuestoes(filtradas, criterio);
+  renderizarListaQuestoes(ordenadas);
   
   if (infoElemento) {
     infoElemento.textContent = `${filtradas.length} resultado(s) encontrado(s)`;
   }
+}
+
+function ordenarQuestoes(lista, criterio) {
+  return [...lista].sort((a, b) => {
+    const qa = a.questoes || a;
+    const qb = b.questoes || b;
+    const matA = (a.materias?.nome || '').toLowerCase();
+    const matB = (b.materias?.nome || '').toLowerCase();
+
+    switch (criterio) {
+      case 'antigas':
+        return new Date(qa.criado_em) - new Date(qb.criado_em);
+      
+      case 'materia':
+        return matA.localeCompare(matB);
+      
+      case 'diagnostico':
+        // Usa utilitário existente (assumindo que está global ou importado)
+        const scoreA = typeof avaliarQualidadeDiagnosticoQuestao === 'function' 
+          ? avaliarQualidadeDiagnosticoQuestao(qa) 
+          : 0;
+        const scoreB = typeof avaliarQualidadeDiagnosticoQuestao === 'function' 
+          ? avaliarQualidadeDiagnosticoQuestao(qb) 
+          : 0;
+        return scoreA - scoreB; // Menor score (pior) primeiro
+      
+      case 'revisao':
+        if (!qa.revisar_novamente_em && !qb.revisar_novamente_em) return 0;
+        if (!qa.revisar_novamente_em) return 1; // Nulos no fim
+        if (!qb.revisar_novamente_em) return -1;
+        return new Date(qa.revisar_novamente_em) - new Date(qb.revisar_novamente_em);
+      
+      case 'recente':
+      default:
+        return new Date(qb.criado_em) - new Date(qa.criado_em);
+    }
+  });
 }
 
 function criarCabecalhoGrupoQuestoes(titulo, resumo) {
