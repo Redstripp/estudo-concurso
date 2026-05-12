@@ -822,6 +822,17 @@ function inicializarAcaoFlutuante() {
 }
 
 function navegarPara(secao) {
+  // Verifica se há formulário preenchido na seção de questões antes de navegar
+  const secaoAtual = localStorage.getItem(CHAVE_SECAO_ATUAL)
+  if (secaoAtual === 'questoes' && typeof formularioQuestaoTemConteudo === 'function') {
+    if (formularioQuestaoTemConteudo()) {
+      const confirmacao = confirm(
+        'Você tem um registro em andamento. Se sair agora, os dados serão perdidos.\n\nDeseja sair mesmo assim?'
+      )
+      if (!confirmacao) return
+    }
+  }
+
   let secaoDestino = secaoExiste(secao) ? secao : 'dashboard'
   if (obterModoInterfaceAtual() === 'essencial' && SECOES_INTERFACE_AVANCADA.has(secaoDestino)) {
     secaoDestino = 'dashboard'
