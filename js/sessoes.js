@@ -43,12 +43,14 @@ async function carregarDesempenho() {
     .from('questoes')
     .select('sessao_id, materia_id, materias(nome)')
     .eq('user_id', window.usuarioAtual.id)
+    .limit(500)
 
   // Busca questões certas (com id para poder editar/excluir)
   const { data: certas } = await db
     .from('questoes_certas')
     .select('id, sessao_id, materia_id, quantidade, materias(nome)')
     .eq('user_id', window.usuarioAtual.id)
+    .limit(500)
 
   // Agrupa por sessão
   const erradasPorSessao = {}
