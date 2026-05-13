@@ -671,6 +671,25 @@ body[data-modo-interface="completo"] .modo-essencial-banner {
   .aviso-arquivamento-acoes .btn-secundario {
     width: 100%;
   }
+
+  /* Responsividade para cards de matéria */
+  .lista-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .card-materia {
+    padding: 16px;
+  }
+
+  .card-materia-icone {
+    font-size: 1.5rem;
+    min-width: 40px;
+    height: 40px;
+  }
+
+  .card-materia-nome {
+    font-size: 0.95rem;
+  }
 }
  
 /* ================================
@@ -1198,9 +1217,125 @@ select.input-texto option {
    LISTA DE CARDS (matérias)
 ================================ */
 .lista-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 8px 0;
+}
+
+/* Card de Matéria - Design Moderno */
+.card-materia {
+  background: var(--cor-fundo-card);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-borda);
+  padding: 20px;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: var(--sombra-card);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+}
+
+.card-materia::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--cor-primaria), var(--cor-secundaria));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card-materia:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+  border-color: var(--cor-primaria);
+}
+
+.card-materia:hover::before {
+  opacity: 1;
+}
+
+.card-materia-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.card-materia-icone {
+  font-size: 2rem;
+  min-width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--cor-primaria-suave), var(--cor-secundaria-suave));
+  border-radius: 12px;
+  transition: transform 0.3s ease;
+}
+
+.card-materia:hover .card-materia-icone {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.card-materia-nome {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--cor-texto-principal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.3s ease;
+}
+
+.card-materia:hover .card-materia-nome {
+  color: var(--cor-primaria);
+}
+
+/* Botão de excluir matéria */
+.btn-excluir {
+  background: transparent;
+  border: none;
+  font-size: 1.3rem;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.btn-excluir:hover {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.1);
+  transform: scale(1.1);
+}
+
+.btn-excluir:active {
+  transform: scale(0.95);
+}
+
+/* Placeholder estilizado */
+.texto-placeholder {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--cor-texto-suave);
+  font-size: 1.1rem;
+  background: var(--cor-fundo-card);
+  border: 2px dashed var(--cor-borda);
+  border-radius: var(--raio-borda);
+  grid-column: 1 / -1;
 }
  
 /* ================================
