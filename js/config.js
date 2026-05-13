@@ -6,3 +6,4 @@ window.ADMIN_EMAILS = ['ewertonc29@gmail.com']
 
 const { createClient } = supabase
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+window.db = db
