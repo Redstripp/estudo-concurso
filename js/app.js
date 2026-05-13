@@ -1189,7 +1189,7 @@ async function realizarLogout() {
     }
 
     // Corrigido: "questões" em vez de "questãoões"
-    const mensagem = `Você registrou ${questoesHoje} erro${questoesHoje !== 1 ? 's' : ''} hoje, revisou ${revisoesHoje} questão${revisoesHoje !== 1 ? 'ões' : ''} e está no ${streakInfo}.`
+    const mensagem = `Você registrou ${questoesHoje} erro${questoesHoje !== 1 ? 's' : ''} hoje, revisou ${revisoesHoje === 1 ? 'uma questão' : `${revisoesHoje} questões`} e está no ${streakInfo}.`
     
     // Armazena dados para o modal e exibe
     logoutPendente = { mensagem }
