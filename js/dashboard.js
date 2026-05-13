@@ -572,22 +572,6 @@ async function carregarArquivamentoMensal(userId) {
 
   container.innerHTML = criarPainelArquivamentoMensal(periodo, resumo, resumoSalvo, protecaoBanco)
 
-<<<<<<< erro-maximum-call-stack-size-exceeded-95724
-  // Usa delegação de eventos para os botões do arquivamento mensal
-  if (!container.dataset.listenersArquivamento) {
-    container.dataset.listenersArquivamento = 'true'
-    container.addEventListener('click', (e) => {
-      const btnPdf = e.target.closest('#btn-gerar-pdf-mensal')
-      const btnArquivar = e.target.closest('#btn-arquivar-limpar-mensal')
-      
-      if (btnPdf) {
-        gerarPdfArquivamentoMensal(userId, periodo)
-      }
-      if (btnArquivar) {
-        arquivarELimparMes(userId, periodo)
-      }
-    })
-=======
   // Remove listeners antigos antes de adicionar novos
   const btnPdf = container.querySelector('#btn-gerar-pdf-mensal')
   if (btnPdf) {
@@ -601,7 +585,6 @@ async function carregarArquivamentoMensal(userId) {
     const novoBtnArquivar = btnArquivar.cloneNode(false)
     btnArquivar.parentNode.replaceChild(novoBtnArquivar, btnArquivar)
     novoBtnArquivar.addEventListener('click', () => arquivarELimparMes(userId, periodo))
->>>>>>> main
   }
 }
 
@@ -1477,17 +1460,6 @@ async function carregarRelatorioErrosRecorrentes(userId) {
   const relatorio = montarRelatorioErrosRecorrentes(data || [])
   container.innerHTML = criarPainelRelatorioErrosRecorrentes(relatorio)
 
-<<<<<<< erro-maximum-call-stack-size-exceeded-95724
-  // Usa delegação de eventos para os botões do relatório de erros
-  if (!container.dataset.listenersRelatorio) {
-    container.dataset.listenersRelatorio = 'true'
-    container.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-dashboard-atalho]')
-      if (btn) {
-        const secao = btn.dataset.dashboardAtalho
-        if (typeof navegarPara === 'function') navegarPara(secao)
-      }
-=======
   // Remove listeners antigos antes de adicionar novos
   container.querySelectorAll('[data-dashboard-atalho]').forEach(btn => {
     const novoBtn = btn.cloneNode(false)
@@ -1498,9 +1470,8 @@ async function carregarRelatorioErrosRecorrentes(userId) {
     btn.addEventListener('click', () => {
       const secao = btn.dataset.dashboardAtalho
       if (typeof navegarPara === 'function') navegarPara(secao)
->>>>>>> main
     })
-  }
+  })
 }
 
 function montarRelatorioErrosRecorrentes(questoes) {
