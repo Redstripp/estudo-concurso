@@ -134,15 +134,35 @@ function formatarData(data) {
   return `${dia}/${mes}/${ano}`
 }
 
-// Exportações para testes
-export { 
-  escaparHtmlSeguro, 
-  formatarQuantidadeQuestoes, 
-  avaliarQualidadeDiagnosticoQuestao,
-  valorDiagnostico,
-  campoDiagnosticoPreenchido,
-  criarResumoQualidadeDiagnostico,
-  criarAlertaCadastroFracoQuestao,
-  calcularPorcentagem,
-  formatarData
+// Exportações apenas para testes (Vitest)
+// No navegador, essas linhas são ignoradas pois o script é carregado como tradicional
+if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  // Ambiente Node/Vitest
+  const exportsObj = {
+    escaparHtmlSeguro,
+    formatarQuantidadeQuestoes,
+    avaliarQualidadeDiagnosticoQuestao,
+    valorDiagnostico,
+    campoDiagnosticoPreenchido,
+    criarResumoQualidadeDiagnostico,
+    criarAlertaCadastroFracoQuestao,
+    calcularPorcentagem,
+    formatarData
+  }
+  
+  // Compatibilidade com ES modules no Vitest
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = exportsObj
+  }
+  
+  // Para Vitest com type: module
+  globalThis.escaparHtmlSeguro = escaparHtmlSeguro
+  globalThis.formatarQuantidadeQuestoes = formatarQuantidadeQuestoes
+  globalThis.avaliarQualidadeDiagnosticoQuestao = avaliarQualidadeDiagnosticoQuestao
+  globalThis.valorDiagnostico = valorDiagnostico
+  globalThis.campoDiagnosticoPreenchido = campoDiagnosticoPreenchido
+  globalThis.criarResumoQualidadeDiagnostico = criarResumoQualidadeDiagnostico
+  globalThis.criarAlertaCadastroFracoQuestao = criarAlertaCadastroFracoQuestao
+  globalThis.calcularPorcentagem = calcularPorcentagem
+  globalThis.formatarData = formatarData
 }
