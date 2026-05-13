@@ -266,9 +266,18 @@ async function carregarCentralHoje(userId) {
     editalConfig
   })
 
-  container.querySelectorAll('[data-central-atalho]').forEach(btn => {
-    btn.replaceWith(btn.cloneNode(true))
-  })
+  // Remove listeners antigos clonando os botões sem seus eventos
+  const containerCentral = document.getElementById('dashboard-central-hoje')
+  if (containerCentral) {
+    containerCentral.querySelectorAll('[data-central-atalho]').forEach(btn => {
+      const novoBtn = btn.cloneNode(false)
+      btn.parentNode.replaceChild(novoBtn, btn)
+    })
+    containerCentral.querySelectorAll('[data-central-gerar-plano]').forEach(btn => {
+      const novoBtn = btn.cloneNode(false)
+      btn.parentNode.replaceChild(novoBtn, btn)
+    })
+  }
 
   container.querySelectorAll('[data-central-atalho]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -278,10 +287,6 @@ async function carregarCentralHoje(userId) {
         setTimeout(() => gerarFilaRevisaoInteligente({ manual: true }), 150)
       }
     })
-  })
-
-  container.querySelectorAll('[data-central-gerar-plano]').forEach(btn => {
-    btn.replaceWith(btn.cloneNode(true))
   })
 
   container.querySelectorAll('[data-central-gerar-plano]').forEach(btn => {
