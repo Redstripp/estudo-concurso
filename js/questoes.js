@@ -1829,6 +1829,11 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
     return
   }
 
+  if (!placeholder) {
+    console.error('Elemento placeholder do caderno de erros não encontrado no DOM.')
+    return
+  }
+
   placeholder.style.display = 'none'
   lista.appendChild(placeholder)
   questoesEmMemoria = data
