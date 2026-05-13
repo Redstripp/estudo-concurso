@@ -2714,3 +2714,30 @@ function formularioQuestaoTemConteudo() {
   const correta = alternativaCorreta
   return Boolean(enunciado || marcada || correta)
 }
+
+// Exportações apenas para testes (Vitest)
+// No navegador, essas linhas são ignoradas pois o script é carregado como tradicional
+if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  // Ambiente Node/Vitest
+  const exportsObj = {
+    escaparHtmlQuestao,
+    CONFIG_TIPO_QUESTAO,
+    normalizarTipoQuestao,
+    normalizarStatusRevisao,
+    questaoChutadaAcertada,
+    normalizarTextoDuplicidade
+  }
+  
+  // Compatibilidade com ES modules no Vitest
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = exportsObj
+  }
+  
+  // Para Vitest com type: module
+  globalThis.escaparHtmlQuestao = escaparHtmlQuestao
+  globalThis.CONFIG_TIPO_QUESTAO = CONFIG_TIPO_QUESTAO
+  globalThis.normalizarTipoQuestao = normalizarTipoQuestao
+  globalThis.normalizarStatusRevisao = normalizarStatusRevisao
+  globalThis.questaoChutadaAcertada = questaoChutadaAcertada
+  globalThis.normalizarTextoDuplicidade = normalizarTextoDuplicidade
+}

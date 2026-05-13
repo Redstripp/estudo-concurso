@@ -407,3 +407,28 @@ function adicionarDiasGamificacao(dataISO, dias) {
   data.setDate(data.getDate() + dias)
   return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
 }
+
+// Exportações apenas para testes (Vitest)
+// No navegador, essas linhas são ignoradas pois o script é carregado como tradicional
+if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  // Ambiente Node/Vitest
+  const exportsObj = {
+    dataHojeGamificacao,
+    adicionarDiasGamificacao,
+    calcularRecordeGamificacao,
+    contarSequenciaGamificacao,
+    adicionarDataNormalizadaGamificacao
+  }
+  
+  // Compatibilidade com ES modules no Vitest
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = exportsObj
+  }
+  
+  // Para Vitest com type: module
+  globalThis.dataHojeGamificacao = dataHojeGamificacao
+  globalThis.adicionarDiasGamificacao = adicionarDiasGamificacao
+  globalThis.calcularRecordeGamificacao = calcularRecordeGamificacao
+  globalThis.contarSequenciaGamificacao = contarSequenciaGamificacao
+  globalThis.adicionarDataNormalizadaGamificacao = adicionarDataNormalizadaGamificacao
+}
