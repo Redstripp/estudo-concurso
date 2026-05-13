@@ -1874,11 +1874,11 @@ async function carregarCardsDashboard(userId) {
         <strong>${totalMaterias}</strong>
         <small>matérias estudadas</small>
       </div>
-      <button class="dash-mini-card dash-mini-card--clicavel" type="button" data-dashboard-atalho="revisao">
+      <div class="dash-mini-card">
         <span>&#9888;&#65039;</span>
         <strong>${escaparHtmlSeguro(materiaCampea)}</strong>
         <small>matéria com mais revisão</small>
-      </button>
+      </div>
     </div>
   `
 
