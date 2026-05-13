@@ -454,7 +454,10 @@ function dataISOHoje() {
 }
 
 function dataISO(data) {
-  return dataISO(data)
+  if (!data) return dataHoje()
+  const d = new Date(data)
+  if (isNaN(d.getTime())) return dataHoje()
+  return d.toISOString().split('T')[0]
 }
 
 function mostrarMsgPlano(texto, tipo) {
