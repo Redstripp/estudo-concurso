@@ -144,7 +144,12 @@ function mostrarErroDashboard(containerId, titulo, mensagem, detalhe) {
     </div>
   `
 
-  container.querySelector('button').addEventListener('click', inicializarDashboard)
+  const btn = container.querySelector('button')
+  if (btn) {
+    const novoBtn = btn.cloneNode(false)
+    btn.parentNode.replaceChild(novoBtn, btn)
+    novoBtn.addEventListener('click', inicializarDashboard)
+  }
 }
 
 function criarErroConsultaDashboard(mensagem, erroOriginal) {
@@ -266,9 +271,10 @@ async function carregarCentralHoje(userId) {
     editalConfig
   })
 
-  // Remove listeners antigos clonando os botões sem seus eventos
+  // Gerencia listeners dos botões da Central de Hoje
   const containerCentral = document.getElementById('dashboard-central-hoje')
   if (containerCentral) {
+    // Remove listeners antigos clonando os botões SEM seus eventos
     containerCentral.querySelectorAll('[data-central-atalho]').forEach(btn => {
       const novoBtn = btn.cloneNode(false)
       btn.parentNode.replaceChild(novoBtn, btn)
@@ -277,29 +283,26 @@ async function carregarCentralHoje(userId) {
       const novoBtn = btn.cloneNode(false)
       btn.parentNode.replaceChild(novoBtn, btn)
     })
+
+    // Adiciona novos listeners nos botões limpos
+    containerCentral.querySelectorAll('[data-central-atalho]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const destino = btn.dataset.centralAtalho
+        if (typeof navegarPara === 'function') navegarPara(destino)
+        if (destino === 'revisao' && typeof gerarFilaRevisaoInteligente === 'function') {
+          setTimeout(() => gerarFilaRevisaoInteligente({ manual: true }), 150)
+        }
+      })
+    })
+
+    containerCentral.querySelectorAll('[data-central-gerar-plano]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (typeof gerarPlanoDiaPeloPlanejamento !== 'function') return
+        await gerarPlanoDiaPeloPlanejamento(hoje)
+        await carregarCentralHoje(userId)
+      })
+    })
   }
-
-  container.querySelectorAll('[data-central-atalho]').forEach(btn => {
-    btn.replaceWith(btn.cloneNode(true))
-  })
-
-  container.querySelectorAll('[data-central-atalho]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const destino = btn.dataset.centralAtalho
-      if (typeof navegarPara === 'function') navegarPara(destino)
-      if (destino === 'revisao' && typeof gerarFilaRevisaoInteligente === 'function') {
-        setTimeout(() => gerarFilaRevisaoInteligente({ manual: true }), 150)
-      }
-    })
-  })
-
-  container.querySelectorAll('[data-central-gerar-plano]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (typeof gerarPlanoDiaPeloPlanejamento !== 'function') return
-      await gerarPlanoDiaPeloPlanejamento(hoje)
-      await carregarCentralHoje(userId)
-    })
-  })
 }
 
 function calcularDiaSemanaCentralHoje(dataISO) {
@@ -575,11 +578,20 @@ async function carregarArquivamentoMensal(userId) {
 
   container.innerHTML = criarPainelArquivamentoMensal(periodo, resumo, resumoSalvo, protecaoBanco)
 
-  container.querySelector('#btn-gerar-pdf-mensal')
-    ?.addEventListener('click', () => gerarPdfArquivamentoMensal(userId, periodo))
+  // Remove listeners antigos antes de adicionar novos
+  const btnPdf = container.querySelector('#btn-gerar-pdf-mensal')
+  if (btnPdf) {
+    const novoBtnPdf = btnPdf.cloneNode(false)
+    btnPdf.parentNode.replaceChild(novoBtnPdf, btnPdf)
+    novoBtnPdf.addEventListener('click', () => gerarPdfArquivamentoMensal(userId, periodo))
+  }
 
-  container.querySelector('#btn-arquivar-limpar-mensal')
-    ?.addEventListener('click', () => arquivarELimparMes(userId, periodo))
+  const btnArquivar = container.querySelector('#btn-arquivar-limpar-mensal')
+  if (btnArquivar) {
+    const novoBtnArquivar = btnArquivar.cloneNode(false)
+    btnArquivar.parentNode.replaceChild(novoBtnArquivar, btnArquivar)
+    novoBtnArquivar.addEventListener('click', () => arquivarELimparMes(userId, periodo))
+  }
 }
 
 async function obterPeriodoArquivamentoMensal(userId) {
@@ -1454,6 +1466,12 @@ async function carregarRelatorioErrosRecorrentes(userId) {
   const relatorio = montarRelatorioErrosRecorrentes(data || [])
   container.innerHTML = criarPainelRelatorioErrosRecorrentes(relatorio)
 
+  // Remove listeners antigos antes de adicionar novos
+  container.querySelectorAll('[data-dashboard-atalho]').forEach(btn => {
+    const novoBtn = btn.cloneNode(false)
+    btn.parentNode.replaceChild(novoBtn, btn)
+  })
+
   container.querySelectorAll('[data-dashboard-atalho]').forEach(btn => {
     btn.addEventListener('click', () => {
       const secao = btn.dataset.dashboardAtalho
@@ -1859,16 +1877,26 @@ async function carregarCardsDashboard(userId) {
   `
 
   container.querySelectorAll('[data-dashboard-atalho]').forEach(btn => {
+    const novoBtn = btn.cloneNode(false)
+    btn.parentNode.replaceChild(novoBtn, btn)
+  })
+
+  container.querySelectorAll('[data-dashboard-atalho]').forEach(btn => {
     btn.addEventListener('click', () => {
       const secao = btn.dataset.dashboardAtalho
       if (typeof navegarPara === 'function') navegarPara(secao)
     })
   })
 
-  container.querySelector('[data-dashboard-ocultar-checklist]')?.addEventListener('click', () => {
-    localStorage.setItem(CHAVE_CHECKLIST_INICIAL_OCULTO, '1')
-    inicializarDashboard()
-  })
+  const btnOcultar = container.querySelector('[data-dashboard-ocultar-checklist]')
+  if (btnOcultar) {
+    const novoBtn = btnOcultar.cloneNode(false)
+    btnOcultar.parentNode.replaceChild(novoBtn, btnOcultar)
+    novoBtn.addEventListener('click', () => {
+      localStorage.setItem(CHAVE_CHECKLIST_INICIAL_OCULTO, '1')
+      inicializarDashboard()
+    })
+  }
 }
 
 function obterClasseAproveitamentoDashboard(aproveitamento) {
