@@ -1,10 +1,16 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import Estado from '../js/estado.js'
+
+// Importação compatível com ES modules
+let Estado
+const modulo = await import('../js/estado.js')
+Estado = modulo.default || modulo.Estado || modulo
 
 describe('Estado Global Centralizado', () => {
   beforeEach(() => {
     // Resetar estado antes de cada teste
-    Estado.resetAll()
+    if (Estado && typeof Estado.resetAll === 'function') {
+      Estado.resetAll()
+    }
   })
 
   describe('Estrutura do Estado', () => {

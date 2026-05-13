@@ -203,21 +203,18 @@ Estado.reset = function(modulo) {
 
 Estado.resetAll = function() {
   for (const modulo in this) {
-    if (typeof this[modulo] === 'object' && !Array.isArray(this[modulo])) {
+    if (typeof this[modulo] === 'object' && !Array.isArray(this[modulo]) && 
+        modulo !== 'resetAll' && modulo !== 'get' && modulo !== 'set' && modulo !== 'reset') {
       this.reset(modulo)
     }
   }
 }
 
 // Exportações para testes (Vitest) e navegador
-if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
-  // Ambiente Node/Vitest
-  if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Estado
-  }
-  
-  globalThis.Estado = Estado
+if (typeof window !== 'undefined') {
+  // Ambiente navegador
+  window.Estado = Estado
 }
 
-// Exportação ES6 para Vitest com type: module
+// Também exporta como default para ES modules
 export default Estado
