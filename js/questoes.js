@@ -1886,27 +1886,31 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
   }
 }
 
+// Variável para controlar se o listener de delegação já foi adicionado
+let listenerDelegacaoAdicionado = false
+
+
 function renderizarAcoesCadernoErros(questoes) {
   const container = document.getElementById('caderno-erros-acoes')
   if (!container) return
-
+  
   const lista = questoes || []
   const semAssunto = lista.filter(q => !q.edital_topico_id).length
   const diagnosticoReforcar = lista.filter(q => avaliarQualidadeDiagnosticoQuestao(q).status !== 'completo').length
   const comPegadinha = lista.filter(q => String(q.pegadinha_banca || '').trim()).length
-
+  
   if (lista.length === 0) {
     container.innerHTML = ''
     return
   }
-
+  
   const filtros = [
     ['todos', 'Todas', lista.length],
     ['diagnostico', 'Completar diagnóstico', diagnosticoReforcar],
     ['sem-assunto', 'Sem assunto do edital', semAssunto],
     ['pegadinhas', 'Com pegadinhas', comPegadinha]
   ]
-
+  
   container.innerHTML = `
     <div class="caderno-erros-acoes-topo">
       <div>
@@ -1923,19 +1927,19 @@ function renderizarAcoesCadernoErros(questoes) {
       `).join('')}
     </div>
   `
-
-  // Remover listeners antigos para evitar duplicação e loop infinito
-  const novoContainer = container.cloneNode(true)
-  container.parentNode.replaceChild(novoContainer, container)
   
-  novoContainer.querySelectorAll('[data-filtro-caderno]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      filtroCadernoErrosAtual = btn.dataset.filtroCaderno || 'todos'
-      carregarQuestoes()
+  // Usa delegação de eventos: adiciona o listener apenas UMA vez no container
+  if (!listenerDelegacaoAdicionado) {
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-filtro-caderno]')
+      if (btn) {
+        filtroCadernoErrosAtual = btn.dataset.filtroCaderno || 'todos'
+        carregarQuestoes()
+      }
     })
-  })
+    listenerDelegacaoAdicionado = true
+  }
 }
-
 function filtrarQuestoesCadernoErros(questoes) {
   const lista = questoes || []
   if (filtroCadernoErrosAtual === 'diagnostico') {
