@@ -1,54 +1,13 @@
 import { describe, it, expect } from 'vitest'
 
-// Funções extraídas de js/gamificacao.js para teste puro
-function dataHojeGamificacao() {
-  const agora = new Date()
-  return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`
-}
-
-function adicionarDiasGamificacao(dataISO, dias) {
-  const data = new Date(`${dataISO}T12:00:00`)
-  data.setDate(data.getDate() + dias)
-  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
-}
-
-function calcularRecordeGamificacao(datas) {
-  const ordenadas = [...new Set(datas)].sort()
-  if (ordenadas.length === 0) return 0
-
-  let recorde = 1
-  let atual = 1
-
-  for (let i = 1; i < ordenadas.length; i += 1) {
-    const anterior = ordenadas[i - 1]
-    const esperada = adicionarDiasGamificacao(anterior, 1)
-    if (ordenadas[i] === esperada) {
-      atual += 1
-    } else {
-      atual = 1
-    }
-    recorde = Math.max(recorde, atual)
-  }
-
-  return recorde
-}
-
-function contarSequenciaGamificacao(conjunto, dataBase) {
-  let total = 0
-  let data = dataBase
-
-  while (conjunto.has(data)) {
-    total += 1
-    data = adicionarDiasGamificacao(data, -1)
-  }
-
-  return total
-}
-
-function adicionarDataNormalizadaGamificacao(conjunto, valor) {
-  const data = String(valor || '').substring(0, 10)
-  if (/^\d{4}-\d{2}-\d{2}$/.test(data)) conjunto.add(data)
-}
+// Importa as funções reais de js/gamificacao.js via globalThis
+const {
+  dataHojeGamificacao,
+  adicionarDiasGamificacao,
+  calcularRecordeGamificacao,
+  contarSequenciaGamificacao,
+  adicionarDataNormalizadaGamificacao
+} = globalThis
 
 describe('calcularRecordeGamificacao', () => {
   it('Array vazio deve retornar 0', () => {

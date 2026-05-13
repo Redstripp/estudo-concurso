@@ -1,74 +1,14 @@
 import { describe, it, expect } from 'vitest'
 
-// Funções extraídas de js/questoes.js para teste puro
-function escaparHtmlQuestao(valor) {
-  return String(valor ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;')
-}
-
-const CONFIG_TIPO_QUESTAO = {
-  Errada: {
-    rotulo: 'Errada realmente',
-    motivos: [
-      'A diagnosticar',
-      'Falta de conteúdo',
-      'Interpretação incorreta',
-      'Desatenção',
-      'Confusão entre conceitos',
-      'Esquecimento',
-      'Falta de domínio teórico',
-      'Dúvida entre alternativas',
-      'Falta de revisão',
-      'Pegadinha',
-      'Cálculo'
-    ],
-    niveis: ['Não informado', 'Baixa confiança', 'Dúvida', 'Confiante mas errei']
-  },
-  Chutada: {
-    rotulo: 'Chutada / baixa confiança',
-    motivos: [
-      'A diagnosticar',
-      'Eliminação parcial',
-      'Dúvida entre alternativas',
-      'Falta de certeza',
-      'Chute completo',
-      'Reconhecimento superficial do conteúdo'
-    ],
-    niveis: ['Não informado', 'Chutei', 'Dúvida forte', 'Quase confiante']
-  }
-}
-
-function normalizarTipoQuestao(q) {
-  if (q?.tipo_questao === 'Chutada' || q?.tipo_questao === 'Errada') return q.tipo_questao
-  if (
-    q?.motivo_erro === 'Chute' ||
-    CONFIG_TIPO_QUESTAO.Chutada.motivos.includes(q?.motivo_erro) ||
-    q?.nivel_confianca === 'Chutei'
-  ) return 'Chutada'
-  return 'Errada'
-}
-
-function normalizarStatusRevisao(q) {
-  return q?.status_revisao === 'recuperada' ? 'recuperada' : 'pendente'
-}
-
-function questaoChutadaAcertada(q) {
-  return normalizarTipoQuestao(q) === 'Chutada' && q?.alternativa_marcada === q?.alternativa_correta
-}
-
-function normalizarTextoDuplicidade(texto) {
-  return String(texto || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
+// Importa as funções reais de js/questoes.js via globalThis
+const {
+  escaparHtmlQuestao,
+  CONFIG_TIPO_QUESTAO,
+  normalizarTipoQuestao,
+  normalizarStatusRevisao,
+  questaoChutadaAcertada,
+  normalizarTextoDuplicidade
+} = globalThis
 
 describe('escaparHtmlQuestao', () => {
   it('escapa < para &lt;', () => {

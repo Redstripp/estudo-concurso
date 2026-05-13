@@ -2,10 +2,15 @@
 # Dependencies
 node_modules/
 
-# Test coverage and temporary files
-__tests__/setup.js
-*.tmp
+# Build artifacts
+dist/
+build/
+*.min.js
+*.bundle.js
+
+# Logs and temp files
 *.log
+*.tmp
 
 # Environment
 .env
@@ -16,22 +21,7 @@ __tests__/setup.js
 .vscode/
 .idea/
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Build outputs
-dist/
-build/
-*.min.js
-*.bundle.js
-
-# Logs
-*.log
-
-# OS generated files
-.DS_Store
-Thumbs.db
+# Test coverage
+coverage/
+.nyc_output/
 ```
