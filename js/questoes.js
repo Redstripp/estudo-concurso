@@ -1804,6 +1804,12 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
     return
   }
 
+  if (!lista || !placeholder) {
+    // Elementos não existem: provavelmente a tela de questões não está visível
+    // Não tenta recursão para evitar loop infinito
+    return
+  }
+
   placeholder.textContent   = '⏳ Buscando suas questões...'
   placeholder.style.display = 'block'
 
@@ -1826,6 +1832,11 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
     placeholder.textContent   = 'Resolva exercícios e registre seu primeiro erro aqui. Quanto mais cedo começar, mais rápido o sistema aprende seus padrões.'
     placeholder.style.display = 'block'
     lista.appendChild(placeholder)
+    return
+  }
+
+  if (!placeholder) {
+    console.error('Elemento placeholder do caderno de erros não encontrado no DOM.')
     return
   }
 
