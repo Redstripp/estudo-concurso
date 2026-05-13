@@ -1793,9 +1793,8 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
   const placeholder = document.getElementById('placeholder-questoes')
 
   if (!lista || !placeholder) {
-    console.warn('Elementos da lista de questões ou placeholder não encontrados no DOM. Aguardando renderização...')
-    // Tenta novamente após um breve delay para permitir a renderização da tela
-    setTimeout(() => carregarQuestoes(marcarPrimeiroComoNovo), 100)
+    // Elementos não existem: provavelmente a tela de questões não está visível
+    // Não tenta recursão para evitar loop infinito
     return
   }
 
