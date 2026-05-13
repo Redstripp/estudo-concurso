@@ -25,6 +25,11 @@ select {
 
 button {
   touch-action: manipulation;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
 }
  
 .escondido {
@@ -415,9 +420,16 @@ body[data-modo-interface="completo"] .modo-essencial-banner {
   min-height: 36px;
   text-align: left;
   transition: var(--transicao);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
  
-.btn-logout:hover { opacity: 0.7; }
+.btn-logout:hover { 
+  opacity: 0.7; 
+  text-decoration: underline;
+}
  
 /* ================================
    SEÇÕES
@@ -6011,27 +6023,27 @@ body.modo-foco .conteudo-principal {
   border: 1px solid transparent;
 }
 
-/* Botão Cancelar */
-.btn-secundario {
+/* Botão Cancelar - específico do modal */
+.modal-footer .btn-secundario {
   background: #ffffff;
   color: #475569;
   border-color: #cbd5e1;
 }
 
-.btn-secundario:hover {
+.modal-footer .btn-secundario:hover {
   background: #f8fafc;
   border-color: #94a3b8;
   color: #1e293b;
 }
 
-/* Botão Sair */
-.btn-perigo {
+/* Botão Sair - específico do modal */
+.modal-footer .btn-perigo {
   background: #ef4444;
   color: #ffffff;
   box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
 }
 
-.btn-perigo:hover {
+.modal-footer .btn-perigo:hover {
   background: #dc2626;
   transform: translateY(-1px);
   box-shadow: 0 6px 8px -1px rgba(239, 68, 68, 0.4);
