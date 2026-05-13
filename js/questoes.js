@@ -1791,8 +1791,10 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
   const lista       = document.getElementById('lista-questoes')
   const placeholder = document.getElementById('placeholder-questoes')
 
-  placeholder.textContent   = '⏳ Buscando suas questões...'
-  placeholder.style.display = 'block'
+  if (placeholder) {
+    placeholder.textContent   = '⏳ Buscando suas questões...'
+    placeholder.style.display = 'block'
+  }
 
   const { data, error } = await db
     .from('questoes')
