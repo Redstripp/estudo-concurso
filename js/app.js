@@ -1143,6 +1143,8 @@ function fecharSidebar() {
 // ============================================
 // LOGOUT ✅ agora é uma função separada
 // ============================================
+let logoutPendente = null
+
 async function realizarLogout() {
   try {
     const userId = window.usuarioAtual?.id
@@ -1186,16 +1188,49 @@ async function realizarLogout() {
       streakInfo = 'sequência em andamento'
     }
 
-    const mensagem = `Você registrou ${questoesHoje} erro${questoesHoje !== 1 ? 's' : ''} hoje, revisou ${revisoesHoje} questão${revisoesHoje !== 1 ? 'ões' : ''} e está no ${streakInfo}. Deseja sair?`
+    // Corrigido: "questões" em vez de "questãoões"
+    const mensagem = `Você registrou ${questoesHoje} erro${questoesHoje !== 1 ? 's' : ''} hoje, revisou ${revisoesHoje} questão${revisoesHoje !== 1 ? 'ões' : ''} e está no ${streakInfo}.`
     
-    const confirmou = confirm(mensagem)
-    if (!confirmou) return
+    // Armazena dados para o modal e exibe
+    logoutPendente = { mensagem }
+    mostrarModalSaida(mensagem)
+  } catch (erro) {
+    console.error('Erro ao preparar logout:', erro)
+    // Em caso de erro, ainda permite o logout direto
+    await db.auth.signOut()
+    window.location.href = 'index.html'
+  }
+}
 
+function mostrarModalSaida(mensagem) {
+  const modal = document.getElementById('modal-saida')
+  const msgElemento = document.getElementById('modal-saida-mensagem')
+  
+  if (msgElemento) {
+    msgElemento.textContent = mensagem
+  }
+  
+  if (modal) {
+    modal.style.display = 'flex'
+  }
+}
+
+function fecharModalSaida() {
+  const modal = document.getElementById('modal-saida')
+  if (modal) {
+    modal.style.display = 'none'
+  }
+  logoutPendente = null
+}
+
+async function confirmarLogout() {
+  if (!logoutPendente) return
+  
+  try {
     await db.auth.signOut()
     window.location.href = 'index.html'
   } catch (erro) {
-    console.error('Erro ao preparar logout:', erro)
-    // Em caso de erro, ainda permite o logout
+    console.error('Erro ao efetuar logout:', erro)
     await db.auth.signOut()
     window.location.href = 'index.html'
   }
