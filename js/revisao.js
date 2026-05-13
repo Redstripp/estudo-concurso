@@ -13,6 +13,33 @@ let filaRevisaoCompletaAtual = []
 let treinoRevisaoConfianca = ''
 let treinoRevisaoResultados = []
 let modoFocoAtivo = false
+
+function alternarModoFoco() {
+  if (modoFocoAtivo) {
+    desativarModoFoco()
+  } else {
+    ativarModoFoco()
+  }
+}
+
+function ativarModoFoco() {
+  modoFocoAtivo = true
+  document.body.classList.add('modo-foco')
+  const btnModoFoco = document.getElementById('btn-modo-foco-revisao')
+  if (btnModoFoco) {
+    btnModoFoco.textContent = 'Sair do modo foco'
+  }
+}
+
+function desativarModoFoco() {
+  modoFocoAtivo = false
+  document.body.classList.remove('modo-foco')
+  const btnModoFoco = document.getElementById('btn-modo-foco-revisao')
+  if (btnModoFoco) {
+    btnModoFoco.textContent = 'Entrar em modo foco'
+  }
+}
+
 const NIVEIS_CONFIANCA_TREINO_REVISAO = ['Chutei', 'Dúvida', 'Confiante']
 let treinoPegadinhasQuestoes = []
 let treinoPegadinhasIndice = 0
