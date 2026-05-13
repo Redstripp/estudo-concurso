@@ -271,36 +271,30 @@ async function carregarCentralHoje(userId) {
     editalConfig
   })
 
-  // Gerencia listeners dos botões da Central de Hoje
+  // Gerencia listeners dos botões da Central de Hoje usando delegação de eventos
   const containerCentral = document.getElementById('dashboard-central-hoje')
-  if (containerCentral) {
-    // Remove listeners antigos clonando os botões SEM seus eventos
-    containerCentral.querySelectorAll('[data-central-atalho]').forEach(btn => {
-      const novoBtn = btn.cloneNode(false)
-      btn.parentNode.replaceChild(novoBtn, btn)
-    })
-    containerCentral.querySelectorAll('[data-central-gerar-plano]').forEach(btn => {
-      const novoBtn = btn.cloneNode(false)
-      btn.parentNode.replaceChild(novoBtn, btn)
-    })
-
-    // Adiciona novos listeners nos botões limpos
-    containerCentral.querySelectorAll('[data-central-atalho]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const destino = btn.dataset.centralAtalho
+  if (containerCentral && !containerCentral.dataset.listenersCentralHoje) {
+    containerCentral.dataset.listenersCentralHoje = 'true'
+    
+    containerCentral.addEventListener('click', (e) => {
+      const btnAtalho = e.target.closest('[data-central-atalho]')
+      const btnGerarPlano = e.target.closest('[data-central-gerar-plano]')
+      
+      if (btnAtalho) {
+        const destino = btnAtalho.dataset.centralAtalho
         if (typeof navegarPara === 'function') navegarPara(destino)
         if (destino === 'revisao' && typeof gerarFilaRevisaoInteligente === 'function') {
           setTimeout(() => gerarFilaRevisaoInteligente({ manual: true }), 150)
         }
-      })
-    })
-
-    containerCentral.querySelectorAll('[data-central-gerar-plano]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (typeof gerarPlanoDiaPeloPlanejamento !== 'function') return
-        await gerarPlanoDiaPeloPlanejamento(hoje)
-        await carregarCentralHoje(userId)
-      })
+      }
+      
+      if (btnGerarPlano) {
+        ;(async () => {
+          if (typeof gerarPlanoDiaPeloPlanejamento !== 'function') return
+          await gerarPlanoDiaPeloPlanejamento(hoje)
+          await carregarCentralHoje(userId)
+        })()
+      }
     })
   }
 }
@@ -578,6 +572,22 @@ async function carregarArquivamentoMensal(userId) {
 
   container.innerHTML = criarPainelArquivamentoMensal(periodo, resumo, resumoSalvo, protecaoBanco)
 
+<<<<<<< erro-maximum-call-stack-size-exceeded-95724
+  // Usa delegação de eventos para os botões do arquivamento mensal
+  if (!container.dataset.listenersArquivamento) {
+    container.dataset.listenersArquivamento = 'true'
+    container.addEventListener('click', (e) => {
+      const btnPdf = e.target.closest('#btn-gerar-pdf-mensal')
+      const btnArquivar = e.target.closest('#btn-arquivar-limpar-mensal')
+      
+      if (btnPdf) {
+        gerarPdfArquivamentoMensal(userId, periodo)
+      }
+      if (btnArquivar) {
+        arquivarELimparMes(userId, periodo)
+      }
+    })
+=======
   // Remove listeners antigos antes de adicionar novos
   const btnPdf = container.querySelector('#btn-gerar-pdf-mensal')
   if (btnPdf) {
@@ -591,6 +601,7 @@ async function carregarArquivamentoMensal(userId) {
     const novoBtnArquivar = btnArquivar.cloneNode(false)
     btnArquivar.parentNode.replaceChild(novoBtnArquivar, btnArquivar)
     novoBtnArquivar.addEventListener('click', () => arquivarELimparMes(userId, periodo))
+>>>>>>> main
   }
 }
 
@@ -1466,6 +1477,17 @@ async function carregarRelatorioErrosRecorrentes(userId) {
   const relatorio = montarRelatorioErrosRecorrentes(data || [])
   container.innerHTML = criarPainelRelatorioErrosRecorrentes(relatorio)
 
+<<<<<<< erro-maximum-call-stack-size-exceeded-95724
+  // Usa delegação de eventos para os botões do relatório de erros
+  if (!container.dataset.listenersRelatorio) {
+    container.dataset.listenersRelatorio = 'true'
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-dashboard-atalho]')
+      if (btn) {
+        const secao = btn.dataset.dashboardAtalho
+        if (typeof navegarPara === 'function') navegarPara(secao)
+      }
+=======
   // Remove listeners antigos antes de adicionar novos
   container.querySelectorAll('[data-dashboard-atalho]').forEach(btn => {
     const novoBtn = btn.cloneNode(false)
@@ -1476,8 +1498,9 @@ async function carregarRelatorioErrosRecorrentes(userId) {
     btn.addEventListener('click', () => {
       const secao = btn.dataset.dashboardAtalho
       if (typeof navegarPara === 'function') navegarPara(secao)
+>>>>>>> main
     })
-  })
+  }
 }
 
 function montarRelatorioErrosRecorrentes(questoes) {
