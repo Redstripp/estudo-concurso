@@ -1739,8 +1739,6 @@ async function salvarQuestao(opcoes = {}) {
   mostrarMsgQuestao('Questão salva com sucesso!', 'sucesso')
   setTimeout(() => mostrarMsgQuestao('', ''), 3000)
 
-  // Carrega questões e marca o primeiro card como novo
-  await carregarQuestoes(true)
   if (typeof avaliarConquistasUsuario === 'function') {
     await avaliarConquistasUsuario({ atualizarPerfil: true })
   }
@@ -1778,6 +1776,11 @@ async function atualizarTelasAposRegistro() {
     tarefas.push(carregarPlanoDia())
   }
 
+  // Recarrega a lista de questões para mostrar a nova questão inserida
+  if (typeof carregarQuestoes === 'function') {
+    tarefas.push(carregarQuestoes(true))
+  }
+
   const resultados = await Promise.allSettled(tarefas)
   resultados.forEach(resultado => {
     if (resultado.status === 'rejected') console.error(resultado.reason)
@@ -1789,15 +1792,16 @@ async function atualizarTelasAposRegistro() {
 // ============================================
 async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
 
-  const lista       = document.getElementById('lista-questoes')
-  const placeholder = document.getElementById('placeholder-questoes')
   const secaoQuestoes = document.getElementById('secao-questoes')
-
+  
   // Verifica se a seção de questões está visível
   if (!secaoQuestoes || secaoQuestoes.classList.contains('escondido')) {
     // Seção não está visível, não tenta carregar ainda
     return
   }
+
+  const lista       = document.getElementById('lista-questoes')
+  const placeholder = document.getElementById('placeholder-questoes')
 
   if (!lista || !placeholder) {
     // Elementos não existem: provavelmente a tela de questões não está visível
@@ -1827,11 +1831,6 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
     placeholder.textContent   = 'Resolva exercícios e registre seu primeiro erro aqui. Quanto mais cedo começar, mais rápido o sistema aprende seus padrões.'
     placeholder.style.display = 'block'
     lista.appendChild(placeholder)
-    return
-  }
-
-  if (!placeholder) {
-    console.error('Elemento placeholder do caderno de erros não encontrado no DOM.')
     return
   }
 
