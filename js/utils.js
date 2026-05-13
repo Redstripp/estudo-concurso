@@ -164,7 +164,7 @@ function dataHoje() {
 function adicionarDias(dataISO, dias) {
   const data = new Date(`${dataISO}T12:00:00`)
   data.setDate(data.getDate() + dias)
-  return dataISO(data)
+  return data.toISOString().split('T')[0]
 }
 
 /**
