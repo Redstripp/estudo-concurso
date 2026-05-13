@@ -134,6 +134,74 @@ function formatarData(data) {
   return `${dia}/${mes}/${ano}`
 }
 
+// ============================================
+// FUNÇÕES DE DATA - UTILITÁRIOS GLOBAIS
+// ============================================
+
+/**
+ * Converte uma data para formato ISO (YYYY-MM-DD)
+ * @param {Date} data - Objeto Date
+ * @returns {string} Data no formato ISO
+ */
+function dataISO(data) {
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * Retorna a data de hoje em formato ISO (YYYY-MM-DD)
+ * @returns {string} Data de hoje no formato ISO
+ */
+function dataHoje() {
+  return dataISO(new Date())
+}
+
+/**
+ * Adiciona dias a uma data ISO e retorna nova data ISO
+ * @param {string} dataISO - Data no formato ISO (YYYY-MM-DD)
+ * @param {number} dias - Quantidade de dias para adicionar
+ * @returns {string} Nova data no formato ISO
+ */
+function adicionarDias(dataISO, dias) {
+  const data = new Date(`${dataISO}T12:00:00`)
+  data.setDate(data.getDate() + dias)
+  return dataISO(data)
+}
+
+/**
+ * Calcula dias até uma data de prova
+ * @param {string} dataProva - Data da prova no formato ISO
+ * @returns {number|null} Quantidade de dias ou null se sem data
+ */
+function calcularDiasAteProva(dataProva) {
+  if (!dataProva) return null
+  const hoje = new Date(dataHoje() + 'T12:00:00')
+  const prova = new Date(`${dataProva}T12:00:00`)
+  if (Number.isNaN(prova.getTime())) return null
+  return Math.ceil((prova - hoje) / 86400000)
+}
+
+/**
+ * Retorna o dia anterior a uma data ISO
+ * @param {string} dataStr - Data no formato ISO
+ * @returns {string} Dia anterior no formato ISO
+ */
+function diaAnterior(dataStr) {
+  const d = new Date(dataStr + 'T12:00:00')
+  d.setDate(d.getDate() - 1)
+  return dataISO(d)
+}
+
+/**
+ * Formata data ISO para formato curto brasileiro (DD/MM/YYYY)
+ * @param {string} dataISO - Data no formato ISO
+ * @returns {string} Data formatada ou '-' se vazio
+ */
+function formatarDataCurta(dataISO) {
+  if (!dataISO) return '-'
+  const [ano, mes, dia] = dataISO.substring(0, 10).split('-')
+  return `${dia}/${mes}/${ano}`
+}
+
 // Exportações apenas para testes (Vitest)
 // No navegador, essas linhas são ignoradas pois o script é carregado como tradicional
 if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
@@ -147,7 +215,13 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     criarResumoQualidadeDiagnostico,
     criarAlertaCadastroFracoQuestao,
     calcularPorcentagem,
-    formatarData
+    formatarData,
+    dataISO,
+    dataHoje,
+    adicionarDias,
+    calcularDiasAteProva,
+    diaAnterior,
+    formatarDataCurta
   }
   
   // Compatibilidade com ES modules no Vitest
@@ -165,4 +239,10 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.criarAlertaCadastroFracoQuestao = criarAlertaCadastroFracoQuestao
   globalThis.calcularPorcentagem = calcularPorcentagem
   globalThis.formatarData = formatarData
+  globalThis.dataISO = dataISO
+  globalThis.dataHoje = dataHoje
+  globalThis.adicionarDias = adicionarDias
+  globalThis.calcularDiasAteProva = calcularDiasAteProva
+  globalThis.diaAnterior = diaAnterior
+  globalThis.formatarDataCurta = formatarDataCurta
 }

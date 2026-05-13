@@ -366,13 +366,11 @@ function textoDiasRevisao(dias) {
 }
 
 function dataISORevisao(data) {
-  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
+  return dataISO(data)
 }
 
 function formatarDataCurtaRevisao(dataISO) {
-  if (!dataISO) return '-'
-  const [ano, mes, dia] = dataISO.substring(0, 10).split('-')
-  return `${dia}/${mes}/${ano}`
+  return formatarDataCurta(dataISO)
 }
 
 // ============================================
@@ -823,11 +821,7 @@ function calcularDiasSemContatoRevisao(q, hojeISO) {
 }
 
 function calcularDiasAteProvaRevisao(dataProva) {
-  if (!dataProva) return null
-  const hoje = new Date(`${dataRevisaoHoje()}T12:00:00`)
-  const prova = new Date(`${dataProva}T12:00:00`)
-  if (Number.isNaN(prova.getTime())) return null
-  return Math.ceil((prova - hoje) / 86400000)
+  return calcularDiasAteProva(dataProva)
 }
 
 function classificarPegadinhasRevisao(texto) {
@@ -1731,14 +1725,11 @@ function avancarTreinoRevisao() {
 }
 
 function dataRevisaoHoje() {
-  const agora = new Date()
-  return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`
+  return dataHoje()
 }
 
 function adicionarDiasRevisao(dataISO, dias) {
-  const data = new Date(`${dataISO}T12:00:00`)
-  data.setDate(data.getDate() + dias)
-  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
+  return adicionarDias(dataISO, dias)
 }
 
 function calcularProximaRevisao24730(q, hoje, acertou, nivelConfianca = 'Confiante') {

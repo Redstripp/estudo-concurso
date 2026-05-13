@@ -784,14 +784,11 @@ function textoDiasOnboarding(dias) {
 }
 
 function dataHojeOnboarding() {
-  const agora = new Date()
-  return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`
+  return dataHoje()
 }
 
 function adicionarDiasOnboarding(dataISO, dias) {
-  const data = new Date(`${dataISO}T12:00:00`)
-  data.setDate(data.getDate() + dias)
-  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
+  return adicionarDias(dataISO, dias)
 }
 
 // ============================================
@@ -1081,7 +1078,7 @@ function ocultarAvisoArquivamento() {
 }
 
 function dataISOApp(data) {
-  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
+  return dataISO(data)
 }
 
 // ============================================

@@ -450,11 +450,11 @@ function diferencaDias(inicio, fim) {
 }
 
 function dataISOHoje() {
-  return dataISO(new Date())
+  return dataHoje()
 }
 
 function dataISO(data) {
-  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
+  return dataISO(data)
 }
 
 function mostrarMsgPlano(texto, tipo) {

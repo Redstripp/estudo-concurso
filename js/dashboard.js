@@ -1339,7 +1339,7 @@ function criarSimuladosRelatorio(simulados) {
 }
 
 function dataISOArquivamento(data) {
-  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
+  return dataISO(data)
 }
 
 function formatarDataBRArquivamento(dataStr) {
@@ -2069,14 +2069,11 @@ function diferencaDiasDashboard(dataInicio, dataFim) {
 }
 
 function dataHoje() {
-  const agora = new Date()
-  return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`
+  return dataHoje()
 }
 
 function diaAnterior(dataStr) {
-  const d = new Date(dataStr + 'T12:00:00')
-  d.setDate(d.getDate() - 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return diaAnterior(dataStr)
 }
 
 // ─── GRÁFICO ──────────────────────────────────────────────
