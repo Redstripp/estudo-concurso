@@ -1669,7 +1669,7 @@ function criarCardMateria(materia) {
   card.innerHTML = `
     <div class="card-materia-info">
       <span class="card-materia-icone">${icone}</span>
-      <span class="card-materia-nome">${nomeFormatado}</span>
+      <span class="card-materia-nome" title="${nomeFormatado}">${nomeFormatado}</span>
     </div>
     <button class="btn-excluir" data-id="${materia.id}" title="Excluir matéria">
       🗑️
