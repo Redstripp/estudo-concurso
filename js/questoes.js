@@ -1924,7 +1924,11 @@ function renderizarAcoesCadernoErros(questoes) {
     </div>
   `
 
-  container.querySelectorAll('[data-filtro-caderno]').forEach(btn => {
+  // Remover listeners antigos para evitar duplicação e loop infinito
+  const novoContainer = container.cloneNode(true)
+  container.parentNode.replaceChild(novoContainer, container)
+  
+  novoContainer.querySelectorAll('[data-filtro-caderno]').forEach(btn => {
     btn.addEventListener('click', () => {
       filtroCadernoErrosAtual = btn.dataset.filtroCaderno || 'todos'
       carregarQuestoes()
