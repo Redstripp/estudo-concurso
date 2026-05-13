@@ -1811,23 +1811,6 @@ button.dash-card.dash-card--principal {
 .dash-mini-card--certa strong { color: var(--cor-sucesso); }
 .dash-mini-card--errada strong { color: var(--cor-erro); }
 
-.dash-mini-card--clicavel {
-  background: var(--cor-fundo-card);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-borda-sm);
-  color: inherit;
-  cursor: pointer;
-  font-family: inherit;
-  padding: 0.75rem;
-  text-align: left;
-  width: 100%;
-}
-
-.dash-mini-card--clicavel:hover {
-  border-color: var(--cor-primaria);
-  transform: translateY(-1px);
-}
-
 .dash-cards-grid > .estado-erro {
   grid-column: 1 / -1;
 }
