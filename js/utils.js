@@ -1,4 +1,5 @@
 // js/utils.js
+// Utilitários globais para o sistema
 
 function escaparHtmlSeguro(valor) {
   return String(valor ?? '')
