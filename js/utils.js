@@ -119,3 +119,29 @@ function criarAlertaCadastroFracoQuestao(qualidade) {
     </div>
   `
 }
+
+function calcularPorcentagem(parcial, total) {
+  if (total === 0) return 0
+  return Math.round((parcial / total) * 100 * 100) / 100
+}
+
+function formatarData(data) {
+  if (!(data instanceof Date) || isNaN(data.getTime())) return ''
+  const dia = String(data.getDate()).padStart(2, '0')
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const ano = data.getFullYear()
+  return `${dia}/${mes}/${ano}`
+}
+
+// Exportações para testes
+export { 
+  escaparHtmlSeguro, 
+  formatarQuantidadeQuestoes, 
+  avaliarQualidadeDiagnosticoQuestao,
+  valorDiagnostico,
+  campoDiagnosticoPreenchido,
+  criarResumoQualidadeDiagnostico,
+  criarAlertaCadastroFracoQuestao,
+  calcularPorcentagem,
+  formatarData
+}
