@@ -578,19 +578,20 @@ async function carregarArquivamentoMensal(userId) {
 
   container.innerHTML = criarPainelArquivamentoMensal(periodo, resumo, resumoSalvo, protecaoBanco)
 
-  // Remove listeners antigos antes de adicionar novos
-  const btnPdf = container.querySelector('#btn-gerar-pdf-mensal')
-  if (btnPdf) {
-    const novoBtnPdf = btnPdf.cloneNode(false)
-    btnPdf.parentNode.replaceChild(novoBtnPdf, btnPdf)
-    novoBtnPdf.addEventListener('click', () => gerarPdfArquivamentoMensal(userId, periodo))
-  }
+  // Usa delegação de eventos para os botões do arquivamento mensal
+  if (!container.dataset.listenersArquivamento) {
+    container.dataset.listenersArquivamento = 'true'
+    container.addEventListener('click', (e) => {
+      const btnPdf = e.target.closest('#btn-gerar-pdf-mensal')
+      const btnArquivar = e.target.closest('#btn-arquivar-limpar-mensal')
 
-  const btnArquivar = container.querySelector('#btn-arquivar-limpar-mensal')
-  if (btnArquivar) {
-    const novoBtnArquivar = btnArquivar.cloneNode(false)
-    btnArquivar.parentNode.replaceChild(novoBtnArquivar, btnArquivar)
-    novoBtnArquivar.addEventListener('click', () => arquivarELimparMes(userId, periodo))
+      if (btnPdf) {
+        gerarPdfArquivamentoMensal(userId, periodo)
+      }
+      if (btnArquivar) {
+        arquivarELimparMes(userId, periodo)
+      }
+    })
   }
 }
 
@@ -1466,18 +1467,17 @@ async function carregarRelatorioErrosRecorrentes(userId) {
   const relatorio = montarRelatorioErrosRecorrentes(data || [])
   container.innerHTML = criarPainelRelatorioErrosRecorrentes(relatorio)
 
-  // Remove listeners antigos antes de adicionar novos
-  container.querySelectorAll('[data-dashboard-atalho]').forEach(btn => {
-    const novoBtn = btn.cloneNode(false)
-    btn.parentNode.replaceChild(novoBtn, btn)
-  })
-
-  container.querySelectorAll('[data-dashboard-atalho]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const secao = btn.dataset.dashboardAtalho
-      if (typeof navegarPara === 'function') navegarPara(secao)
+  // Usa delegação de eventos para os botões do relatório de erros
+  if (!container.dataset.listenersRelatorio) {
+    container.dataset.listenersRelatorio = 'true'
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-dashboard-atalho]')
+      if (btn) {
+        const secao = btn.dataset.dashboardAtalho
+        if (typeof navegarPara === 'function') navegarPara(secao)
+      }
     })
-  })
+  }
 }
 
 function montarRelatorioErrosRecorrentes(questoes) {
