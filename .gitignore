@@ -1,3 +1,4 @@
+<<<<<<< tooltip-para-títulos-truncados-e6880
 ```
 # Dependencies
 node_modules/
@@ -77,3 +78,6 @@ yarn.lock
 *.tar.xz
 *.tar.zst
 ```
+=======
+(js/materias.js)
+>>>>>>> main
