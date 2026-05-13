@@ -454,9 +454,15 @@ function dataISOHoje() {
 }
 
 function dataISO(data) {
-  if (!data) return dataHoje()
+  if (!data) {
+    const hoje = new Date()
+    return hoje.toISOString().split('T')[0]
+  }
   const d = new Date(data)
-  if (isNaN(d.getTime())) return dataHoje()
+  if (isNaN(d.getTime())) {
+    const hoje = new Date()
+    return hoje.toISOString().split('T')[0]
+  }
   return d.toISOString().split('T')[0]
 }
 
