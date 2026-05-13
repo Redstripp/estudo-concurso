@@ -215,6 +215,3 @@ if (typeof window !== 'undefined') {
   // Ambiente navegador
   window.Estado = Estado
 }
-
-// Também exporta como default para ES modules
-export default Estado
