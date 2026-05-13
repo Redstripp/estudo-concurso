@@ -1776,9 +1776,17 @@ async function atualizarTelasAposRegistro() {
     tarefas.push(carregarPlanoDia())
   }
 
-  // Recarrega a lista de questões para mostrar a nova questão inserida
-  if (typeof carregarQuestoes === 'function') {
-    tarefas.push(carregarQuestoes(true))
+  // Atualiza a memória das questões (independente da tela visível)
+  if (typeof carregarQuestoesEmMemoria === 'function') {
+    tarefas.push(carregarQuestoesEmMemoria())
+  }
+
+  // Se a seção de questões estiver visível, recarrega a lista na tela
+  const secaoQuestoes = document.getElementById('secao-questoes')
+  if (secaoQuestoes && !secaoQuestoes.classList.contains('escondido')) {
+    if (typeof carregarQuestoes === 'function') {
+      tarefas.push(carregarQuestoes(true))
+    }
   }
 
   const resultados = await Promise.allSettled(tarefas)
@@ -1790,6 +1798,23 @@ async function atualizarTelasAposRegistro() {
 // ============================================
 // CARREGAR LISTA DE QUESTÕES
 // ============================================
+
+// Função para carregar questões apenas em memória (sem renderizar)
+async function carregarQuestoesEmMemoria() {
+  const { data, error } = await db
+    .from('questoes')
+    .select('id, materia_id, edital_topico_id, banca, pegadinha_banca, enunciado, alternativas, alternativa_marcada, alternativa_correta, tipo_questao, status_revisao, revisar_novamente_em, revisao_ultima_data, revisao_ultima_resultado, revisao_total_acertos, revisao_total_erros, revisao_etapa, motivo_erro, nivel_confianca, comentario, conceito_chave, como_reconhecer, acao_corretiva, criado_em, materias(nome), edital_topicos(titulo, status)')
+    .eq('user_id', window.usuarioAtual.id)
+    .order('criado_em', { ascending: false })
+
+  if (error) {
+    console.error('Erro ao carregar questões em memória:', error)
+    return
+  }
+
+  questoesEmMemoria = data || []
+}
+
 async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
 
   const secaoQuestoes = document.getElementById('secao-questoes')
@@ -2748,7 +2773,8 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     normalizarTipoQuestao,
     normalizarStatusRevisao,
     questaoChutadaAcertada,
-    normalizarTextoDuplicidade
+    normalizarTextoDuplicidade,
+    carregarQuestoesEmMemoria
   }
   
   // Compatibilidade com ES modules no Vitest
@@ -2763,4 +2789,5 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.normalizarStatusRevisao = normalizarStatusRevisao
   globalThis.questaoChutadaAcertada = questaoChutadaAcertada
   globalThis.normalizarTextoDuplicidade = normalizarTextoDuplicidade
+  globalThis.carregarQuestoesEmMemoria = carregarQuestoesEmMemoria
 }
