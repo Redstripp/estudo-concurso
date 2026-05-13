@@ -9,21 +9,23 @@ const formLogin      = document.getElementById('form-login')
 const formCadastro   = document.getElementById('form-cadastro')
 const msgAuth        = document.getElementById('msg-auth')
 
-btnAbaLogin.addEventListener('click', () => {
-  btnAbaLogin.classList.add('ativa')
-  btnAbaCadastro.classList.remove('ativa')
-  formLogin.classList.remove('escondido')
-  formCadastro.classList.add('escondido')
-  limparMensagem()
-})
+if (btnAbaLogin && btnAbaCadastro && formLogin && formCadastro) {
+  btnAbaLogin.addEventListener('click', () => {
+    btnAbaLogin.classList.add('ativa')
+    btnAbaCadastro.classList.remove('ativa')
+    formLogin.classList.remove('escondido')
+    formCadastro.classList.add('escondido')
+    limparMensagem()
+  })
 
-btnAbaCadastro.addEventListener('click', () => {
-  btnAbaCadastro.classList.add('ativa')
-  btnAbaLogin.classList.remove('ativa')
-  formCadastro.classList.remove('escondido')
-  formLogin.classList.add('escondido')
-  limparMensagem()
-})
+  btnAbaCadastro.addEventListener('click', () => {
+    btnAbaCadastro.classList.add('ativa')
+    btnAbaLogin.classList.remove('ativa')
+    formCadastro.classList.remove('escondido')
+    formLogin.classList.add('escondido')
+    limparMensagem()
+  })
+}
 
 // ============================================
 // FUNÇÕES AUXILIARES
@@ -69,75 +71,79 @@ function obterUrlApp() {
 // CADASTRO
 // ============================================
 const btnCadastrar = document.getElementById('btn-cadastrar')
-btnCadastrar.dataset.texto = 'Criar conta'
-
-btnCadastrar.addEventListener('click', async () => {
-  const nome  = document.getElementById('cad-nome').value.trim()
-  const email = document.getElementById('cad-email').value.trim()
-  const senha = document.getElementById('cad-senha').value
-
-  // Validações básicas
-  if (!nome || !email || !senha) {
-    mostrarMensagem('Preencha todos os campos.', 'erro')
-    return
-  }
-
-  if (senha.length < 6) {
-    mostrarMensagem('A senha deve ter no mínimo 6 caracteres.', 'erro')
-    return
-  }
-
-  setBotaoCarregando(btnCadastrar, true)
-
-  // Cria o usuário no Supabase Auth
-  // O metadata 'nome' será usado pelo gatilho para preencher a tabela profiles
-  const { error } = await db.auth.signUp({
-    email,
-    password: senha,
-    options: {
-      data: { nome }
+if (btnCadastrar) {
+  btnCadastrar.dataset.texto = 'Criar conta'
+  
+  btnCadastrar.addEventListener('click', async () => {
+    const nome  = document.getElementById('cad-nome').value.trim()
+    const email = document.getElementById('cad-email').value.trim()
+    const senha = document.getElementById('cad-senha').value
+  
+    // Validações básicas
+    if (!nome || !email || !senha) {
+      mostrarMensagem('Preencha todos os campos.', 'erro')
+      return
     }
+  
+    if (senha.length < 6) {
+      mostrarMensagem('A senha deve ter no mínimo 6 caracteres.', 'erro')
+      return
+    }
+  
+    setBotaoCarregando(btnCadastrar, true)
+  
+    // Cria o usuário no Supabase Auth
+    // O metadata 'nome' será usado pelo gatilho para preencher a tabela profiles
+    const { error } = await db.auth.signUp({
+      email,
+      password: senha,
+      options: {
+        data: { nome }
+      }
+    })
+  
+    setBotaoCarregando(btnCadastrar, false)
+  
+    if (error) {
+      mostrarMensagem(traduzirErro(error.message), 'erro')
+      return
+    }
+  
+    mostrarMensagem('Conta criada! Verifique seu e-mail para confirmar o cadastro.', 'sucesso')
   })
-
-  setBotaoCarregando(btnCadastrar, false)
-
-  if (error) {
-    mostrarMensagem(traduzirErro(error.message), 'erro')
-    return
-  }
-
-  mostrarMensagem('Conta criada! Verifique seu e-mail para confirmar o cadastro.', 'sucesso')
-})
+}
 
 // ============================================
 // LOGIN
 // ============================================
 const btnEntrar = document.getElementById('btn-entrar')
-btnEntrar.dataset.texto = 'Entrar'
-
-btnEntrar.addEventListener('click', async () => {
-  const email = document.getElementById('login-email').value.trim()
-  const senha = document.getElementById('login-senha').value
-
-  if (!email || !senha) {
-    mostrarMensagem('Preencha e-mail e senha.', 'erro')
-    return
-  }
-
-  setBotaoCarregando(btnEntrar, true)
-
-  const { error } = await db.auth.signInWithPassword({ email, password: senha })
-
-  setBotaoCarregando(btnEntrar, false)
-
-  if (error) {
-    mostrarMensagem(traduzirErro(error.message), 'erro')
-    return
-  }
-
-  // Login bem-sucedido → redireciona para o app
-  window.location.href = obterUrlApp()
-})
+if (btnEntrar) {
+  btnEntrar.dataset.texto = 'Entrar'
+  
+  btnEntrar.addEventListener('click', async () => {
+    const email = document.getElementById('login-email').value.trim()
+    const senha = document.getElementById('login-senha').value
+  
+    if (!email || !senha) {
+      mostrarMensagem('Preencha e-mail e senha.', 'erro')
+      return
+    }
+  
+    setBotaoCarregando(btnEntrar, true)
+  
+    const { error } = await db.auth.signInWithPassword({ email, password: senha })
+  
+    setBotaoCarregando(btnEntrar, false)
+  
+    if (error) {
+      mostrarMensagem(traduzirErro(error.message), 'erro')
+      return
+    }
+  
+    // Login bem-sucedido → redireciona para o app
+    window.location.href = obterUrlApp()
+  })
+}
 
 // ============================================
 // VERIFICAR SE JÁ ESTÁ LOGADO
@@ -150,7 +156,10 @@ async function verificarSessao() {
   }
 }
 
-verificarSessao()
+// Só executa se estiver na página de login
+if (document.getElementById('btn-entrar') || document.getElementById('btn-cadastrar')) {
+  verificarSessao()
+}
 
 // ============================================
 // TRADUÇÃO DE ERROS DO SUPABASE
@@ -174,42 +183,45 @@ const formRecuperar  = document.getElementById('form-recuperar')
 const linkEsqueceu   = document.getElementById('link-esqueceu-senha')
 const linkVoltarLogin = document.getElementById('link-voltar-login')
 const btnRecuperar   = document.getElementById('btn-recuperar')
-btnRecuperar.dataset.texto = 'Enviar link'
 
-linkEsqueceu.addEventListener('click', (e) => {
-  e.preventDefault()
-  formLogin.classList.add('escondido')
-  formRecuperar.classList.remove('escondido')
-  limparMensagem()
-})
-
-linkVoltarLogin.addEventListener('click', (e) => {
-  e.preventDefault()
-  formRecuperar.classList.add('escondido')
-  formLogin.classList.remove('escondido')
-  limparMensagem()
-})
-
-btnRecuperar.addEventListener('click', async () => {
-  const email = document.getElementById('recuperar-email').value.trim()
-
-  if (!email) {
-    mostrarMensagem('Digite seu e-mail.', 'erro')
-    return
-  }
-
-  setBotaoCarregando(btnRecuperar, true)
-
-  const { error } = await db.auth.resetPasswordForEmail(email, {
-    redirectTo: obterUrlApp()
+if (formRecuperar && linkEsqueceu && linkVoltarLogin && btnRecuperar) {
+  btnRecuperar.dataset.texto = 'Enviar link'
+  
+  linkEsqueceu.addEventListener('click', (e) => {
+    e.preventDefault()
+    formLogin.classList.add('escondido')
+    formRecuperar.classList.remove('escondido')
+    limparMensagem()
   })
-
-  setBotaoCarregando(btnRecuperar, false)
-
-  if (error) {
-    mostrarMensagem(traduzirErro(error.message), 'erro')
-    return
-  }
-
-  mostrarMensagem('Link enviado! Verifique seu e-mail.', 'sucesso')
-})
+  
+  linkVoltarLogin.addEventListener('click', (e) => {
+    e.preventDefault()
+    formRecuperar.classList.add('escondido')
+    formLogin.classList.remove('escondido')
+    limparMensagem()
+  })
+  
+  btnRecuperar.addEventListener('click', async () => {
+    const email = document.getElementById('recuperar-email').value.trim()
+  
+    if (!email) {
+      mostrarMensagem('Digite seu e-mail.', 'erro')
+      return
+    }
+  
+    setBotaoCarregando(btnRecuperar, true)
+  
+    const { error } = await db.auth.resetPasswordForEmail(email, {
+      redirectTo: obterUrlApp()
+    })
+  
+    setBotaoCarregando(btnRecuperar, false)
+  
+    if (error) {
+      mostrarMensagem(traduzirErro(error.message), 'erro')
+      return
+    }
+  
+    mostrarMensagem('Link enviado! Verifique seu e-mail.', 'sucesso')
+  })
+}
