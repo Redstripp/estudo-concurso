@@ -267,6 +267,10 @@ async function carregarCentralHoje(userId) {
   })
 
   container.querySelectorAll('[data-central-atalho]').forEach(btn => {
+    btn.replaceWith(btn.cloneNode(true))
+  })
+
+  container.querySelectorAll('[data-central-atalho]').forEach(btn => {
     btn.addEventListener('click', () => {
       const destino = btn.dataset.centralAtalho
       if (typeof navegarPara === 'function') navegarPara(destino)
@@ -276,11 +280,17 @@ async function carregarCentralHoje(userId) {
     })
   })
 
-  container.querySelectorAll('[data-central-gerar-plano]').forEach(btn => btn.addEventListener('click', async () => {
-    if (typeof gerarPlanoDiaPeloPlanejamento !== 'function') return
-    await gerarPlanoDiaPeloPlanejamento(hoje)
-    await carregarCentralHoje(userId)
-  }))
+  container.querySelectorAll('[data-central-gerar-plano]').forEach(btn => {
+    btn.replaceWith(btn.cloneNode(true))
+  })
+
+  container.querySelectorAll('[data-central-gerar-plano]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (typeof gerarPlanoDiaPeloPlanejamento !== 'function') return
+      await gerarPlanoDiaPeloPlanejamento(hoje)
+      await carregarCentralHoje(userId)
+    })
+  })
 }
 
 function calcularDiaSemanaCentralHoje(dataISO) {
