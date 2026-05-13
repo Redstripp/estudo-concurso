@@ -15,29 +15,30 @@ async function inicializarDashboard() {
   if (arquivamento) arquivamento.innerHTML = criarEstadoVazioDashboard('Ciclo mensal', 'O ciclo mensal aparece aqui quando houver questões registradas no período.')
   if (relatorioErros) relatorioErros.innerHTML = criarEstadoVazioDashboard('Treinador de padrões', 'Preencha o motivo do erro e o conceito ao registrar questões — o sistema vai mostrar aqui o que está se repetindo.')
 
-  const { data, error } = await db.auth.getUser()
-
-  if (error || !data?.user) {
-    const erro = criarErroConsultaDashboard('Não foi possível confirmar seu login.', error)
-    mostrarErroDashboard('dashboard-central-hoje', 'Erro ao carregar a Central de Hoje', erro.message, erro.detalhe)
-    mostrarErroDashboard('dashboard-cards', 'Erro ao carregar o Dashboard', erro.message, erro.detalhe)
-    mostrarErroDashboard('dashboard-grafico', 'Erro ao carregar o gráfico', erro.message, erro.detalhe)
-    mostrarErroDashboard('dashboard-arquivamento', 'Erro ao carregar o ciclo mensal', erro.message, erro.detalhe)
-    mostrarErroDashboard('dashboard-relatorio-erros', 'Erro ao carregar o relatório', erro.message, erro.detalhe)
+  const userId = window.usuarioAtual?.id
+  
+  if (!userId) {
+    const erro = new Error('Usuário não autenticado.')
+    erro.detalhe = 'Faça login novamente para acessar o dashboard.'
+    mostrarErroDashboard('dashboard-central-hoje', 'Erro de autenticação', erro.message, erro.detalhe)
+    mostrarErroDashboard('dashboard-cards', 'Erro de autenticação', erro.message, erro.detalhe)
+    mostrarErroDashboard('dashboard-grafico', 'Erro de autenticação', erro.message, erro.detalhe)
+    mostrarErroDashboard('dashboard-arquivamento', 'Erro de autenticação', erro.message, erro.detalhe)
+    mostrarErroDashboard('dashboard-relatorio-erros', 'Erro de autenticação', erro.message, erro.detalhe)
     return
   }
-
+  
   await Promise.all([
-    carregarCentralHojeComErro(data.user.id),
-    carregarCardsDashboardComErro(data.user.id)
+    carregarCentralHojeComErro(userId),
+    carregarCardsDashboardComErro(userId)
   ])
 
   if (window.modoInterfaceAtual === 'essencial') return
 
   await Promise.all([
-    carregarArquivamentoMensalComErro(data.user.id),
-    carregarGraficoDashboardComErro(data.user.id),
-    carregarRelatorioErrosRecorrentesComErro(data.user.id)
+    carregarArquivamentoMensalComErro(userId),
+    carregarGraficoDashboardComErro(userId),
+    carregarRelatorioErrosRecorrentesComErro(userId)
   ])
 }
 
