@@ -1788,11 +1788,19 @@ async function atualizarTelasAposRegistro() {
 // CARREGAR LISTA DE QUESTÕES
 // ============================================
 async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
+  // Verifica se estamos na tela de questões antes de tentar carregar
+  const telaQuestoes = document.getElementById('tela-questoes')
+  if (!telaQuestoes || telaQuestoes.style.display === 'none') {
+    return // Não carrega se não estiver na tela de questões
+  }
+
   const lista       = document.getElementById('lista-questoes')
   const placeholder = document.getElementById('placeholder-questoes')
 
   if (!lista || !placeholder) {
-    console.error('Elementos da lista de questões ou placeholder não encontrados no DOM.')
+    console.warn('Elementos da lista de questões ou placeholder não encontrados no DOM. Aguardando renderização...')
+    // Tenta novamente após um breve delay para permitir a renderização da tela
+    setTimeout(() => carregarQuestoes(marcarPrimeiroComoNovo), 100)
     return
   }
 
