@@ -1,1 +1,1 @@
-Nothing needs to be added to .gitignore since only a JavaScript source file (js/utils.js) was modified, and no build artifacts, dependencies, or temporary files were included in the changes.
+(js/questoes.js is a source file, and there are no build artifacts, dependencies, or temp files in the changes)
