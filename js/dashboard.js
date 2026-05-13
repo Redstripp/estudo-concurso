@@ -2,44 +2,53 @@
 
 const CHAVE_CHECKLIST_INICIAL_OCULTO = 'estudoConcursoChecklistInicialOculto'
 
+let _dashboardCarregando = false
+
 async function inicializarDashboard() {
-  const centralHoje = document.getElementById('dashboard-central-hoje')
-  const cards = document.getElementById('dashboard-cards')
-  const grafico = document.getElementById('dashboard-grafico')
-  const arquivamento = document.getElementById('dashboard-arquivamento')
-  const relatorioErros = document.getElementById('dashboard-relatorio-erros')
+  if (_dashboardCarregando) return
+  _dashboardCarregando = true
 
-  if (centralHoje) centralHoje.innerHTML = criarEstadoVazioDashboard('Central de Hoje', 'Seu resumo do dia aparece aqui assim que os dados forem lidos.')
-  if (cards) cards.innerHTML = criarCardsDashboardVazios()
-  if (grafico) grafico.innerHTML = criarEstadoVazioDashboard('Atividade semanal', 'Seu gráfico de atividade aparece após o primeiro registro. Comece pelo Caderno de Erros.')
-  if (arquivamento) arquivamento.innerHTML = criarEstadoVazioDashboard('Ciclo mensal', 'O ciclo mensal aparece aqui quando houver questões registradas no período.')
-  if (relatorioErros) relatorioErros.innerHTML = criarEstadoVazioDashboard('Treinador de padrões', 'Preencha o motivo do erro e o conceito ao registrar questões — o sistema vai mostrar aqui o que está se repetindo.')
+  try {
+    const centralHoje = document.getElementById('dashboard-central-hoje')
+    const cards = document.getElementById('dashboard-cards')
+    const grafico = document.getElementById('dashboard-grafico')
+    const arquivamento = document.getElementById('dashboard-arquivamento')
+    const relatorioErros = document.getElementById('dashboard-relatorio-erros')
 
-  const userId = window.usuarioAtual?.id
-  
-  if (!userId) {
-    const erro = new Error('Usuário não autenticado.')
-    erro.detalhe = 'Faça login novamente para acessar o dashboard.'
-    mostrarErroDashboard('dashboard-central-hoje', 'Erro de autenticação', erro.message, erro.detalhe)
-    mostrarErroDashboard('dashboard-cards', 'Erro de autenticação', erro.message, erro.detalhe)
-    mostrarErroDashboard('dashboard-grafico', 'Erro de autenticação', erro.message, erro.detalhe)
-    mostrarErroDashboard('dashboard-arquivamento', 'Erro de autenticação', erro.message, erro.detalhe)
-    mostrarErroDashboard('dashboard-relatorio-erros', 'Erro de autenticação', erro.message, erro.detalhe)
-    return
+    if (centralHoje) centralHoje.innerHTML = criarEstadoVazioDashboard('Central de Hoje', 'Seu resumo do dia aparece aqui assim que os dados forem lidos.')
+    if (cards) cards.innerHTML = criarCardsDashboardVazios()
+    if (grafico) grafico.innerHTML = criarEstadoVazioDashboard('Atividade semanal', 'Seu gráfico de atividade aparece após o primeiro registro. Comece pelo Caderno de Erros.')
+    if (arquivamento) arquivamento.innerHTML = criarEstadoVazioDashboard('Ciclo mensal', 'O ciclo mensal aparece aqui quando houver questões registradas no período.')
+    if (relatorioErros) relatorioErros.innerHTML = criarEstadoVazioDashboard('Treinador de padrões', 'Preencha o motivo do erro e o conceito ao registrar questões — o sistema vai mostrar aqui o que está se repetindo.')
+
+    const userId = window.usuarioAtual?.id
+    
+    if (!userId) {
+      const erro = new Error('Usuário não autenticado.')
+      erro.detalhe = 'Faça login novamente para acessar o dashboard.'
+      mostrarErroDashboard('dashboard-central-hoje', 'Erro de autenticação', erro.message, erro.detalhe)
+      mostrarErroDashboard('dashboard-cards', 'Erro de autenticação', erro.message, erro.detalhe)
+      mostrarErroDashboard('dashboard-grafico', 'Erro de autenticação', erro.message, erro.detalhe)
+      mostrarErroDashboard('dashboard-arquivamento', 'Erro de autenticação', erro.message, erro.detalhe)
+      mostrarErroDashboard('dashboard-relatorio-erros', 'Erro de autenticação', erro.message, erro.detalhe)
+      return
+    }
+    
+    await Promise.all([
+      carregarCentralHojeComErro(userId),
+      carregarCardsDashboardComErro(userId)
+    ])
+
+    if (window.modoInterfaceAtual === 'essencial') return
+
+    await Promise.all([
+      carregarArquivamentoMensalComErro(userId),
+      carregarGraficoDashboardComErro(userId),
+      carregarRelatorioErrosRecorrentesComErro(userId)
+    ])
+  } finally {
+    _dashboardCarregando = false
   }
-  
-  await Promise.all([
-    carregarCentralHojeComErro(userId),
-    carregarCardsDashboardComErro(userId)
-  ])
-
-  if (window.modoInterfaceAtual === 'essencial') return
-
-  await Promise.all([
-    carregarArquivamentoMensalComErro(userId),
-    carregarGraficoDashboardComErro(userId),
-    carregarRelatorioErrosRecorrentesComErro(userId)
-  ])
 }
 
 function criarEstadoVazioDashboard(titulo, texto) {
@@ -148,7 +157,10 @@ function mostrarErroDashboard(containerId, titulo, mensagem, detalhe) {
   if (btn) {
     const novoBtn = btn.cloneNode(false)
     btn.parentNode.replaceChild(novoBtn, btn)
-    novoBtn.addEventListener('click', inicializarDashboard)
+    // CORREÇÃO: setTimeout quebra a pilha de chamadas síncrona
+    novoBtn.addEventListener('click', () => {
+      setTimeout(inicializarDashboard, 0)
+    })
   }
 }
 
