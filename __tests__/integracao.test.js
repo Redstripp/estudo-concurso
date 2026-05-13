@@ -47,8 +47,9 @@ const windowMock = {
 }
 global.window = windowMock
 
-// Importa as funções utilitárias
-import { escaparHtmlSeguro, formatarData, calcularPorcentagem } from '../js/utils.js'
+// Importa as funções utilitárias via globalThis (definidas em js/utils.js)
+// As funções são exportadas para globalThis quando executadas no Vitest
+const { escaparHtmlSeguro, formatarData, calcularPorcentagem } = globalThis
 
 describe('Testes de Integração', () => {
   beforeEach(() => {
