@@ -1,68 +1,50 @@
-```
-# Dependencies
-node_modules/
-
-# Build artifacts
+```gitignore
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+*.o
+*.obj
 dist/
 build/
 target/
 
-# Package lock files
-package-lock.json
-
-# Temporary files
-*.tmp
-*.swp
-*.log
-
-# Environment variables
+# Dependencies
+node_modules/
+venv/
+.venv/
 .env
 .env.local
-*.env.*
+.env.*
 
-# IDE specific
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Editors
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# Test related
-__tests__/
+# System files
+.DS_Store
+Thumbs.db
 
-# Coverage reports
+# Coverage
 coverage/
 htmlcov/
 .coverage
 
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Python specific (if present in project)
-__pycache__/
+# Python specific
 *.pyc
+__pycache__/
 *.pyo
 *.pyd
 .Python
-venv/
-.venv/
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Compiled binary files
-*.exe
-*.dll
 *.so
-*.a
-*.obj
-*.out
-
-# Source maps
-*.map
-
-# Cache directories
-.vite/
-.mypy_cache/
-.pytest_cache/
-.gradle/
+*.egg-info/
+.eggs/
 
 # Compressed files
 *.zip
