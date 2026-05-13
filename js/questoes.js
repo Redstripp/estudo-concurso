@@ -1791,10 +1791,13 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
   const lista       = document.getElementById('lista-questoes')
   const placeholder = document.getElementById('placeholder-questoes')
 
-  if (placeholder) {
-    placeholder.textContent   = '⏳ Buscando suas questões...'
-    placeholder.style.display = 'block'
+  if (!lista || !placeholder) {
+    console.error('Elementos da lista de questões ou placeholder não encontrados no DOM.')
+    return
   }
+
+  placeholder.textContent   = '⏳ Buscando suas questões...'
+  placeholder.style.display = 'block'
 
   const { data, error } = await db
     .from('questoes')
