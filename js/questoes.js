@@ -1791,6 +1791,18 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
 
   const lista       = document.getElementById('lista-questoes')
   const placeholder = document.getElementById('placeholder-questoes')
+  const secaoQuestoes = document.getElementById('secao-questoes')
+
+  // Verifica se a seção de questões está visível
+  if (!secaoQuestoes || secaoQuestoes.classList.contains('escondido')) {
+    // Seção não está visível, não tenta carregar ainda
+    return
+  }
+
+  if (!lista || !placeholder) {
+    console.error('Elementos da lista de questões ou placeholder não encontrados no DOM.')
+    return
+  }
 
   if (!lista || !placeholder) {
     // Elementos não existem: provavelmente a tela de questões não está visível
