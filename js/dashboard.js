@@ -2121,20 +2121,6 @@ function diferencaDiasDashboard(dataInicio, dataFim) {
   return Math.round((fim - inicio) / 86400000)
 }
 
-function dataHoje() {
-  const d = new Date()
-  const ano = d.getFullYear()
-  const mes = String(d.getMonth() + 1).padStart(2, '0')
-  const dia = String(d.getDate()).padStart(2, '0')
-  return `${ano}-${mes}-${dia}`
-}
-
-function diaAnterior(dataStr) {
-  const data = new Date(`${dataStr}T12:00:00`)
-  data.setDate(data.getDate() - 1)
-  return data.toISOString().substring(0, 10)
-}
-
 // ─── GRÁFICO ──────────────────────────────────────────────
 
 async function carregarGrafico(userId) {
