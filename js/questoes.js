@@ -198,14 +198,58 @@ async function carregarMateriasNoSelect() {
 
 async function carregarTopicosQuestao(topicoAtualId = '') {
   const materiaId = document.getElementById('q-materia')?.value || ''
+  await carregarTopicosQuestaoParaSelect('q-edital-topico', materiaId, topicoAtualId, 'Sem assunto específico')
+}
 
+async function carregarTopicosQuestaoParaSelect(selectId, materiaId = '', topicoAtualId = '', textoVazio = 'Sem assunto específico') {
   if (typeof carregarTopicosEditalParaSelect === 'function') {
-    await carregarTopicosEditalParaSelect('q-edital-topico', materiaId, topicoAtualId, 'Sem assunto específico')
+    await carregarTopicosEditalParaSelect(selectId, materiaId, topicoAtualId, textoVazio)
     return
   }
 
-  const select = document.getElementById('q-edital-topico')
-  if (select) select.innerHTML = '<option value="">Sem assunto específico</option>'
+  const select = document.getElementById(selectId)
+  if (!select) return
+
+  select.innerHTML = '<option value="">Buscando lista de assuntos do edital...</option>'
+
+  try {
+    let query = db
+      .from('edital_topicos')
+      .select('id, materia_id, titulo, materias(nome)')
+      .eq('user_id', window.usuarioAtual.id)
+      .order('titulo', { ascending: true })
+
+    if (materiaId) query = query.eq('materia_id', materiaId)
+
+    const { data, error } = await query
+    if (error) throw error
+
+    popularTopicosQuestaoSelect(select, data || [], materiaId, topicoAtualId, textoVazio)
+  } catch (erro) {
+    console.warn('Não foi possível carregar assuntos do edital em Questões.', erro)
+    select.innerHTML = '<option value="">Execute o SQL do edital</option>'
+  }
+}
+
+function popularTopicosQuestaoSelect(select, topicos, materiaId = '', topicoAtualId = '', textoVazio = 'Sem assunto específico') {
+  const filtrados = (topicos || [])
+    .filter(topico => !materiaId || topico.materia_id === materiaId)
+    .sort((a, b) => String(a.titulo || '').localeCompare(String(b.titulo || ''), 'pt-BR'))
+
+  select.innerHTML = ''
+  const optionVazio = document.createElement('option')
+  optionVazio.value = ''
+  optionVazio.textContent = textoVazio
+  select.appendChild(optionVazio)
+
+  filtrados.forEach(topico => {
+    const materia = topico.materias?.nome ? ` · ${topico.materias.nome}` : ''
+    const option = document.createElement('option')
+    option.value = topico.id
+    option.textContent = `${topico.titulo}${materia}`
+    if (topico.id === topicoAtualId) option.selected = true
+    select.appendChild(option)
+  })
 }
 
 function obterTextoTopicoSelecionado(selectId) {
@@ -2622,13 +2666,7 @@ async function carregarMateriasNoSelectEdicao(materiaAtualId) {
 }
 
 async function carregarTopicosEdicao(materiaId, topicoAtualId = '') {
-  if (typeof carregarTopicosEditalParaSelect === 'function') {
-    await carregarTopicosEditalParaSelect('edit-edital-topico', materiaId, topicoAtualId, 'Sem assunto específico')
-    return
-  }
-
-  const select = document.getElementById('edit-edital-topico')
-  if (select) select.innerHTML = '<option value="">Sem assunto específico</option>'
+  await carregarTopicosQuestaoParaSelect('edit-edital-topico', materiaId, topicoAtualId, 'Sem assunto específico')
 }
 
 // ============================================
