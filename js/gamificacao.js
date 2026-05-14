@@ -89,7 +89,7 @@ async function obterResumoStreakGamificacao(userId = window.usuarioAtual?.id) {
     streak,
     recorde,
     atividadeHoje,
-    sequenciaEmRisco: !atividadeHoje,
+    sequenciaEmRisco: streak > 0 && !atividadeHoje,
     datas
   }
 }
