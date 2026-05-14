@@ -1,6 +1,35 @@
 // js/dashboard.js
 
 const CHAVE_CHECKLIST_INICIAL_OCULTO = 'estudoConcursoChecklistInicialOculto'
+const TAMANHO_PAGINA_CENTRAL_HOJE = 1000
+const CAMPOS_QUESTOES_CENTRAL_HOJE = [
+  'id',
+  'enunciado',
+  'alternativas',
+  'alternativa_marcada',
+  'alternativa_correta',
+  'tipo_questao',
+  'status_revisao',
+  'revisar_novamente_em',
+  'revisao_ultima_data',
+  'revisao_ultima_resultado',
+  'revisao_total_acertos',
+  'revisao_total_erros',
+  'revisao_etapa',
+  'motivo_erro',
+  'nivel_confianca',
+  'comentario',
+  'criado_em',
+  'materia_id',
+  'edital_topico_id',
+  'banca',
+  'pegadinha_banca',
+  'conceito_chave',
+  'como_reconhecer',
+  'acao_corretiva',
+  'materias(nome)',
+  'edital_topicos(titulo, status, peso)'
+].join(', ')
 
 let _dashboardCarregando = false
 
@@ -198,43 +227,18 @@ async function carregarCentralHoje(userId) {
     ? obterConfiguracaoRevisaoUsuario(userId)
     : Promise.resolve({ dias_revisao: [6], tempo_revisao_minutos: 60, ultima_revisao_geral: null })
 
-  // --- ETAPA 6: Separação da Contagem (Total Real) dos Dados (Exibição) ---
-  
-  // 1. Cria a promessa apenas para contar (não traz dados, só o número)
-  const countPromessa = db
-    .from('questoes')
-    .select('*', { head: true, count: 'exact' })
-    .eq('user_id', userId)
-    .eq('status_revisao', 'pendente')
-    .then(({ count, error }) => {
-      if (error) throw error
-      return count || 0
-    })
-
-  // 2. Cria a promessa para trazer apenas 50 itens leves para a tela
-  const questoesPromessa = db
-    .from('questoes')
-    .select('id, criado_em, materias(nome)') 
-    .eq('user_id', userId)
-    .eq('status_revisao', 'pendente')
-    .order('criado_em', { ascending: false })
-    .limit(50)
+  // Busca paginada para o relatorio usar todas as pendentes, nao uma amostra.
+  const questoesPromessa = buscarQuestoesPendentesCentralHoje(userId)
 
   // Executa tudo em paralelo junto com as outras consultas originais
-  const [config, totalReal, questoesResp, planoResp, editalResp, planejamentoResp] = await Promise.all([
+  const [config, questoes, planoResp, editalResp, planejamentoResp] = await Promise.all([
     configPromessa,
-    countPromessa,       // <-- Novo: Total real
-    questoesPromessa,    // <-- Modificado: Apenas 50 itens
+    questoesPromessa,
     db.from('plano_dia_materias').select('id, data, meta_questoes, materias(nome)').eq('user_id', userId).eq('data', hoje).order('criado_em', { ascending: true }),
     db.from('edital_config').select('data_prova, concurso_alvo').eq('user_id', userId).maybeSingle(),
     db.from('planejamento_semanal').select('id, dia_semana, materia_id, meta_questoes, tipo_estudo, materias(nome)').eq('user_id', userId).eq('dia_semana', diaSemanaHoje).order('ordem', { ascending: true })
   ])
 
-  // Tratamento de erro específico da consulta de questões
-  if (questoesResp.error) throw criarErroConsultaDashboard('Não foi possível buscar suas revisões pendentes.', questoesResp.error)
-
-  const questoes = questoesResp.data || []
-  
   const planoGerado = planoResp.error ? [] : (planoResp.data || [])
   const planejamentoHoje = planejamentoResp.error ? [] : (planejamentoResp.data || [])
   
@@ -257,12 +261,6 @@ async function carregarCentralHoje(userId) {
   const relatorio = typeof montarRelatorioFilaRevisao === 'function'
     ? montarRelatorioFilaRevisao(questoes, config, editalConfig)
     : montarResumoCentralHojeBasico(questoes)
-
-  // --- Sobrescreve os totais pelo valor real do banco ---
-  if (relatorio) {
-    relatorio.totalPendente = totalReal
-    relatorio.totalCiclo = totalReal
-  }
 
   const ehRevisao = typeof ehDiaDeRevisaoHoje === 'function' ? ehDiaDeRevisaoHoje(config) : false
   const proxima = typeof calcularProximaDataRevisao === 'function' ? calcularProximaDataRevisao(config.dias_revisao) : hoje
@@ -309,6 +307,40 @@ async function carregarCentralHoje(userId) {
       }
     })
   }
+}
+
+async function buscarQuestoesPendentesCentralHoje(userId) {
+  const questoes = []
+  let inicio = 0
+  let totalEsperado = null
+
+  while (true) {
+    const fim = inicio + TAMANHO_PAGINA_CENTRAL_HOJE - 1
+    const consulta = db
+      .from('questoes')
+      .select(CAMPOS_QUESTOES_CENTRAL_HOJE, totalEsperado === null ? { count: 'exact' } : undefined)
+      .eq('user_id', userId)
+      .eq('status_revisao', 'pendente')
+      .order('criado_em', { ascending: false })
+      .range(inicio, fim)
+
+    const { data, error, count } = await consulta
+    if (error) {
+      throw criarErroConsultaDashboard('Não foi possível buscar suas revisões pendentes.', error)
+    }
+
+    const pagina = data || []
+    if (totalEsperado === null && typeof count === 'number') totalEsperado = count
+    questoes.push(...pagina)
+
+    if (pagina.length === 0) break
+    if (totalEsperado !== null && questoes.length >= totalEsperado) break
+    if (pagina.length < TAMANHO_PAGINA_CENTRAL_HOJE) break
+
+    inicio += TAMANHO_PAGINA_CENTRAL_HOJE
+  }
+
+  return questoes
 }
 
 function calcularDiaSemanaCentralHoje(dataISO) {
