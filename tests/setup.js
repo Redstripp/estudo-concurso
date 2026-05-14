@@ -6,6 +6,8 @@ await import('../js/utils.js')
 await import('../js/gamificacao.js')
 await import('../js/questoes.js')
 await import('../js/revisao.js')
+await import('../js/edital.js')
+await import('../js/planejamento.js')
 
 if (typeof globalThis.window === 'undefined') {
   globalThis.window = {}

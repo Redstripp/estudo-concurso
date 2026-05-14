@@ -9,7 +9,8 @@ const {
   obterTipoQuestaoPorCampos,
   questaoChutadaAcertada,
   normalizarTextoDuplicidade,
-  ordenarQuestoes
+  ordenarQuestoes,
+  obterOuCriarSessaoDeHoje
 } = globalThis
 
 describe('escaparHtmlSeguro', () => {
@@ -194,5 +195,56 @@ describe('ordenarQuestoes', () => {
 
   it('ordena diagnóstico mais fraco primeiro', () => {
     expect(ordenarQuestoes(questoes, 'diagnostico').map(q => q.id)).toEqual(['antiga', 'meio', 'recente'])
+  })
+})
+
+describe('obterOuCriarSessaoDeHoje', () => {
+  it('usa maybeSingle e cria a sessão quando ainda não existe registro no dia', async () => {
+    const dbAnterior = globalThis.db
+    const windowAnterior = globalThis.window
+    let consultaSessaoUsouMaybeSingle = false
+    let fromCount = 0
+
+    const consultaSessao = {
+      select() { return this },
+      eq() { return this },
+      single() { throw new Error('Não deve usar single na busca de sessão existente') },
+      async maybeSingle() {
+        consultaSessaoUsouMaybeSingle = true
+        return { data: null, error: null }
+      }
+    }
+    const criacaoSessao = {
+      payload: null,
+      insert(payload) {
+        this.payload = payload
+        return this
+      },
+      select() { return this },
+      async single() {
+        return { data: { id: 'sessao-nova', total_questoes: 0 }, error: null }
+      }
+    }
+
+    globalThis.window = { usuarioAtual: { id: 'usuario-1' } }
+    globalThis.db = {
+      from(tabela) {
+        expect(tabela).toBe('sessoes_estudo')
+        fromCount += 1
+        return fromCount === 1 ? consultaSessao : criacaoSessao
+      }
+    }
+
+    try {
+      const sessao = await obterOuCriarSessaoDeHoje()
+
+      expect(consultaSessaoUsouMaybeSingle).toBe(true)
+      expect(criacaoSessao.payload.user_id).toBe('usuario-1')
+      expect(criacaoSessao.payload.total_questoes).toBe(0)
+      expect(sessao).toEqual({ id: 'sessao-nova', total_questoes: 0 })
+    } finally {
+      globalThis.db = dbAnterior
+      globalThis.window = windowAnterior
+    }
   })
 })

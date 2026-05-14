@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 
 const {
   calcularProximaRevisao24730,
-  calcularEtapaRevisao24730
+  calcularEtapaRevisao24730,
+  preRespostaTreinoCompleta
 } = globalThis
 
 describe('calcularProximaRevisao24730', () => {
@@ -33,6 +34,29 @@ describe('calcularProximaRevisao24730', () => {
   it('deve voltar para 1 dia quando errar', () => {
     expect(calcularProximaRevisao24730({ revisao_etapa: 2 }, '2026-05-14', false, 'Confiante'))
       .toBe('2026-05-15')
+  })
+})
+
+describe('preRespostaTreinoCompleta', () => {
+  it('aceita conceito preenchido com ao menos um item do checklist marcado', () => {
+    expect(preRespostaTreinoCompleta({
+      texto: 'CF 37',
+      checklist: { comando: true, pegadinha: false, tipo: false }
+    })).toBe(true)
+  })
+
+  it('bloqueia quando o conceito está vazio', () => {
+    expect(preRespostaTreinoCompleta({
+      texto: '   ',
+      checklist: { comando: true, pegadinha: true, tipo: true }
+    })).toBe(false)
+  })
+
+  it('bloqueia quando nenhum item do checklist foi marcado', () => {
+    expect(preRespostaTreinoCompleta({
+      texto: 'Lei seca',
+      checklist: { comando: false, pegadinha: false, tipo: false }
+    })).toBe(false)
   })
 })
 

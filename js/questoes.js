@@ -1560,12 +1560,17 @@ async function obterOuCriarSessaoDeHoje() {
   const agora = new Date()
   const hoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`
 
-  const { data: sessaoExistente } = await db
+  const { data: sessaoExistente, error: erroSessaoExistente } = await db
     .from('sessoes_estudo')
     .select('id, total_questoes')
     .eq('user_id', window.usuarioAtual.id)
     .eq('data', hoje)
-    .single()
+    .maybeSingle()
+
+  if (erroSessaoExistente) {
+    console.error('Erro ao buscar sessão de estudo do dia.', erroSessaoExistente)
+    return null
+  }
 
   if (sessaoExistente) return sessaoExistente
 
@@ -1579,7 +1584,10 @@ async function obterOuCriarSessaoDeHoje() {
     .select('id, total_questoes')
     .single()
 
-  if (error) return null
+  if (error) {
+    console.error('Erro ao criar sessão de estudo do dia.', error)
+    return null
+  }
   return novaSessao
 }
 
@@ -2820,7 +2828,8 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     questaoChutadaAcertada,
     normalizarTextoDuplicidade,
     ordenarQuestoes,
-    carregarQuestoesEmMemoria
+    carregarQuestoesEmMemoria,
+    obterOuCriarSessaoDeHoje
   }
   
   // Compatibilidade com ES modules no Vitest
@@ -2837,4 +2846,5 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.normalizarTextoDuplicidade = normalizarTextoDuplicidade
   globalThis.ordenarQuestoes = ordenarQuestoes
   globalThis.carregarQuestoesEmMemoria = carregarQuestoesEmMemoria
+  globalThis.obterOuCriarSessaoDeHoje = obterOuCriarSessaoDeHoje
 }

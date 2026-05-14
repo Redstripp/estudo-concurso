@@ -1409,6 +1409,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.calcularProximaRevisao24730 = calcularProximaRevisao24730
   globalThis.calcularEtapaRevisao24730 = calcularEtapaRevisao24730
   globalThis.calcularIntervaloRepeticaoEtapa24730 = calcularIntervaloRepeticaoEtapa24730
+  globalThis.preRespostaTreinoCompleta = preRespostaTreinoCompleta
 }
 
 function criarAlternativasTreinoPegadinha(q) {
@@ -1643,12 +1644,6 @@ function criarAlternativasTreino(q, gabaritoVisivel, respostaSelecionada) {
 }
 
 function selecionarRespostaTreinoRevisao(letra) {
-  if (!preRespostaTreinoCompleta()) {
-    const msg = document.getElementById('msg-treino-revisao')
-    if (msg) msg.textContent = 'Antes de marcar, escreva o conceito e conclua o checklist.'
-    return
-  }
-
   treinoRevisaoRespostaSelecionada = letra
   renderizarTreinoRevisao(false)
 }
@@ -1661,7 +1656,7 @@ function confirmarRespostaTreinoRevisao() {
     return
   }
   if (!preRespostaTreinoCompleta()) {
-    msg.textContent = 'Preencha o conceito antes da resposta e marque o checklist.'
+    msg.textContent = 'Escreva o conceito antes da resposta e marque ao menos um item do checklist.'
     return
   }
   if (!treinoRevisaoConfianca) {
@@ -1688,11 +1683,14 @@ function renderizarOptionsConfiancaTreino(valorAtual = '') {
   `).join('')
 }
 
-function preRespostaTreinoCompleta() {
-  return treinoRevisaoPreResposta.trim().length >= 8 &&
-    treinoRevisaoChecklist.comando &&
-    treinoRevisaoChecklist.pegadinha &&
-    treinoRevisaoChecklist.tipo
+function preRespostaTreinoCompleta(estado = {}) {
+  const texto = estado.texto ?? treinoRevisaoPreResposta
+  const checklist = estado.checklist ?? treinoRevisaoChecklist
+  return String(texto || '').trim().length > 0 && checklistTreinoMarcado(checklist)
+}
+
+function checklistTreinoMarcado(checklist = treinoRevisaoChecklist) {
+  return Boolean(checklist?.comando || checklist?.pegadinha || checklist?.tipo)
 }
 
 function criarDiagnosticoTreino(q) {

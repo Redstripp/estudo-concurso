@@ -3308,6 +3308,29 @@ body.modo-foco .conteudo-principal {
   margin-bottom: 0.85rem;
 }
 
+.edital-bloco-topo--com-filtro {
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.edital-bloco-subtexto {
+  margin: 0.25rem 0 0;
+  color: var(--cor-texto-suave);
+  font-size: 0.8rem;
+}
+
+.edital-filtro-assuntos {
+  min-width: 220px;
+}
+
+.edital-filtro-assuntos .campo-label {
+  margin-bottom: 0.35rem;
+}
+
+.edital-filtro-assuntos .input-texto {
+  width: 100%;
+}
+
 .edital-bloco-topo h3,
 .edital-topico-card h4,
 .edital-prioridade-card h4 {
@@ -3415,6 +3438,11 @@ body.modo-foco .conteudo-principal {
     flex-direction: column;
   }
 
+  .edital-bloco-topo--com-filtro,
+  .edital-filtro-assuntos {
+    width: 100%;
+  }
+
   .edital-status-select {
     width: 100%;
   }
@@ -3450,10 +3478,28 @@ body.modo-foco .conteudo-principal {
 .meta-central-linha .campo-form {
   flex: 1 1 220px;
   min-width: min(220px, 100%);
+  margin-bottom: 0;
 }
 
 .meta-central-linha .btn-primario {
+  align-self: flex-end;
   width: auto;
+}
+
+.meta-central-linha .btn-primario,
+.planejamento-form-grid .btn-primario,
+.planejamento-form-grid .btn-secundario {
+  align-items: center;
+  align-self: end;
+  display: inline-flex;
+  justify-content: center;
+  margin-top: 0;
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.planejamento-form-grid .campo-form {
+  margin-bottom: 0;
 }
 
 .planejamento-form-grid--simulado {

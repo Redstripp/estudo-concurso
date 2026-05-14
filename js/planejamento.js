@@ -9,6 +9,7 @@ let planejamentoEstado = {
   config: null,
   perfil: null
 }
+let relatorioProntoProvaAtualizacaoId = 0
 
 const DIAS_PLANEJAMENTO = [
   { valor: 1, nome: 'Segunda-feira' },
@@ -664,13 +665,34 @@ async function gerarRelatorioProntoProva() {
   const container = document.getElementById('relatorio-pronto-prova')
   if (!container) return
 
+  const atualizacaoId = ++relatorioProntoProvaAtualizacaoId
+  const btn = document.getElementById('btn-atualizar-pronto-prova')
+  const textoBotaoOriginal = btn?.dataset.textoOriginal || btn?.textContent || 'Atualizar relatório'
+  if (btn) {
+    btn.dataset.textoOriginal = textoBotaoOriginal
+    btn.disabled = true
+    btn.textContent = 'Atualizando...'
+  }
+  container.setAttribute('aria-busy', 'true')
+  container.innerHTML = '<p class="texto-placeholder">Atualizando relatório...</p>'
+
   try {
     const dados = await buscarDadosInteligentesPlanejamento()
+    if (atualizacaoId !== relatorioProntoProvaAtualizacaoId) return
     const relatorio = montarRelatorioProntoProva(dados)
     renderizarRelatorioProntoProva(relatorio)
   } catch (erro) {
+    if (atualizacaoId !== relatorioProntoProvaAtualizacaoId) return
     console.warn('Não foi possível atualizar o relatório de prova.', erro)
     container.innerHTML = '<p class="texto-placeholder">Execute os SQLs do edital e do planejamento para gerar o relatório.</p>'
+  } finally {
+    if (atualizacaoId === relatorioProntoProvaAtualizacaoId) {
+      container.removeAttribute('aria-busy')
+      if (btn) {
+        btn.disabled = false
+        btn.textContent = textoBotaoOriginal
+      }
+    }
   }
 }
 
@@ -940,4 +962,8 @@ function mostrarErroPlanejamento(mensagem) {
     const el = document.getElementById(id)
     if (el) el.innerHTML = `<p class="texto-placeholder">${escaparHtmlSeguro(mensagem)}</p>`
   })
+}
+
+if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  globalThis.montarRelatorioProntoProva = montarRelatorioProntoProva
 }

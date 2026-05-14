@@ -9,6 +9,7 @@ let editalEstado = {
   config: null,
   perfil: null
 }
+let filtroMateriaEdital = ''
 
 const STATUS_EDITAL = {
   nao_estudado: { rotulo: 'Não estudado', classe: 'status-nao-estudado', peso: 10 },
@@ -22,6 +23,8 @@ async function inicializarEdital() {
   if (!editalInicializado) {
     editalInicializado = true
     document.getElementById('btn-salvar-edital-config')?.addEventListener('click', salvarConfigEdital)
+    document.getElementById('edital-data-prova')?.addEventListener('input', limparErroDataProvaEdital)
+    document.getElementById('edital-data-prova')?.addEventListener('change', limparErroDataProvaEdital)
     document.getElementById('btn-salvar-edital-topico')?.addEventListener('click', salvarTopicoEdital)
     document.getElementById('btn-salvar-pegadinha')?.addEventListener('click', salvarPegadinhaBanca)
     document.getElementById('pegadinha-materia')?.addEventListener('change', () => {
@@ -159,37 +162,106 @@ function obterMetaCentralEdital() {
 async function salvarConfigEdital() {
   const btn = document.getElementById('btn-salvar-edital-config')
   const msg = document.getElementById('msg-edital-config')
-  const concurso = document.getElementById('edital-concurso').value.trim()
-  const dataProva = document.getElementById('edital-data-prova').value || null
+  const campoConcurso = document.getElementById('edital-concurso')
+  const campoDataProva = document.getElementById('edital-data-prova')
+  const concurso = campoConcurso?.value.trim() || ''
+  const validacaoData = validarCampoDataProvaEdital(campoDataProva)
   const meta = obterMetaCentralEdital()
 
-  btn.disabled = true
-  btn.textContent = 'Salvando...'
-  msg.textContent = ''
+  if (validacaoData.erro) {
+    if (msg) {
+      msg.textContent = validacaoData.erro
+      msg.className = 'msg-materia erro'
+    }
+    campoDataProva?.setAttribute('aria-invalid', 'true')
+    campoDataProva?.focus()
+    return
+  }
+
+  campoDataProva?.removeAttribute('aria-invalid')
+  if (btn) {
+    btn.disabled = true
+    btn.textContent = 'Salvando...'
+  }
+  if (msg) msg.textContent = ''
 
   const { error } = await db
     .from('edital_config')
     .upsert({
       user_id: window.usuarioAtual.id,
       concurso_alvo: concurso || null,
-      data_prova: dataProva,
+      data_prova: validacaoData.data,
       meta_questoes_reta_final: meta,
       atualizado_em: new Date().toISOString()
     }, { onConflict: 'user_id' })
 
-  btn.disabled = false
-  btn.textContent = 'Salvar reta final'
+  if (btn) {
+    btn.disabled = false
+    btn.textContent = 'Salvar reta final'
+  }
 
   if (error) {
     console.error(error)
-    msg.textContent = 'Erro ao salvar. Execute o SQL do edital no Supabase.'
-    msg.className = 'msg-materia erro'
+    if (msg) {
+      msg.textContent = 'Erro ao salvar. Execute o SQL do edital no Supabase.'
+      msg.className = 'msg-materia erro'
+    }
     return
   }
 
-  msg.textContent = 'Reta final salva.'
-  msg.className = 'msg-materia sucesso'
+  if (msg) {
+    msg.textContent = 'Reta final salva.'
+    msg.className = 'msg-materia sucesso'
+  }
   await carregarEdital()
+}
+
+function validarCampoDataProvaEdital(input) {
+  if (input?.validity?.badInput) {
+    return {
+      data: null,
+      erro: 'Digite uma data válida para a prova.'
+    }
+  }
+
+  return validarDataProvaEdital(input?.value || '')
+}
+
+function validarDataProvaEdital(valor, opcoes = {}) {
+  const texto = String(valor || '').trim()
+  const hoje = opcoes.hoje || dataHoje()
+
+  if (!texto) return { data: null, erro: '' }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
+    return { data: null, erro: 'Digite uma data válida para a prova.' }
+  }
+
+  const [ano, mes, dia] = texto.split('-').map(Number)
+  const data = new Date(ano, mes - 1, dia)
+  const dataValida =
+    data.getFullYear() === ano &&
+    data.getMonth() === mes - 1 &&
+    data.getDate() === dia
+
+  if (!dataValida) {
+    return { data: null, erro: 'Digite uma data válida para a prova.' }
+  }
+
+  if (texto < hoje) {
+    return { data: null, erro: 'A data da prova não pode estar no passado.' }
+  }
+
+  return { data: texto, erro: '' }
+}
+
+function limparErroDataProvaEdital() {
+  const input = document.getElementById('edital-data-prova')
+  const msg = document.getElementById('msg-edital-config')
+  input?.removeAttribute('aria-invalid')
+  if (msg?.classList.contains('erro')) {
+    msg.textContent = ''
+    msg.className = 'msg-materia'
+  }
 }
 
 async function salvarTopicoEdital() {
@@ -253,7 +325,13 @@ function renderizarEdital() {
     return
   }
 
+  if (filtroMateriaEdital && !editalEstado.materias.some(materia => materia.id === filtroMateriaEdital)) {
+    filtroMateriaEdital = ''
+  }
+
   const prioridades = calcularPrioridadesEdital(resumo).slice(0, 6)
+  const topicosFiltrados = filtrarTopicosEditalPorMateria(editalEstado.topicos, filtroMateriaEdital)
+  const textoFiltro = obterTextoFiltroAssuntosEdital(topicosFiltrados.length, editalEstado.topicos.length, filtroMateriaEdital)
 
   painel.innerHTML = `
     <div class="edital-resumo-grid">
@@ -272,15 +350,30 @@ function renderizarEdital() {
       </div>
     </div>
     <div class="edital-bloco">
-      <div class="edital-bloco-topo">
-        <h3>Assuntos do edital</h3>
-        <span class="tag-estudo">${resumo.percentualDominio}% dominado</span>
+      <div class="edital-bloco-topo edital-bloco-topo--com-filtro">
+        <div>
+          <h3>Assuntos do edital</h3>
+          <p class="edital-bloco-subtexto">${escaparHtmlSeguro(textoFiltro)} · ${resumo.percentualDominio}% dominado</p>
+        </div>
+        <div class="edital-filtro-assuntos">
+          <label class="campo-label" for="filtro-materia-edital">Matéria</label>
+          <select id="filtro-materia-edital" class="input-texto">
+            ${criarOptionsFiltroMateriasEdital(filtroMateriaEdital)}
+          </select>
+        </div>
       </div>
       <div class="edital-topicos-lista">
-        ${editalEstado.topicos.map(topico => criarCardTopicoEdital(topico, resumo.statsPorTopico[topico.id] || criarStatsTopico())).join('')}
+        ${topicosFiltrados.length > 0
+          ? topicosFiltrados.map(topico => criarCardTopicoEdital(topico, resumo.statsPorTopico[topico.id] || criarStatsTopico())).join('')
+          : '<p class="texto-placeholder">Nenhum assunto cadastrado para esta matéria.</p>'}
       </div>
     </div>
   `
+
+  painel.querySelector('#filtro-materia-edital')?.addEventListener('change', (evento) => {
+    filtroMateriaEdital = evento.target.value
+    renderizarEdital()
+  })
 
   painel.querySelectorAll('.edital-status-select').forEach(select => {
     select.addEventListener('change', () => atualizarStatusTopicoEdital(select.dataset.id, select.value))
@@ -289,6 +382,27 @@ function renderizarEdital() {
   painel.querySelectorAll('.btn-excluir-topico-edital').forEach(btn => {
     btn.addEventListener('click', () => excluirTopicoEdital(btn.dataset.id))
   })
+}
+
+function filtrarTopicosEditalPorMateria(topicos, materiaId = '') {
+  if (!materiaId) return topicos || []
+  return (topicos || []).filter(topico => topico.materia_id === materiaId)
+}
+
+function criarOptionsFiltroMateriasEdital(valorAtual = '') {
+  const opcoes = ['<option value="">Todas as matérias</option>']
+  editalEstado.materias.forEach(materia => {
+    const selecionada = materia.id === valorAtual ? ' selected' : ''
+    opcoes.push(`<option value="${escaparHtmlSeguro(materia.id)}"${selecionada}>${escaparHtmlSeguro(materia.nome)}</option>`)
+  })
+  return opcoes.join('')
+}
+
+function obterTextoFiltroAssuntosEdital(totalFiltrado, totalGeral, materiaId = '') {
+  if (!materiaId) {
+    return `${totalGeral} assunto${totalGeral !== 1 ? 's' : ''}`
+  }
+  return `${totalFiltrado} de ${totalGeral} assunto${totalGeral !== 1 ? 's' : ''}`
 }
 
 function montarResumoEdital() {
@@ -623,4 +737,9 @@ function mostrarErroEdital(mensagem) {
     </div>
   `
   document.getElementById('btn-recarregar-edital')?.addEventListener('click', carregarEdital)
+}
+
+if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  globalThis.validarDataProvaEdital = validarDataProvaEdital
+  globalThis.filtrarTopicosEditalPorMateria = filtrarTopicosEditalPorMateria
 }
