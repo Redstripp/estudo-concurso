@@ -15,6 +15,21 @@ function formatarQuantidadeQuestoes(quantidade) {
   return total === 1 ? '1 questão' : `${total} questões`
 }
 
+function contarOcorrenciasValores(valores, opcoes = {}) {
+  const fallback = opcoes.fallback || ''
+  const contagem = {}
+
+  ;(valores || []).forEach(valor => {
+    const chave = String(valor ?? '').trim() || fallback
+    if (!chave) return
+    contagem[chave] = (contagem[chave] || 0) + 1
+  })
+
+  return Object.entries(contagem)
+    .map(([nome, total]) => ({ nome, total }))
+    .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome))
+}
+
 function avaliarQualidadeDiagnosticoQuestao(q = {}) {
   const motivo = valorDiagnostico(q, 'motivo_erro', 'motivoErro')
   const confianca = valorDiagnostico(q, 'nivel_confianca', 'nivelConfianca')
@@ -209,6 +224,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   const exportsObj = {
     escaparHtmlSeguro,
     formatarQuantidadeQuestoes,
+    contarOcorrenciasValores,
     avaliarQualidadeDiagnosticoQuestao,
     valorDiagnostico,
     campoDiagnosticoPreenchido,
@@ -232,6 +248,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   // Para Vitest com type: module
   globalThis.escaparHtmlSeguro = escaparHtmlSeguro
   globalThis.formatarQuantidadeQuestoes = formatarQuantidadeQuestoes
+  globalThis.contarOcorrenciasValores = contarOcorrenciasValores
   globalThis.avaliarQualidadeDiagnosticoQuestao = avaliarQualidadeDiagnosticoQuestao
   globalThis.valorDiagnostico = valorDiagnostico
   globalThis.campoDiagnosticoPreenchido = campoDiagnosticoPreenchido

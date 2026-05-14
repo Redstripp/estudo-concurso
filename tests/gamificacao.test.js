@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 // Importa as funções reais de js/gamificacao.js via globalThis
 const {
-  dataHojeGamificacao,
-  adicionarDiasGamificacao,
+  adicionarDias,
   calcularRecordeGamificacao,
   contarSequenciaGamificacao,
   adicionarDataNormalizadaGamificacao
@@ -48,17 +47,17 @@ describe('contarSequenciaGamificacao', () => {
   })
 })
 
-describe('adicionarDiasGamificacao', () => {
+describe('adicionarDias', () => {
   it("'2025-01-01' + 1 deve retornar '2025-01-02'", () => {
-    expect(adicionarDiasGamificacao('2025-01-01', 1)).toBe('2025-01-02')
+    expect(adicionarDias('2025-01-01', 1)).toBe('2025-01-02')
   })
 
   it("'2025-01-31' + 1 deve retornar '2025-02-01'", () => {
-    expect(adicionarDiasGamificacao('2025-01-31', 1)).toBe('2025-02-01')
+    expect(adicionarDias('2025-01-31', 1)).toBe('2025-02-01')
   })
 
   it("'2025-01-05' - 3 deve retornar '2025-01-02'", () => {
-    expect(adicionarDiasGamificacao('2025-01-05', -3)).toBe('2025-01-02')
+    expect(adicionarDias('2025-01-05', -3)).toBe('2025-01-02')
   })
 })
 

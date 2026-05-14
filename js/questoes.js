@@ -1583,14 +1583,6 @@ async function obterOuCriarSessaoDeHoje() {
   return novaSessao
 }
 
-function dataQuestaoHoje() {
-  return dataHoje()
-}
-
-function adicionarDiasQuestao(dataISO, dias) {
-  return adicionarDias(dataISO, dias)
-}
-
 // ============================================
 // SALVAR QUESTÃO
 // ============================================
@@ -1722,7 +1714,7 @@ async function salvarQuestao(opcoes = {}) {
       alternativa_marcada: alternativaMarcada,
       tipo_questao:        tipoQuestao,
       status_revisao:      'pendente',
-      revisar_novamente_em: adicionarDiasQuestao(dataQuestaoHoje(), 1),
+      revisar_novamente_em: adicionarDias(dataHoje(), 1),
       revisao_etapa:       0,
       motivo_erro:         motivoErro,
       nivel_confianca:     nivelConfianca,
@@ -1765,26 +1757,7 @@ async function salvarQuestao(opcoes = {}) {
     .update({ total_questoes: sessao.total_questoes + 1 })
     .eq('id', sessao.id)
 
-  // Reseta formulário
-  document.getElementById('q-materia').value    = ''
-  document.getElementById('q-edital-topico').value = ''
-  document.getElementById('q-banca').value = ''
-  document.getElementById('q-pegadinha-banca').value = ''
-  document.getElementById('q-enunciado').value  = ''
-  document.getElementById('q-comentario').value = ''
-  document.getElementById('q-conceito-chave').value = ''
-  document.getElementById('q-como-reconhecer').value = ''
-  document.getElementById('q-acao-corretiva').value = ''
-  document.getElementById('q-motivo-erro').value = ''
-  document.getElementById('q-nivel-confianca').value = ''
-  sincronizarChipsPegadinha(document.getElementById('q-pegadinha-chips'), '')
-  selecionarTipoQuestao('Errada', false)
-  carregarTopicosQuestao()
-  alternativaMarcada = null
-  alternativaCorreta = null
-  gerarCamposAlternativas(numAlternativas)
-  gerarBotoesAlternativas(numAlternativas)
-  atualizarAssistenteDiagnosticoMinimo()
+  limparFormularioQuestaoAposSalvar()
 
   // Feedback visual de sucesso no botão
   const textoOriginal = btn.textContent
@@ -1806,6 +1779,36 @@ async function salvarQuestao(opcoes = {}) {
     await avaliarConquistasUsuario({ atualizarPerfil: true })
   }
   await atualizarTelasAposRegistro({ questaoNova: true })
+}
+
+function limparFormularioQuestaoAposSalvar() {
+  [
+    'q-materia',
+    'q-edital-topico',
+    'q-banca',
+    'q-pegadinha-banca',
+    'q-enunciado',
+    'q-comentario',
+    'q-conceito-chave',
+    'q-como-reconhecer',
+    'q-acao-corretiva',
+    'q-motivo-erro',
+    'q-nivel-confianca'
+  ].forEach(id => definirValorCampoQuestao(id, ''))
+
+  sincronizarChipsPegadinha(document.getElementById('q-pegadinha-chips'), '')
+  selecionarTipoQuestao('Errada', false)
+  carregarTopicosQuestao()
+  alternativaMarcada = null
+  alternativaCorreta = null
+  gerarCamposAlternativas(numAlternativas)
+  gerarBotoesAlternativas(numAlternativas)
+  atualizarAssistenteDiagnosticoMinimo()
+}
+
+function definirValorCampoQuestao(id, valor) {
+  const campo = document.getElementById(id)
+  if (campo) campo.value = valor
 }
 
 async function atualizarTelasAposRegistro(opcoes = {}) {

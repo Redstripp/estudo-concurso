@@ -297,7 +297,7 @@ async function finalizarCicloRevisao() {
 
   const config = {
     ...(revisaoConfiguracaoAtual || await obterConfiguracaoRevisaoUsuario()),
-    ultima_revisao_geral: dataRevisaoHoje()
+    ultima_revisao_geral: dataHoje()
   }
   const resultado = await salvarConfiguracaoRevisaoUsuario(config)
   revisaoConfiguracaoAtual = resultado.config
@@ -392,7 +392,9 @@ function calcularIntervaloSemana(semanaAtras) {
 
   return {
     inicio: segunda.toISOString().substring(0, 10),
-    fim:    domingo.toISOString().substring(0, 10)
+    fim:    domingo.toISOString().substring(0, 10),
+    inicioISO: segunda.toISOString(),
+    fimISO: domingo.toISOString()
   }
 }
 
@@ -453,15 +455,15 @@ async function buscarQuestoesRevisao() {
 
   if (semanaVal === 'due') {
     query = query
-      .lte('revisar_novamente_em', dataRevisaoHoje())
+      .lte('revisar_novamente_em', dataHoje())
       .order('revisar_novamente_em', { ascending: true, nullsFirst: false })
   } else {
     query = query.order('criado_em', { ascending: false })
   }
 
   if (semanaVal !== 'all' && semanaVal !== 'due') {
-    const { inicio, fim } = calcularIntervaloSemana(parseInt(semanaVal))
-    query = query.gte('criado_em', inicio).lte('criado_em', fim + 'T23:59:59')
+    const { inicioISO, fimISO } = calcularIntervaloSemana(parseInt(semanaVal))
+    query = query.gte('criado_em', inicioISO).lte('criado_em', fimISO)
   }
 
   query = query.limit(300)
@@ -546,7 +548,7 @@ async function buscarDadosFilaRevisao(userId) {
 }
 
 function montarRelatorioFilaRevisao(questoes, config, editalConfig = null, revisoes = []) {
-  const hoje = dataRevisaoHoje()
+  const hoje = dataHoje()
   const base = selecionarQuestoesCicloRevisao(questoes, config, hoje)
   const porMateria = contarValoresRevisao(base.map(q => q.materias?.nome || 'Sem materia'))
   const porMotivo = contarValoresRevisao(base.map(q => q.motivo_erro || 'Sem motivo preenchido'))
@@ -1661,7 +1663,7 @@ function criarDiagnosticoTreino(q) {
 async function registrarTreinoRevisao(q, resultado) {
   const msg = document.getElementById('msg-treino-revisao')
   const acertou = resultado === 'Acertou'
-  const hoje = dataRevisaoHoje()
+  const hoje = dataHoje()
   const nivelConfianca = treinoRevisaoConfianca
   const proximaRevisao = calcularProximaRevisao24730(q, hoje, acertou, nivelConfianca)
   const proximaEtapa = calcularEtapaRevisao24730(q, acertou, nivelConfianca, proximaRevisao)
@@ -1729,21 +1731,13 @@ function avancarTreinoRevisao() {
   renderizarTreinoRevisao(false)
 }
 
-function dataRevisaoHoje() {
-  return dataHoje()
-}
-
-function adicionarDiasRevisao(dataISO, dias) {
-  return adicionarDias(dataISO, dias)
-}
-
 function calcularProximaRevisao24730(q, hoje, acertou, nivelConfianca = 'Confiante') {
-  if (!acertou) return adicionarDiasRevisao(hoje, 1)
+  if (!acertou) return adicionarDias(hoje, 1)
 
   const etapaAtual = Number(q.revisao_etapa || 0)
-  if (etapaAtual <= 0) return adicionarDiasRevisao(hoje, 7)
-  if (etapaAtual === 1) return adicionarDiasRevisao(hoje, 30)
-  if (nivelConfianca !== 'Confiante') return adicionarDiasRevisao(hoje, 30)
+  if (etapaAtual <= 0) return adicionarDias(hoje, 7)
+  if (etapaAtual === 1) return adicionarDias(hoje, 30)
+  if (nivelConfianca !== 'Confiante') return adicionarDias(hoje, 30)
   return null
 }
 
@@ -1794,7 +1788,7 @@ function criarResumoInteligenteRevisao(questoes, modoTreino = false) {
 }
 
 function montarResumoInteligenteRevisao(questoes) {
-  const hoje = dataRevisaoHoje()
+  const hoje = dataHoje()
   const lista = questoes || []
   const porMateria = contarValoresRevisao(lista.map(q => q.materias?.nome || 'Sem matéria'))
   const porMotivo = contarValoresRevisao(lista.map(q => q.motivo_erro).filter(Boolean))
@@ -1848,14 +1842,7 @@ function normalizarTipoResumoRevisao(q) {
 }
 
 function contarValoresRevisao(valores) {
-  const contagem = {}
-  valores.forEach(valor => {
-    contagem[valor] = (contagem[valor] || 0) + 1
-  })
-
-  return Object.entries(contagem)
-    .map(([nome, total]) => ({ nome, total }))
-    .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome))
+  return contarOcorrenciasValores(valores)
 }
 
 // ============================================

@@ -737,8 +737,8 @@ async function salvarPrimeiroErroOnboarding() {
 
     if (!sessao) throw new Error('Não foi possível criar a sessão de estudo.')
 
-    const hoje = typeof dataQuestaoHoje === 'function' ? dataQuestaoHoje() : dataHojeOnboarding()
-    const revisarEm = typeof adicionarDiasQuestao === 'function' ? adicionarDiasQuestao(hoje, 1) : adicionarDiasOnboarding(hoje, 1)
+    const hoje = dataHoje()
+    const revisarEm = adicionarDias(hoje, 1)
     const { error } = await db.from('questoes').insert({
       user_id: window.usuarioAtual.id,
       sessao_id: sessao.id,
@@ -820,14 +820,6 @@ function mostrarMsgOnboarding(texto, tipo = '') {
 function textoDiasOnboarding(dias) {
   const mapa = { 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sab', 7: 'Dom' }
   return (dias || []).map(dia => mapa[dia]).filter(Boolean).join(', ') || 'não configurado'
-}
-
-function dataHojeOnboarding() {
-  return dataHoje()
-}
-
-function adicionarDiasOnboarding(dataISO, dias) {
-  return adicionarDias(dataISO, dias)
 }
 
 // ============================================
@@ -1063,7 +1055,7 @@ async function verificarAvisoArquivamentoPendente() {
 
 async function buscarArquivamentoPendenteAviso(userId) {
   const hoje = new Date()
-  const inicioMesAtual = dataISOApp(new Date(hoje.getFullYear(), hoje.getMonth(), 1))
+  const inicioMesAtual = dataISO(new Date(hoje.getFullYear(), hoje.getMonth(), 1))
 
   const { data, count, error } = await db
     .from('questoes')
@@ -1083,7 +1075,7 @@ async function buscarArquivamentoPendenteAviso(userId) {
 }
 
 function criarPeriodoAvisoArquivamento(criadoEm) {
-  const dataBase = criadoEm ? criadoEm.substring(0, 10) : dataISOApp(new Date())
+  const dataBase = criadoEm ? criadoEm.substring(0, 10) : dataISO(new Date())
   const [ano, mes] = dataBase.split('-').map(Number)
   const data = new Date(ano, mes - 1, 1)
 
@@ -1127,10 +1119,6 @@ function mostrarAvisoArquivamento(pendente) {
 
 function ocultarAvisoArquivamento() {
   document.getElementById('aviso-arquivamento-pendente')?.remove()
-}
-
-function dataISOApp(data) {
-  return dataISO(data)
 }
 
 // ============================================

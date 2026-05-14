@@ -73,8 +73,8 @@ async function obterResumoStreakGamificacao(userId = window.usuarioAtual?.id) {
   }
 
   const datas = await buscarDatasAtividadeGamificacao(userId)
-  const hoje = dataHojeGamificacao()
-  const ontem = adicionarDiasGamificacao(hoje, -1)
+  const hoje = dataHoje()
+  const ontem = adicionarDias(hoje, -1)
   const conjunto = new Set(datas)
   const atividadeHoje = conjunto.has(hoje)
   const base = atividadeHoje ? hoje : conjunto.has(ontem) ? ontem : null
@@ -96,8 +96,8 @@ async function obterResumoStreakGamificacao(userId = window.usuarioAtual?.id) {
 
 async function buscarDatasAtividadeGamificacao(userId) {
   const datas = new Set()
-  const hoje = dataHojeGamificacao()
-  const dataLimite = adicionarDiasGamificacao(hoje, -120)
+  const hoje = dataHoje()
+  const dataLimite = adicionarDias(hoje, -120)
 
   const [questoesResp, certasResp, configResp] = await Promise.all([
     db
@@ -153,7 +153,7 @@ function contarSequenciaGamificacao(conjunto, dataBase) {
 
   while (conjunto.has(data)) {
     total += 1
-    data = adicionarDiasGamificacao(data, -1)
+    data = adicionarDias(data, -1)
   }
 
   return total
@@ -168,7 +168,7 @@ function calcularRecordeGamificacao(datas) {
 
   for (let i = 1; i < ordenadas.length; i += 1) {
     const anterior = ordenadas[i - 1]
-    const esperada = adicionarDiasGamificacao(anterior, 1)
+    const esperada = adicionarDias(anterior, 1)
     if (ordenadas[i] === esperada) {
       atual += 1
     } else {
@@ -204,7 +204,7 @@ async function avaliarConquistasUsuario(opcoes = {}) {
 }
 
 async function buscarDadosConquistasGamificacao(userId) {
-  const [questoesResp, configResp, streak] = await Promise.all([
+  const [questoesResp, configResp, revisoesResp, streak] = await Promise.all([
     db
       .from('questoes')
       .select('id, motivo_erro, conceito_chave, como_reconhecer, acao_corretiva, pegadinha_banca, criado_em')
@@ -215,11 +215,18 @@ async function buscarDadosConquistasGamificacao(userId) {
       .select('ultima_revisao_geral')
       .eq('user_id', userId)
       .maybeSingle(),
+    db
+      .from('questoes_revisoes')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId),
     obterResumoStreakGamificacao(userId)
   ])
 
   if (questoesResp.error) {
     throw criarErroGamificacao('Nao foi possivel avaliar suas conquistas.', questoesResp.error)
+  }
+  if (revisoesResp.error) {
+    throw criarErroGamificacao('Nao foi possivel avaliar suas revisoes concluidas.', revisoesResp.error)
   }
 
   const questoes = questoesResp.data || []
@@ -240,6 +247,7 @@ async function buscarDadosConquistasGamificacao(userId) {
     return acc
   }, {})).some(total => total >= 5)
   const revisaoConcluida = Boolean(
+    (revisoesResp.count || 0) > 0 ||
     configResp.data?.ultima_revisao_geral ||
     carregarRevisoesConcluidasLocais(userId).length
   )
@@ -361,7 +369,7 @@ function mostrarToastConquista(badge) {
 function registrarRevisaoConcluidaGamificacao(userId = window.usuarioAtual?.id) {
   if (!userId) return
   const datas = new Set(carregarRevisoesConcluidasLocais(userId))
-  datas.add(dataHojeGamificacao())
+  datas.add(dataHoje())
   localStorage.setItem(chaveRevisoesConcluidasGamificacao(userId), JSON.stringify(Array.from(datas).sort()))
 }
 
@@ -397,24 +405,11 @@ function salvarRecordeStreakLocal(userId, recorde) {
   localStorage.setItem(`${CHAVE_RECORDE_STREAK_GAMIFICACAO}:${userId}`, String(recorde))
 }
 
-function dataHojeGamificacao() {
-  const agora = new Date()
-  return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`
-}
-
-function adicionarDiasGamificacao(dataISO, dias) {
-  const data = new Date(`${dataISO}T12:00:00`)
-  data.setDate(data.getDate() + dias)
-  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
-}
-
 // Exportações apenas para testes (Vitest)
 // No navegador, essas linhas são ignoradas pois o script é carregado como tradicional
 if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
   // Ambiente Node/Vitest
   const exportsObj = {
-    dataHojeGamificacao,
-    adicionarDiasGamificacao,
     calcularRecordeGamificacao,
     contarSequenciaGamificacao,
     adicionarDataNormalizadaGamificacao
@@ -426,8 +421,6 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   }
   
   // Para Vitest com type: module
-  globalThis.dataHojeGamificacao = dataHojeGamificacao
-  globalThis.adicionarDiasGamificacao = adicionarDiasGamificacao
   globalThis.calcularRecordeGamificacao = calcularRecordeGamificacao
   globalThis.contarSequenciaGamificacao = contarSequenciaGamificacao
   globalThis.adicionarDataNormalizadaGamificacao = adicionarDataNormalizadaGamificacao

@@ -190,7 +190,7 @@ async function carregarCentralHoje(userId) {
   const container = document.getElementById('dashboard-central-hoje')
   if (!container) return
 
-  const hoje = dataISOArquivamento(new Date())
+  const hoje = dataISO(new Date())
   const diaSemanaHoje = calcularDiaSemanaCentralHoje(hoje)
   
   // Configuração base
@@ -619,7 +619,7 @@ async function obterPeriodoArquivamentoMensal(userId) {
 
 async function buscarPeriodoPendenteArquivamento(userId) {
   const hoje = new Date()
-  const inicioMesAtual = dataISOArquivamento(new Date(hoje.getFullYear(), hoje.getMonth(), 1))
+  const inicioMesAtual = dataISO(new Date(hoje.getFullYear(), hoje.getMonth(), 1))
 
   const { data, count, error } = await db
     .from('questoes')
@@ -647,10 +647,10 @@ function criarPeriodoArquivamento(alvo, opcoes = {}) {
   fimDataHora.setHours(23, 59, 59, 999)
 
   return {
-    inicio: dataISOArquivamento(alvo),
-    fim: dataISOArquivamento(fim),
+    inicio: dataISO(alvo),
+    fim: dataISO(fim),
     fimDataHora: fimDataHora.toISOString(),
-    periodoMes: dataISOArquivamento(alvo),
+    periodoMes: dataISO(alvo),
     rotulo: alvo.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
     podeLimpar: Boolean(opcoes.podeLimpar),
     fimDeMes: Boolean(opcoes.fimDeMes),
@@ -848,7 +848,7 @@ function normalizarEmailsAdmin(valor) {
 
 async function buscarProtecaoBancoCheio(userId) {
   const hoje = new Date()
-  const inicioMesAtual = dataISOArquivamento(new Date(hoje.getFullYear(), hoje.getMonth(), 1))
+  const inicioMesAtual = dataISO(new Date(hoje.getFullYear(), hoje.getMonth(), 1))
 
   const [totalResp, antigasResp] = await Promise.all([
     db
@@ -1375,10 +1375,6 @@ function criarSimuladosRelatorio(simulados) {
   `
 }
 
-function dataISOArquivamento(data) {
-  return dataISO(data)
-}
-
 function formatarDataBRArquivamento(dataStr) {
   if (!dataStr) return '-'
   const [ano, mes, dia] = dataStr.substring(0, 10).split('-')
@@ -1544,16 +1540,7 @@ function classificarPegadinhasRelatorioErros(texto) {
 }
 
 function contarOcorrenciasRelatorioErros(valores) {
-  const contagem = {}
-
-  valores.forEach(valor => {
-    const chave = String(valor || '').trim() || 'Não informado'
-    contagem[chave] = (contagem[chave] || 0) + 1
-  })
-
-  return Object.entries(contagem)
-    .map(([nome, total]) => ({ nome, total }))
-    .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome))
+  return contarOcorrenciasValores(valores, { fallback: 'Não informado' })
 }
 
 function contarPadroesMateriaMotivo(questoes) {
@@ -1738,7 +1725,7 @@ function criarChipsRelatorioErros(itens) {
 }
 
 async function carregarCardsDashboard(userId) {
-  const [totalErradasResp, certasResp, totalMateriasResp, questoesComMateriaResp, pendentesResp, totaisArquivados] = await Promise.all([
+  const [totalErradasResp, certasResp, totalMateriasResp, questoesComMateriaResp, pendentesResp, revisoesFeitasResp, totaisArquivados] = await Promise.all([
     db
       .from('questoes')
       .select('*', { count: 'exact', head: true })
@@ -1760,6 +1747,10 @@ async function carregarCardsDashboard(userId) {
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('status_revisao', 'pendente'),
+    db
+      .from('questoes_revisoes')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId),
     buscarTotaisMensaisArquivados(userId)
   ])
 
@@ -1783,6 +1774,10 @@ async function carregarCardsDashboard(userId) {
     throw criarErroConsultaDashboard('Não foi possível contar suas revisões pendentes.', pendentesResp.error)
   }
 
+  if (revisoesFeitasResp.error) {
+    throw criarErroConsultaDashboard('Não foi possível contar suas revisões feitas.', revisoesFeitasResp.error)
+  }
+
   const totalErradasAtivas = totalErradasResp.count || 0
   const totalCertasAtivas = (certasResp.data || []).reduce((acc, r) => acc + (Number(r.quantidade) || 0), 0)
   const totalErradasArquivadas = totaisArquivados.totalErradas + totaisArquivados.totalChutadas
@@ -1792,6 +1787,7 @@ async function carregarCardsDashboard(userId) {
   const aproveitamento = totalGeral > 0 ? Math.round((totalCertas / totalGeral) * 100) : 0
   const totalMaterias = totalMateriasResp.count || 0
   const totalRevisoesPendentes = pendentesResp.count || 0
+  const totalRevisoesFeitas = revisoesFeitasResp.count || 0
 
   let materiaCampea = '—'
   const contagem = {}
@@ -1815,7 +1811,7 @@ async function carregarCardsDashboard(userId) {
   if (!container) return
 
   container.innerHTML = `
-    ${criarOnboardingDashboard(totalMaterias, totalGeral)}
+    ${criarOnboardingDashboard(totalMaterias, totalGeral, totalRevisoesFeitas)}
     <div class="dash-resumo-principal">
       <article class="dash-card dash-card--principal">
         <div class="dash-card-topo">
@@ -1924,13 +1920,14 @@ function criarDonutAproveitamentoDashboard(aproveitamento) {
   `
 }
 
-function criarOnboardingDashboard(totalMaterias, totalGeral) {
+function criarOnboardingDashboard(totalMaterias, totalGeral, totalRevisoesFeitas = 0) {
   const checklistOculto = localStorage.getItem(CHAVE_CHECKLIST_INICIAL_OCULTO) === '1'
   const temMateria = totalMaterias > 0
   const temQuestao = totalGeral > 0
+  const temRevisao = totalRevisoesFeitas > 0
   const podeUsarFlashcards = temQuestao
 
-  if (checklistOculto && temMateria && temQuestao) return ''
+  if (checklistOculto && temMateria && temQuestao && temRevisao) return ''
 
   const itens = [
     {
@@ -1948,9 +1945,11 @@ function criarOnboardingDashboard(totalMaterias, totalGeral) {
       secao: 'questoes'
     },
     {
-      feito: false,
+      feito: temRevisao,
       titulo: '3. Revisar com fila',
-      texto: podeUsarFlashcards ? 'Abra Revisão Inteligente, filtre as pendentes e treine antes de revelar o gabarito.' : 'Os flashcards aparecem depois que você registra questões no Caderno de Erros.',
+      texto: temRevisao
+        ? `${formatarQuantidadeQuestoes(totalRevisoesFeitas)} já revisada${totalRevisoesFeitas !== 1 ? 's' : ''}.`
+        : podeUsarFlashcards ? 'Abra Revisão Inteligente, filtre as pendentes e treine antes de revelar o gabarito.' : 'Os flashcards aparecem depois que você registra questões no Caderno de Erros.',
       acao: 'Abrir flashcards',
       secao: 'revisao'
     },
