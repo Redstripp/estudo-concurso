@@ -47,6 +47,9 @@ function setBotaoCarregando(btn, carregando) {
 }
 
 function obterUrlArquivo(nomeArquivo) {
+  const base = obterBaseArquivosAuth()
+  if (base) return new URL(nomeArquivo, base).href
+
   const url = new URL(window.location.href)
   const partes = url.pathname.split('/')
   const ultimo = partes[partes.length - 1]
@@ -61,6 +64,26 @@ function obterUrlArquivo(nomeArquivo) {
   url.search = ''
   url.hash = ''
   return url.href
+}
+
+function obterBaseArquivosAuth() {
+  const scriptAuth = obterScriptAuthAtual()
+  if (!scriptAuth?.src) return null
+
+  const url = new URL(scriptAuth.src, window.location.href)
+  url.pathname = url.pathname.replace(/\/js\/auth\.js$/, '/')
+  url.search = ''
+  url.hash = ''
+  return url.href
+}
+
+function obterScriptAuthAtual() {
+  if (document.currentScript?.src?.includes('js/auth.js')) {
+    return document.currentScript
+  }
+
+  return Array.from(document.scripts || [])
+    .find(script => /(^|\/)js\/auth\.js(\?|#|$)/.test(script.getAttribute('src') || script.src || ''))
 }
 
 function obterUrlApp() {

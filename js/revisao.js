@@ -13,6 +13,35 @@ let filaRevisaoCompletaAtual = []
 let treinoRevisaoConfianca = ''
 let treinoRevisaoResultados = []
 let modoFocoAtivo = false
+const TAMANHO_PAGINA_FILA_REVISAO = 1000
+const CAMPOS_QUESTOES_FILA_REVISAO = [
+  'id',
+  'enunciado',
+  'alternativas',
+  'alternativa_marcada',
+  'alternativa_correta',
+  'tipo_questao',
+  'status_revisao',
+  'revisar_novamente_em',
+  'revisao_ultima_data',
+  'revisao_ultima_resultado',
+  'revisao_total_acertos',
+  'revisao_total_erros',
+  'revisao_etapa',
+  'motivo_erro',
+  'nivel_confianca',
+  'comentario',
+  'criado_em',
+  'materia_id',
+  'edital_topico_id',
+  'banca',
+  'pegadinha_banca',
+  'conceito_chave',
+  'como_reconhecer',
+  'acao_corretiva',
+  'materias(nome)',
+  'edital_topicos(titulo, status, peso)'
+].join(', ')
 
 function alternarModoFoco() {
   if (modoFocoAtivo) {
@@ -516,14 +545,8 @@ async function gerarFilaRevisaoInteligente(opcoes = {}) {
 }
 
 async function buscarDadosFilaRevisao(userId) {
-  const [questoesResp, editalResp, revisoesResp] = await Promise.all([
-    db
-      .from('questoes')
-      .select('id, enunciado, alternativas, alternativa_marcada, alternativa_correta, tipo_questao, status_revisao, revisar_novamente_em, revisao_ultima_data, revisao_ultima_resultado, revisao_total_acertos, revisao_total_erros, revisao_etapa, motivo_erro, nivel_confianca, comentario, criado_em, materia_id, edital_topico_id, banca, pegadinha_banca, conceito_chave, como_reconhecer, acao_corretiva, materias(nome), edital_topicos(titulo, status, peso)')
-      .eq('user_id', userId)
-      .eq('status_revisao', 'pendente')
-      .order('criado_em', { ascending: false })
-      .limit(800),
+  const [questoes, editalResp, revisoesResp] = await Promise.all([
+    buscarQuestoesPendentesFilaRevisao(userId),
     db
       .from('edital_config')
       .select('data_prova, concurso_alvo')
@@ -537,14 +560,44 @@ async function buscarDadosFilaRevisao(userId) {
       .limit(300)
   ])
 
-  if (questoesResp.error) throw questoesResp.error
   if (revisoesResp.error) console.error(revisoesResp.error)
 
   return {
-    questoes: questoesResp.data || [],
+    questoes,
     editalConfig: editalResp.error ? null : editalResp.data,
     revisoes: revisoesResp.error ? [] : (revisoesResp.data || [])
   }
+}
+
+async function buscarQuestoesPendentesFilaRevisao(userId) {
+  const questoes = []
+  let inicio = 0
+  let totalEsperado = null
+
+  while (true) {
+    const fim = inicio + TAMANHO_PAGINA_FILA_REVISAO - 1
+    const { data, error, count } = await db
+      .from('questoes')
+      .select(CAMPOS_QUESTOES_FILA_REVISAO, totalEsperado === null ? { count: 'exact' } : undefined)
+      .eq('user_id', userId)
+      .eq('status_revisao', 'pendente')
+      .order('criado_em', { ascending: false })
+      .range(inicio, fim)
+
+    if (error) throw error
+
+    const pagina = data || []
+    if (totalEsperado === null && typeof count === 'number') totalEsperado = count
+    questoes.push(...pagina)
+
+    if (pagina.length === 0) break
+    if (totalEsperado !== null && questoes.length >= totalEsperado) break
+    if (pagina.length < TAMANHO_PAGINA_FILA_REVISAO) break
+
+    inicio += TAMANHO_PAGINA_FILA_REVISAO
+  }
+
+  return questoes
 }
 
 function montarRelatorioFilaRevisao(questoes, config, editalConfig = null, revisoes = []) {

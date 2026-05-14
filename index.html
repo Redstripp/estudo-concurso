@@ -77,17 +77,10 @@
     // Detecta se veio de um link de recuperacao de senha
     const hash = window.location.hash
     if (hash.includes('type=recovery') && hash.includes('access_token')) {
-      const destino = new URL(window.location.href)
-      const partes = destino.pathname.split('/')
-      const ultimo = partes[partes.length - 1]
-
-      if (ultimo.includes('.')) {
-        partes[partes.length - 1] = 'app.html'
-        destino.pathname = partes.join('/')
-      } else {
-        destino.pathname = `${destino.pathname.replace(/\/?$/, '/')}app.html`
-      }
-
+      const destino = new URL(typeof obterUrlArquivo === 'function'
+        ? obterUrlArquivo('app.html')
+        : 'app.html',
+      window.location.href)
       destino.search = ''
       destino.hash = hash.startsWith('#') ? hash.slice(1) : hash
       window.location.href = destino.href
