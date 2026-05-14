@@ -1275,10 +1275,10 @@ function renderizarTreinoPegadinha() {
         <div class="treino-revisao-final">
           <h3>Treino de pegadinhas concluido</h3>
           <p>Voce revisou ${formatarQuantidadeQuestoes(treinoPegadinhasQuestoes.length)} com armadilhas registradas.</p>
-          <button class="btn-secundario" id="btn-voltar-lista-revisao" type="button">Voltar para lista</button>
+          ${criarBotaoVoltarListaRevisao()}
         </div>
       `
-      document.getElementById('btn-voltar-lista-revisao')?.addEventListener('click', filtrarRevisao)
+      vincularBotaoVoltarListaRevisao(lista)
     }
     return
   }
@@ -1371,19 +1371,14 @@ function renderizarTreinoRevisao(gabaritoVisivel = false) {
   const q = treinoRevisaoQuestoes[treinoRevisaoIndice]
 
   if (!q) {
-    contador.style.display = 'none'
-    lista.innerHTML = `
-      <div class="treino-revisao-final">
-        <h3>Flashcards concluídos</h3>
-        <p>${treinoRevisaoAcertos} acerto${treinoRevisaoAcertos !== 1 ? 's' : ''} e ${treinoRevisaoErros} erro${treinoRevisaoErros !== 1 ? 's' : ''} registrados.</p>
-        <button class="btn-secundario" id="btn-voltar-lista-revisao" type="button">Voltar para lista</button>
-      </div>
-    `
+    if (contador) contador.style.display = 'none'
+    if (!lista) return
     lista.innerHTML = criarResumoFinalTreinoRevisao()
-    document.getElementById('btn-voltar-lista-revisao').addEventListener('click', filtrarRevisao)
+    vincularBotaoVoltarListaRevisao(lista)
     return
   }
 
+  if (!lista || !contador) return
   contador.textContent = `Flashcard ${treinoRevisaoIndice + 1}/${treinoRevisaoQuestoes.length} — ${treinoRevisaoAcertos} acerto${treinoRevisaoAcertos !== 1 ? 's' : ''}, ${treinoRevisaoErros} erro${treinoRevisaoErros !== 1 ? 's' : ''}`
   contador.style.display = 'block'
   lista.innerHTML = ''
@@ -1429,9 +1424,19 @@ function criarResumoFinalTreinoRevisao() {
           </ul>
         </section>
       </div>
-      <button class="btn-secundario" id="btn-voltar-lista-revisao" type="button">Voltar para lista</button>
+      ${criarBotaoVoltarListaRevisao()}
     </div>
   `
+}
+
+function criarBotaoVoltarListaRevisao() {
+  return '<button class="btn-secundario" id="btn-voltar-lista-revisao" data-revisao-acao="voltar-lista" type="button">Voltar para lista</button>'
+}
+
+function vincularBotaoVoltarListaRevisao(container = document) {
+  container
+    .querySelector('[data-revisao-acao="voltar-lista"]')
+    ?.addEventListener('click', filtrarRevisao)
 }
 
 function montarAcoesResumoFinalRevisao({ porMateria, porMotivo, porTopico, calibracao, erros }) {

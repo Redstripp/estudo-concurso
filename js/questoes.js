@@ -293,11 +293,11 @@ function inicializarSeletorTipoQuestao() {
 
   document.getElementById('q-motivo-erro')
     ?.addEventListener('change', () => {
-      sincronizarTipoQuestaoPorCampos()
+      sincronizarTipoQuestaoPorCampos('motivo')
       sugerirAcaoCorretivaPorMotivo('q')
     })
   document.getElementById('q-nivel-confianca')
-    ?.addEventListener('change', sincronizarTipoQuestaoPorCampos)
+    ?.addEventListener('change', () => sincronizarTipoQuestaoPorCampos('confianca'))
 
   atualizarCamposFormularioPorTipo(tipoQuestaoAtual, true)
 }
@@ -339,15 +339,37 @@ function atualizarCamposFormularioPorTipo(tipo, preservarValores = false) {
   atualizarAssistenteDiagnosticoMinimo()
 }
 
-function sincronizarTipoQuestaoPorCampos() {
+function sincronizarTipoQuestaoPorCampos(campoAlterado = '') {
   const motivo = document.getElementById('q-motivo-erro')?.value
   const confianca = document.getElementById('q-nivel-confianca')?.value
-  const configChutada = obterConfigTipoQuestao('Chutada')
+  const tipoInferido = obterTipoQuestaoPorCampos(motivo, confianca, campoAlterado)
 
-  if (configChutada.motivos.includes(motivo) || configChutada.niveis.includes(confianca)) {
-    selecionarTipoQuestao('Chutada', true)
-    return
+  if (tipoInferido && tipoInferido !== tipoQuestaoAtual) {
+    selecionarTipoQuestao(tipoInferido, true)
   }
+}
+
+function obterTipoQuestaoPorCampos(motivo, confianca, campoPrioritario = '') {
+  const tipoMotivo = obterTipoQuestaoPorValorCampo('motivo', motivo)
+  const tipoConfianca = obterTipoQuestaoPorValorCampo('confianca', confianca)
+
+  if (campoPrioritario === 'motivo' && tipoMotivo) return tipoMotivo
+  if (campoPrioritario === 'confianca' && tipoConfianca) return tipoConfianca
+  if (tipoMotivo && tipoConfianca && tipoMotivo !== tipoConfianca) return ''
+
+  return tipoMotivo || tipoConfianca || ''
+}
+
+function obterTipoQuestaoPorValorCampo(campo, valor) {
+  const chave = campo === 'confianca' ? 'niveis' : 'motivos'
+  const configErrada = obterConfigTipoQuestao('Errada')
+  const configChutada = obterConfigTipoQuestao('Chutada')
+  const existeEmErrada = configErrada[chave].includes(valor)
+  const existeEmChutada = configChutada[chave].includes(valor)
+
+  if (existeEmChutada && !existeEmErrada) return 'Chutada'
+  if (existeEmErrada && !existeEmChutada) return 'Errada'
+  return ''
 }
 
 function inicializarModoRegistroQuestao() {
@@ -2517,12 +2539,18 @@ function abrirModalEdicao(q) {
 
   ;[editMotivoErro, editNivelConfianca].forEach(campo => {
     campo.addEventListener('change', () => {
-      if (campo === editMotivoErro) sugerirAcaoCorretivaPorMotivo('edit')
-      const configChutada = obterConfigTipoQuestao('Chutada')
-      const ehChute = configChutada.motivos.includes(editMotivoErro.value) || configChutada.niveis.includes(editNivelConfianca.value)
-      if (ehChute && editTipoQuestao.value !== 'Chutada') {
-        editTipoQuestao.value = 'Chutada'
-        atualizarCamposEdicaoPorTipo('Chutada', true)
+      const campoAlterado = campo === editMotivoErro ? 'motivo' : 'confianca'
+      if (campoAlterado === 'motivo') sugerirAcaoCorretivaPorMotivo('edit')
+
+      const tipoInferido = obterTipoQuestaoPorCampos(
+        editMotivoErro.value,
+        editNivelConfianca.value,
+        campoAlterado
+      )
+
+      if (tipoInferido && editTipoQuestao.value !== tipoInferido) {
+        editTipoQuestao.value = tipoInferido
+        atualizarCamposEdicaoPorTipo(tipoInferido, true)
       }
     })
   })
@@ -2772,6 +2800,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     CONFIG_TIPO_QUESTAO,
     normalizarTipoQuestao,
     normalizarStatusRevisao,
+    obterTipoQuestaoPorCampos,
     questaoChutadaAcertada,
     normalizarTextoDuplicidade,
     ordenarQuestoes,
@@ -2787,6 +2816,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.CONFIG_TIPO_QUESTAO = CONFIG_TIPO_QUESTAO
   globalThis.normalizarTipoQuestao = normalizarTipoQuestao
   globalThis.normalizarStatusRevisao = normalizarStatusRevisao
+  globalThis.obterTipoQuestaoPorCampos = obterTipoQuestaoPorCampos
   globalThis.questaoChutadaAcertada = questaoChutadaAcertada
   globalThis.normalizarTextoDuplicidade = normalizarTextoDuplicidade
   globalThis.ordenarQuestoes = ordenarQuestoes

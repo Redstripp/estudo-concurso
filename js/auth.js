@@ -72,7 +72,7 @@ function ehLinkRedefinicaoSenhaAuth() {
   const searchParams = new URLSearchParams(window.location.search)
   const tipo = hashParams.get('type') || searchParams.get('type')
 
-  return tipo === 'recovery' || Boolean(hashParams.get('access_token'))
+  return tipo === 'recovery'
 }
 
 // ============================================

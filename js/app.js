@@ -188,12 +188,12 @@ function obterUrlArquivoApp(nomeArquivo) {
 }
 
 function obterDadosRedefinicaoSenha() {
-  const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'))
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
   const searchParams = new URLSearchParams(window.location.search)
   const tipo = hashParams.get('type') || searchParams.get('type')
 
   return {
-    ehRecuperacao: tipo === 'recovery' || Boolean(hashParams.get('access_token')),
+    ehRecuperacao: tipo === 'recovery',
     accessToken: hashParams.get('access_token'),
     refreshToken: hashParams.get('refresh_token')
   }
@@ -617,21 +617,46 @@ async function adicionarMateriaOnboarding() {
   btn.disabled = true
   btn.textContent = 'Salvando...'
 
-  const resultado = typeof salvarMateriaUsuario === 'function'
-    ? await salvarMateriaUsuario(nome)
-    : await db.from('materias').insert({ user_id: window.usuarioAtual.id, nome }).select('id, nome, criado_em').single()
+  try {
+    const resultado = typeof salvarMateriaUsuario === 'function'
+      ? await salvarMateriaUsuario(nome)
+      : await db.from('materias').insert({ user_id: window.usuarioAtual.id, nome }).select('id, nome, criado_em').single()
+    const { data: materia, error } = normalizarResultadoMateriaOnboarding(resultado)
 
-  btn.disabled = false
-  btn.textContent = 'Adicionar'
+    if (error) {
+      console.error(error)
+      mostrarMsgOnboarding('Não foi possível salvar a matéria. Tente novamente.', 'erro')
+      return
+    }
 
-  if (resultado.error) {
+    onboardingAtivoEstado.materia = materia
+    if (typeof carregarMaterias === 'function') carregarMaterias()
+    renderizarOnboardingAtivo()
+  } catch (erro) {
+    console.error(erro)
     mostrarMsgOnboarding('Não foi possível salvar a matéria. Tente novamente.', 'erro')
-    return
+  } finally {
+    btn.disabled = false
+    btn.textContent = 'Adicionar'
+  }
+}
+
+function normalizarResultadoMateriaOnboarding(resultado) {
+  if (resultado?.error) {
+    return { data: null, error: resultado.error }
   }
 
-  onboardingAtivoEstado.materia = resultado.data
-  if (typeof carregarMaterias === 'function') carregarMaterias()
-  renderizarOnboardingAtivo()
+  const data = resultado?.data ?? resultado?.materia ?? resultado
+  const materia = Array.isArray(data) ? data[0] : data
+
+  if (!materia?.id) {
+    return {
+      data: null,
+      error: new Error('A matéria salva não retornou um id válido.')
+    }
+  }
+
+  return { data: materia, error: null }
 }
 
 async function salvarDiasOnboarding() {

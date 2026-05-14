@@ -6,6 +6,7 @@ const {
   CONFIG_TIPO_QUESTAO,
   normalizarTipoQuestao,
   normalizarStatusRevisao,
+  obterTipoQuestaoPorCampos,
   questaoChutadaAcertada,
   normalizarTextoDuplicidade,
   ordenarQuestoes
@@ -74,6 +75,24 @@ describe('normalizarStatusRevisao', () => {
 
   it('{} deve retornar pendente', () => {
     expect(normalizarStatusRevisao({})).toBe('pendente')
+  })
+})
+
+describe('obterTipoQuestaoPorCampos', () => {
+  it('identifica Chutada por motivo exclusivo de chute', () => {
+    expect(obterTipoQuestaoPorCampos('Chute completo', '', 'motivo')).toBe('Chutada')
+  })
+
+  it('identifica Errada por motivo exclusivo de erro', () => {
+    expect(obterTipoQuestaoPorCampos('Falta de conteúdo', '', 'motivo')).toBe('Errada')
+  })
+
+  it('prioriza o campo alterado para reverter de Chutada para Errada', () => {
+    expect(obterTipoQuestaoPorCampos('Falta de conteúdo', 'Chutei', 'motivo')).toBe('Errada')
+  })
+
+  it('não força troca de tipo com valores compartilhados', () => {
+    expect(obterTipoQuestaoPorCampos('Dúvida entre alternativas', 'Não informado')).toBe('')
   })
 })
 
