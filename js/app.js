@@ -6,6 +6,7 @@ const CHAVE_ONBOARDING_CONCLUIDO = 'onboarding_concluido'
 const SECOES_INTERFACE_AVANCADA = new Set(['edital', 'plano', 'planejamento', 'simulados', 'desempenho', 'estatisticas'])
 let avisoArquivamentoToken = 0
 let onboardingAtivoEstado = null
+let dadosIniciaisUsuarioCache = { userId: null, promise: null }
 
 const INICIALIZADORES_SECAO = {
   materias: () => inicializarMaterias(),
@@ -246,6 +247,50 @@ async function carregarPerfil() {
   aplicarTema(data.tema || 'claro')
 }
 
+function limparCacheDadosIniciaisUsuario() {
+  dadosIniciaisUsuarioCache = { userId: null, promise: null }
+}
+
+function obterDadosIniciaisUsuario() {
+  const userId = window.usuarioAtual?.id
+  if (!userId) {
+    return Promise.resolve({ totalMaterias: 0, totalQuestoes: 0, totalDados: 0 })
+  }
+
+  if (dadosIniciaisUsuarioCache.userId === userId && dadosIniciaisUsuarioCache.promise) {
+    return dadosIniciaisUsuarioCache.promise
+  }
+
+  const promise = buscarDadosIniciaisUsuario(userId).catch(erro => {
+    if (dadosIniciaisUsuarioCache.userId === userId && dadosIniciaisUsuarioCache.promise === promise) {
+      limparCacheDadosIniciaisUsuario()
+    }
+    throw erro
+  })
+
+  dadosIniciaisUsuarioCache = { userId, promise }
+  return promise
+}
+
+async function buscarDadosIniciaisUsuario(userId) {
+  const [materiasResp, questoesResp] = await Promise.all([
+    db.from('materias').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+    db.from('questoes').select('*', { count: 'exact', head: true }).eq('user_id', userId)
+  ])
+
+  if (materiasResp.error) throw materiasResp.error
+  if (questoesResp.error) throw questoesResp.error
+
+  const totalMaterias = Number(materiasResp.count || 0)
+  const totalQuestoes = Number(questoesResp.count || 0)
+
+  return {
+    totalMaterias,
+    totalQuestoes,
+    totalDados: totalMaterias + totalQuestoes
+  }
+}
+
 // ============================================
 // MODO ESSENCIAL / SISTEMA COMPLETO
 // ============================================
@@ -265,13 +310,8 @@ async function inicializarModoInterface() {
 
 async function inferirModoInicialInterface() {
   try {
-    const [materiasResp, questoesResp] = await Promise.all([
-      db.from('materias').select('*', { count: 'exact', head: true }).eq('user_id', window.usuarioAtual.id),
-      db.from('questoes').select('*', { count: 'exact', head: true }).eq('user_id', window.usuarioAtual.id)
-    ])
-
-    const totalDados = Number(materiasResp.count || 0) + Number(questoesResp.count || 0)
-    return totalDados > 0 ? 'completo' : 'essencial'
+    const dadosIniciais = await obterDadosIniciaisUsuario()
+    return dadosIniciais.totalDados > 0 ? 'completo' : 'essencial'
   } catch (erro) {
     console.warn('Não foi possível inferir o modo inicial da interface.', erro)
     return 'essencial'
@@ -339,13 +379,8 @@ async function verificarOnboardingAtivo() {
   if (!window.usuarioAtual?.id || document.getElementById('modal-onboarding-ativo')) return
 
   try {
-    const [materiasResp, questoesResp] = await Promise.all([
-      db.from('materias').select('*', { count: 'exact', head: true }).eq('user_id', window.usuarioAtual.id),
-      db.from('questoes').select('*', { count: 'exact', head: true }).eq('user_id', window.usuarioAtual.id)
-    ])
-
-    if (materiasResp.error || questoesResp.error) return
-    if (Number(materiasResp.count || 0) === 0 && Number(questoesResp.count || 0) === 0) {
+    const dadosIniciais = await obterDadosIniciaisUsuario()
+    if (dadosIniciais.totalMaterias === 0 && dadosIniciais.totalQuestoes === 0) {
       abrirOnboardingAtivo()
     }
   } catch (erro) {
@@ -1276,6 +1311,7 @@ async function finalizarLogout() {
     console.error('Erro ao efetuar logout:', erro)
   } finally {
     window.usuarioAtual = null
+    limparCacheDadosIniciaisUsuario()
     logoutPendente = null
     window.location.replace(obterUrlArquivoApp('index.html'))
   }
