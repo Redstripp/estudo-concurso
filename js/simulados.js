@@ -131,9 +131,9 @@ function criarCardSimuladoRevisao(q, numero) {
   const totalAcertos = Number(q.revisao_total_acertos || 0)
   const alternativas = q.alternativas && typeof q.alternativas === 'object'
     ? Object.entries(q.alternativas).map(([letra, texto]) => `
-      <button class="alternativa-card simulado-revisao-alternativa simulado-resposta-opcao" type="button" data-letra="${escaparHtml(letra)}">
-        <span class="alt-letra">${escaparHtml(letra)}</span>
-        <span class="alt-texto">${escaparHtml(texto)}</span>
+      <button class="alternativa-card simulado-revisao-alternativa simulado-resposta-opcao" type="button" data-letra="${escaparHtmlSeguro(letra)}">
+        <span class="alt-letra">${escaparHtmlSeguro(letra)}</span>
+        <span class="alt-texto">${escaparHtmlSeguro(texto)}</span>
       </button>
     `).join('')
     : ''
@@ -144,18 +144,18 @@ function criarCardSimuladoRevisao(q, numero) {
     <div class="card-revisao-topo">
       <div class="card-revisao-meta">
         <span class="revisao-numero">#${numero}</span>
-        <span class="tag-materia">${escaparHtml(nomeMateria)}</span>
+        <span class="tag-materia">${escaparHtmlSeguro(nomeMateria)}</span>
         <span class="tag-tipo-questao ${obterClasseTipoQuestaoSimulado(tipo)}">${obterRotuloTipoQuestaoSimulado(tipo)}</span>
         <span class="card-questao-data">${data}</span>
-        <span class="tag-estudo">Revisar: ${escaparHtml(dataRevisao)}</span>
-        ${q.edital_topicos?.titulo ? `<span class="tag-estudo">Edital: ${escaparHtml(q.edital_topicos.titulo)}</span>` : ''}
-        ${q.banca ? `<span class="tag-estudo">Banca: ${escaparHtml(q.banca)}</span>` : ''}
+        <span class="tag-estudo">Revisar: ${escaparHtmlSeguro(dataRevisao)}</span>
+        ${q.edital_topicos?.titulo ? `<span class="tag-estudo">Edital: ${escaparHtmlSeguro(q.edital_topicos.titulo)}</span>` : ''}
+        ${q.banca ? `<span class="tag-estudo">Banca: ${escaparHtmlSeguro(q.banca)}</span>` : ''}
         ${Number(q.revisao_etapa || 0) > 0 ? `<span class="tag-estudo">Ciclo 24/7/30: etapa ${Number(q.revisao_etapa || 0)}</span>` : ''}
         ${totalErros > 0 ? `<span class="tag-revisao tag-revisao--erro">${totalErros} erro${totalErros !== 1 ? 's' : ''} em revisão</span>` : ''}
         ${totalAcertos > 0 ? `<span class="tag-revisao tag-revisao--acerto">${totalAcertos} acerto${totalAcertos !== 1 ? 's' : ''}</span>` : ''}
       </div>
     </div>
-    <p class="card-revisao-enunciado">${escaparHtml(q.enunciado)}</p>
+    <p class="card-revisao-enunciado">${escaparHtmlSeguro(q.enunciado)}</p>
     <div class="modo-pre-resposta">
       <label class="campo-label">Antes de marcar: qual conceito resolve?</label>
       <textarea class="input-texto input-textarea simulado-pre-resposta" rows="2" placeholder="Escreva em uma frase a regra, pista ou raciocínio antes de olhar o gabarito..."></textarea>
@@ -176,16 +176,16 @@ function criarCardSimuladoRevisao(q, numero) {
       </div>
     </div>
     <div class="simulado-revisao-gabarito escondido">
-      <span class="tag-certa">Correta: ${escaparHtml(q.alternativa_correta || '-')}</span>
-      <span class="tag-errada tag-marcada-antes">Marquei antes: ${escaparHtml(q.alternativa_marcada || '-')}</span>
+      <span class="tag-certa">Correta: ${escaparHtmlSeguro(q.alternativa_correta || '-')}</span>
+      <span class="tag-errada tag-marcada-antes">Marquei antes: ${escaparHtmlSeguro(q.alternativa_marcada || '-')}</span>
       <span class="tag-estudo">Marquei agora: <span class="resposta-atual">-</span></span>
-      ${q.motivo_erro ? `<span class="tag-estudo">Erro: ${escaparHtml(q.motivo_erro)}</span>` : ''}
-      ${q.nivel_confianca ? `<span class="tag-estudo">Confiança: ${escaparHtml(q.nivel_confianca)}</span>` : ''}
-      ${q.comentario ? `<p class="simulado-revisao-comentario">${escaparHtml(q.comentario)}</p>` : ''}
-      ${q.pegadinha_banca ? `<p class="simulado-revisao-comentario"><strong>Pegadinhas:</strong> ${escaparHtml(q.pegadinha_banca)}</p>` : ''}
-      ${q.conceito_chave ? `<p class="simulado-revisao-comentario"><strong>Conceito:</strong> ${escaparHtml(q.conceito_chave)}</p>` : ''}
-      ${q.como_reconhecer ? `<p class="simulado-revisao-comentario"><strong>Reconhecer:</strong> ${escaparHtml(q.como_reconhecer)}</p>` : ''}
-      ${q.acao_corretiva ? `<p class="simulado-revisao-comentario"><strong>Ação:</strong> ${escaparHtml(q.acao_corretiva)}</p>` : ''}
+      ${q.motivo_erro ? `<span class="tag-estudo">Erro: ${escaparHtmlSeguro(q.motivo_erro)}</span>` : ''}
+      ${q.nivel_confianca ? `<span class="tag-estudo">Confiança: ${escaparHtmlSeguro(q.nivel_confianca)}</span>` : ''}
+      ${q.comentario ? `<p class="simulado-revisao-comentario">${escaparHtmlSeguro(q.comentario)}</p>` : ''}
+      ${q.pegadinha_banca ? `<p class="simulado-revisao-comentario"><strong>Pegadinhas:</strong> ${escaparHtmlSeguro(q.pegadinha_banca)}</p>` : ''}
+      ${q.conceito_chave ? `<p class="simulado-revisao-comentario"><strong>Conceito:</strong> ${escaparHtmlSeguro(q.conceito_chave)}</p>` : ''}
+      ${q.como_reconhecer ? `<p class="simulado-revisao-comentario"><strong>Reconhecer:</strong> ${escaparHtmlSeguro(q.como_reconhecer)}</p>` : ''}
+      ${q.acao_corretiva ? `<p class="simulado-revisao-comentario"><strong>Ação:</strong> ${escaparHtmlSeguro(q.acao_corretiva)}</p>` : ''}
     </div>
     <div class="simulado-diagnostico escondido">
       <h4 class="simulado-diagnostico-titulo">Diagnóstico da revisão</h4>
@@ -205,15 +205,15 @@ function criarCardSimuladoRevisao(q, numero) {
       <div class="caderno-erros-grid">
         <div class="campo-form">
           <label class="campo-label">Conceito ou regra que resolve</label>
-          <textarea class="input-texto input-textarea simulado-diagnostico-conceito" rows="2">${escaparHtml(q.conceito_chave || '')}</textarea>
+          <textarea class="input-texto input-textarea simulado-diagnostico-conceito" rows="2">${escaparHtmlSeguro(q.conceito_chave || '')}</textarea>
         </div>
         <div class="campo-form">
           <label class="campo-label">Como reconhecer na próxima vez</label>
-          <textarea class="input-texto input-textarea simulado-diagnostico-reconhecer" rows="2">${escaparHtml(q.como_reconhecer || '')}</textarea>
+          <textarea class="input-texto input-textarea simulado-diagnostico-reconhecer" rows="2">${escaparHtmlSeguro(q.como_reconhecer || '')}</textarea>
         </div>
         <div class="campo-form caderno-erros-grid-full">
           <label class="campo-label">Ação corretiva</label>
-          <textarea class="input-texto input-textarea simulado-diagnostico-acao" rows="2">${escaparHtml(q.acao_corretiva || '')}</textarea>
+          <textarea class="input-texto input-textarea simulado-diagnostico-acao" rows="2">${escaparHtmlSeguro(q.acao_corretiva || '')}</textarea>
         </div>
       </div>
       <button class="btn-secundario btn-salvar-diagnostico" type="button">Salvar diagnóstico</button>
@@ -592,18 +592,9 @@ function embaralharQuestoes(questoes) {
   return copia
 }
 
-function escaparHtml(valor) {
-  return String(valor ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;')
-}
-
 function renderizarOptionsSelectSimulado(valores, valorAtual) {
   return valores.map(valor => `
-    <option value="${escaparHtml(valor)}" ${valor === valorAtual ? 'selected' : ''}>${escaparHtml(valor)}</option>
+    <option value="${escaparHtmlSeguro(valor)}" ${valor === valorAtual ? 'selected' : ''}>${escaparHtmlSeguro(valor)}</option>
   `).join('')
 }
 
@@ -661,12 +652,12 @@ function criarCardQuestaoRecuperada(q) {
 
   card.innerHTML = `
     <div class="card-revisao-meta">
-      <span class="tag-materia">${escaparHtml(q.materias?.nome || 'Sem matéria')}</span>
+      <span class="tag-materia">${escaparHtmlSeguro(q.materias?.nome || 'Sem matéria')}</span>
       <span class="tag-tipo-questao ${obterClasseTipoQuestaoSimulado(tipo)}">${obterRotuloTipoQuestaoSimulado(tipo)}</span>
-      <span class="tag-revisao tag-revisao--acerto">Recuperada em ${escaparHtml(dataRecuperacao)}</span>
+      <span class="tag-revisao tag-revisao--acerto">Recuperada em ${escaparHtmlSeguro(dataRecuperacao)}</span>
       ${totalErros > 0 ? `<span class="tag-revisao tag-revisao--erro">${totalErros} erro${totalErros !== 1 ? 's' : ''} antes de recuperar</span>` : ''}
     </div>
-    <p class="card-questao-enunciado">${escaparHtml(enunciado)}</p>
+    <p class="card-questao-enunciado">${escaparHtmlSeguro(enunciado)}</p>
   `
 
   return card
@@ -773,8 +764,8 @@ function criarCardSimulado(simulado) {
   card.innerHTML = `
     <div class="simulado-card-topo">
       <div>
-        <h3 class="simulado-titulo">${escaparHtml(simulado.nome)}</h3>
-        <p class="simulado-subtitulo">${escaparHtml(data)}${simulado.banca ? ` · ${escaparHtml(simulado.banca)}` : ''}</p>
+        <h3 class="simulado-titulo">${escaparHtmlSeguro(simulado.nome)}</h3>
+        <p class="simulado-subtitulo">${escaparHtmlSeguro(data)}${simulado.banca ? ` · ${escaparHtmlSeguro(simulado.banca)}` : ''}</p>
       </div>
       <span class="simulado-nota">${nota}%</span>
     </div>
@@ -784,7 +775,7 @@ function criarCardSimulado(simulado) {
       <span class="resumo-errada-sessao">❌ ${simulado.erradas}</span>
       <span>${tempo}</span>
     </div>
-    ${simulado.comentario ? `<p class="card-questao-comentario">${escaparHtml(simulado.comentario)}</p>` : ''}
+    ${simulado.comentario ? `<p class="card-questao-comentario">${escaparHtmlSeguro(simulado.comentario)}</p>` : ''}
     <div class="card-questao-acoes">
       <button class="btn-acao btn-excluir" type="button">Excluir</button>
     </div>
@@ -861,9 +852,9 @@ function criarEstadoErroSimulado(titulo, mensagem, detalhe, aoTentarNovamente = 
   const div = document.createElement('div')
   div.className = 'estado-erro'
   div.innerHTML = `
-    <h3 class="estado-erro-titulo">${escaparHtml(titulo)}</h3>
-    <p class="estado-erro-texto">${escaparHtml(mensagem)}</p>
-    ${detalhe ? `<p class="estado-erro-detalhe">${escaparHtml(detalhe)}</p>` : ''}
+    <h3 class="estado-erro-titulo">${escaparHtmlSeguro(titulo)}</h3>
+    <p class="estado-erro-texto">${escaparHtmlSeguro(mensagem)}</p>
+    ${detalhe ? `<p class="estado-erro-detalhe">${escaparHtmlSeguro(detalhe)}</p>` : ''}
     <button class="btn-secundario" type="button">Tentar novamente</button>
   `
   div.querySelector('button').addEventListener('click', aoTentarNovamente)
