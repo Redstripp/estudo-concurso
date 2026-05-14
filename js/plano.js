@@ -15,11 +15,37 @@ function inicializarPlanoDia() {
       event.currentTarget.dataset.editado = 'true'
     })
     document.getElementById('btn-adicionar-plano')?.addEventListener('click', salvarMateriaNoPlano)
+    document.getElementById('btn-gerar-plano-semanal')?.addEventListener('click', gerarPlanoSemanalNoPlanoDia)
   }
 
   carregarMetaCentralPlano()
   carregarMateriasPlano()
   carregarPlanoDia()
+}
+
+async function gerarPlanoSemanalNoPlanoDia() {
+  const btn = document.getElementById('btn-gerar-plano-semanal')
+  const data = document.getElementById('plano-data')?.value || dataISOHoje()
+
+  if (typeof gerarPlanoDiaPeloPlanejamento !== 'function') {
+    mostrarMsgPlano('Não foi possível carregar o gerador do planejamento semanal.', 'erro')
+    return
+  }
+
+  if (btn) {
+    btn.disabled = true
+    btn.dataset.textoOriginal = btn.dataset.textoOriginal || btn.textContent
+    btn.textContent = 'Gerando...'
+  }
+
+  try {
+    await gerarPlanoDiaPeloPlanejamento(data)
+  } finally {
+    if (btn) {
+      btn.disabled = false
+      btn.textContent = btn.dataset.textoOriginal || 'Gerar pelo planejamento semanal'
+    }
+  }
 }
 
 async function carregarMetaCentralPlano() {
