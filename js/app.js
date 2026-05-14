@@ -1164,15 +1164,14 @@ async function realizarLogout() {
       
       questoesHoje = questoesData?.length || 0
 
-      // Buscar revisões feitas hoje (tabela de histórico de revisão ou sessões)
-      const { data: sessoesData } = await db
-        .from('sessoes')
+      // Buscar revisões feitas hoje no histórico de revisão
+      const { data: revisoesData } = await db
+        .from('questoes_revisoes')
         .select('id', { count: 'exact' })
         .eq('user_id', userId)
-        .gte('criado_em', hojeInicio.toISOString())
-        .lte('criado_em', hojeFim.toISOString())
+        .eq('data_revisao', dataHoje())
       
-      revisoesHoje = sessoesData?.length || 0
+      revisoesHoje = revisoesData?.length || 0
     }
 
     // Buscar streak
