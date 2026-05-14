@@ -8,6 +8,7 @@ let modoRegistroQuestao = 'rapido'
 let questoesInicializado = false
 let filtroCadernoErrosAtual = 'todos'
 let questoesEmMemoria = []
+let questaoRecemSalvaId = null
 let timeoutBusca
 
 const LETRAS = ['A', 'B', 'C', 'D', 'E']
@@ -1684,7 +1685,7 @@ async function salvarQuestao(opcoes = {}) {
     return
   }
 
-  const { error: erroQuestao } = await db
+  const { data: questaoSalva, error: erroQuestao } = await db
     .from('questoes')
     .insert({
       user_id:             window.usuarioAtual.id,
@@ -1708,6 +1709,8 @@ async function salvarQuestao(opcoes = {}) {
       como_reconhecer:     comoReconhecer || null,
       acao_corretiva:      acaoCorretiva || null
     })
+    .select('id')
+    .single()
 
   if (erroQuestao) {
     console.error(erroQuestao)
@@ -1774,13 +1777,16 @@ async function salvarQuestao(opcoes = {}) {
   mostrarMsgQuestao('Questão salva com sucesso!', 'sucesso')
   setTimeout(() => mostrarMsgQuestao('', ''), 3000)
 
+  questaoRecemSalvaId = questaoSalva?.id || null
+  prepararCadernoParaQuestaoNova()
+
   if (typeof avaliarConquistasUsuario === 'function') {
     await avaliarConquistasUsuario({ atualizarPerfil: true })
   }
-  atualizarTelasAposRegistro()
+  await atualizarTelasAposRegistro({ questaoNova: true })
 }
 
-async function atualizarTelasAposRegistro() {
+async function atualizarTelasAposRegistro(opcoes = {}) {
   const tarefas = []
 
   if (typeof inicializarDashboard === 'function') {
@@ -1820,7 +1826,7 @@ async function atualizarTelasAposRegistro() {
   const secaoQuestoes = document.getElementById('secao-questoes')
   if (secaoQuestoes && !secaoQuestoes.classList.contains('escondido')) {
     if (typeof carregarQuestoes === 'function') {
-      tarefas.push(carregarQuestoes(true))
+      tarefas.push(carregarQuestoes(Boolean(opcoes.questaoNova)))
     }
   }
 
@@ -1860,17 +1866,15 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
     return
   }
 
-  const lista       = document.getElementById('lista-questoes')
-  const placeholder = document.getElementById('placeholder-questoes')
+  const lista = document.getElementById('lista-questoes')
 
-  if (!lista || !placeholder) {
+  if (!lista) {
     // Elementos não existem: provavelmente a tela de questões não está visível
     // Não tenta recursão para evitar loop infinito
     return
   }
 
-  placeholder.textContent   = '⏳ Buscando suas questões...'
-  placeholder.style.display = 'block'
+  lista.innerHTML = '<p class="texto-placeholder" id="placeholder-questoes">⏳ Buscando suas questões...</p>'
 
   const { data, error } = await db
     .from('questoes')
@@ -1880,88 +1884,13 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
 
   if (error) {
     console.error(error)
-    placeholder.textContent = '❌ Erro ao carregar questões. Execute os SQLs de melhoria e do edital no Supabase.'
+    lista.innerHTML = '<p class="texto-placeholder" id="placeholder-questoes">❌ Erro ao carregar questões. Execute os SQLs de melhoria e do edital no Supabase.</p>'
     return
   }
 
-  lista.innerHTML = ''
-  renderizarAcoesCadernoErros(data || [])
-
-  if (!data || data.length === 0) {
-    placeholder.textContent   = 'Resolva exercícios e registre seu primeiro erro aqui. Quanto mais cedo começar, mais rápido o sistema aprende seus padrões.'
-    placeholder.style.display = 'block'
-    lista.appendChild(placeholder)
-    return
-  }
-
-  placeholder.style.display = 'none'
-  lista.appendChild(placeholder)
-  questoesEmMemoria = data
-  const dadosFiltrados = filtrarQuestoesCadernoErros(data)
-  renderizarListaQuestoes(dadosFiltrados)
-
-  if (dadosFiltrados.length === 0) {
-    placeholder.textContent = obterMensagemFiltroCadernoErros()
-    placeholder.style.display = 'block'
-    return
-  }
-
-  const pendentesErradas = dadosFiltrados.filter(q =>
-    normalizarStatusRevisao(q) !== 'recuperada' &&
-    normalizarTipoQuestao(q) === 'Errada'
-  )
-  const pendentesChutadas = dadosFiltrados.filter(q =>
-    normalizarStatusRevisao(q) !== 'recuperada' &&
-    normalizarTipoQuestao(q) === 'Chutada'
-  )
-  const recuperadas = dadosFiltrados.filter(q => normalizarStatusRevisao(q) === 'recuperada')
-
-  let primeiroCardAdicionado = false
-
-  if (pendentesErradas.length > 0) {
-    lista.appendChild(criarCabecalhoGrupoQuestoes(
-      'Erros por falta de domínio',
-      `${formatarQuantidadeQuestoes(pendentesErradas.length)} com correção obrigatória`
-    ))
-    pendentesErradas.forEach(q => {
-      const card = criarCardQuestao(q)
-      if (marcarPrimeiroComoNovo && !primeiroCardAdicionado) {
-        card.classList.add('card-questao--novo')
-        primeiroCardAdicionado = true
-      }
-      lista.appendChild(card)
-    })
-  }
-
-  if (pendentesChutadas.length > 0) {
-    lista.appendChild(criarCabecalhoGrupoQuestoes(
-      'Acertos no chute e baixa confiança',
-      `${formatarQuantidadeQuestoes(pendentesChutadas.length)} para confirmar domínio`
-    ))
-    pendentesChutadas.forEach(q => {
-      const card = criarCardQuestao(q)
-      if (marcarPrimeiroComoNovo && !primeiroCardAdicionado) {
-        card.classList.add('card-questao--novo')
-        primeiroCardAdicionado = true
-      }
-      lista.appendChild(card)
-    })
-  }
-
-  if (recuperadas.length > 0) {
-    lista.appendChild(criarCabecalhoGrupoQuestoes(
-      'Questões recuperadas',
-      `${formatarQuantidadeQuestoes(recuperadas.length)} fora da fila crítica`
-    ))
-    recuperadas.forEach(q => {
-      const card = criarCardQuestao(q)
-      if (marcarPrimeiroComoNovo && !primeiroCardAdicionado) {
-        card.classList.add('card-questao--novo')
-        primeiroCardAdicionado = true
-      }
-      lista.appendChild(card)
-    })
-  }
+  questoesEmMemoria = data || []
+  renderizarAcoesCadernoErros(questoesEmMemoria)
+  atualizarListaQuestoesCaderno({ marcarPrimeiroComoNovo })
 }
 
 // Variável para controlar se o listener de delegação já foi adicionado
@@ -2012,7 +1941,8 @@ function renderizarAcoesCadernoErros(questoes) {
       const btn = e.target.closest('[data-filtro-caderno]')
       if (btn) {
         filtroCadernoErrosAtual = btn.dataset.filtroCaderno || 'todos'
-        carregarQuestoes()
+        renderizarAcoesCadernoErros(questoesEmMemoria)
+        atualizarListaQuestoesCaderno()
       }
     })
     listenerDelegacaoAdicionado = true
@@ -2032,7 +1962,17 @@ function filtrarQuestoesCadernoErros(questoes) {
   return lista
 }
 
-function renderizarListaQuestoes(listaParaExibir) {
+function prepararCadernoParaQuestaoNova() {
+  filtroCadernoErrosAtual = 'todos'
+
+  const busca = document.getElementById('busca-caderno')
+  if (busca) busca.value = ''
+
+  const ordenacao = document.getElementById('ordenacao-caderno')
+  if (ordenacao) ordenacao.value = 'recente'
+}
+
+function renderizarListaQuestoes(listaParaExibir, opcoes = {}) {
   const container = document.getElementById('lista-questoes');
   if (!container) return;
 
@@ -2041,56 +1981,21 @@ function renderizarListaQuestoes(listaParaExibir) {
   if (listaParaExibir.length === 0) {
     container.innerHTML = `
       <div class="estado-vazio">
-        <p>Nenhuma questão encontrada com este filtro.</p>
+        <p>${escaparHtmlSeguro(opcoes.mensagemVazia || 'Nenhuma questão encontrada com este filtro.')}</p>
       </div>`;
     return;
   }
 
-  // Agrupar questões
-  const pendentesErradas = listaParaExibir.filter(q =>
-    normalizarStatusRevisao(q) !== 'recuperada' &&
-    normalizarTipoQuestao(q) === 'Errada'
-  );
-  const pendentesChutadas = listaParaExibir.filter(q =>
-    normalizarStatusRevisao(q) !== 'recuperada' &&
-    normalizarTipoQuestao(q) === 'Chutada'
-  );
-  const recuperadas = listaParaExibir.filter(q => normalizarStatusRevisao(q) === 'recuperada');
-
   let primeiroCardAdicionado = false;
 
-  if (pendentesErradas.length > 0) {
-    container.appendChild(criarCabecalhoGrupoQuestoes(
-      'Erros por falta de domínio',
-      `${formatarQuantidadeQuestoes(pendentesErradas.length)} com correção obrigatória`
-    ));
-    pendentesErradas.forEach(q => {
-      const card = criarCardQuestao(q);
-      container.appendChild(card);
-    });
-  }
-
-  if (pendentesChutadas.length > 0) {
-    container.appendChild(criarCabecalhoGrupoQuestoes(
-      'Acertos no chute e baixa confiança',
-      `${formatarQuantidadeQuestoes(pendentesChutadas.length)} para confirmar domínio`
-    ));
-    pendentesChutadas.forEach(q => {
-      const card = criarCardQuestao(q);
-      container.appendChild(card);
-    });
-  }
-
-  if (recuperadas.length > 0) {
-    container.appendChild(criarCabecalhoGrupoQuestoes(
-      'Questões recuperadas',
-      `${formatarQuantidadeQuestoes(recuperadas.length)} fora da fila crítica`
-    ));
-    recuperadas.forEach(q => {
-      const card = criarCardQuestao(q);
-      container.appendChild(card);
-    });
-  }
+  listaParaExibir.forEach(q => {
+    const card = criarCardQuestao(q);
+    if (opcoes.marcarPrimeiroComoNovo && !primeiroCardAdicionado) {
+      card.classList.add('card-questao--novo');
+      primeiroCardAdicionado = true;
+    }
+    container.appendChild(card);
+  });
 }
 
 function obterMensagemFiltroCadernoErros() {
@@ -2100,70 +2005,144 @@ function obterMensagemFiltroCadernoErros() {
   return 'Nenhuma questão encontrada para este filtro.'
 }
 
-function filtrarQuestoesBusca(termo) {
-  const termoNormalizado = termo.toLowerCase().trim();
-  const infoElemento = document.getElementById('resultado-busca-info');
-  
-  if (!termoNormalizado) {
-    renderizarListaQuestoes(questoesEmMemoria);
-    if (infoElemento) infoElemento.textContent = '';
-    return;
+function atualizarListaQuestoesCaderno(opcoes = {}) {
+  const listaBase = Array.isArray(questoesEmMemoria) ? questoesEmMemoria : []
+  const termoBusca = String(document.getElementById('busca-caderno')?.value || '').toLowerCase().trim()
+  const filtradasPorAtalho = filtrarQuestoesCadernoErros(listaBase)
+  const filtradasPorBusca = termoBusca
+    ? filtradasPorAtalho.filter(q => questaoCorrespondeBuscaCaderno(q, termoBusca))
+    : filtradasPorAtalho
+  const criterio = document.getElementById('ordenacao-caderno')?.value || 'recente'
+  let ordenadas = ordenarQuestoes(filtradasPorBusca, criterio)
+
+  if (opcoes.marcarPrimeiroComoNovo && questaoRecemSalvaId) {
+    ordenadas = colocarQuestaoNoInicio(ordenadas, questaoRecemSalvaId)
   }
 
-  const filtradas = questoesEmMemoria.filter(q => {
-    const enunciado = (q.enunciado || '').toLowerCase();
-    const motivo = (q.motivo_erro || '').toLowerCase();
-    const materia = (q.materias?.nome || '').toLowerCase();
-    
-    return enunciado.includes(termoNormalizado) || 
-           motivo.includes(termoNormalizado) || 
-           materia.includes(termoNormalizado);
-  });
+  renderizarListaQuestoes(ordenadas, {
+    marcarPrimeiroComoNovo: Boolean(opcoes.marcarPrimeiroComoNovo),
+    mensagemVazia: obterMensagemListaQuestoesVazia(listaBase.length, filtradasPorAtalho.length, termoBusca)
+  })
+  atualizarResultadoBuscaCaderno(termoBusca, filtradasPorBusca.length, filtradasPorAtalho.length)
 
-  const criterio = document.getElementById('ordenacao-caderno')?.value || 'recente';
-  const ordenadas = ordenarQuestoes(filtradas, criterio);
-  renderizarListaQuestoes(ordenadas);
-  
-  if (infoElemento) {
-    infoElemento.textContent = `${filtradas.length} resultado(s) encontrado(s)`;
+  if (opcoes.marcarPrimeiroComoNovo) questaoRecemSalvaId = null
+}
+
+function questaoCorrespondeBuscaCaderno(q, termoNormalizado) {
+  const campos = [
+    q.enunciado,
+    q.motivo_erro,
+    q.nivel_confianca,
+    q.comentario,
+    q.pegadinha_banca,
+    q.banca,
+    q.materias?.nome,
+    q.edital_topicos?.titulo
+  ]
+
+  return campos.some(campo => String(campo || '').toLowerCase().includes(termoNormalizado))
+}
+
+function colocarQuestaoNoInicio(lista, questaoId) {
+  const indice = lista.findIndex(q => q.id === questaoId)
+  if (indice <= 0) return lista
+
+  const copia = [...lista]
+  const [questao] = copia.splice(indice, 1)
+  return [questao, ...copia]
+}
+
+function obterMensagemListaQuestoesVazia(totalQuestoes, totalAposAtalho, termoBusca) {
+  if (totalQuestoes === 0) {
+    return 'Resolva exercícios e registre seu primeiro erro aqui. Quanto mais cedo começar, mais rápido o sistema aprende seus padrões.'
   }
+  if (termoBusca) return 'Nenhuma questão encontrada para esta busca.'
+  if (totalAposAtalho === 0) return obterMensagemFiltroCadernoErros()
+  return 'Nenhuma questão encontrada com os filtros atuais.'
+}
+
+function atualizarResultadoBuscaCaderno(termoBusca, totalBusca, totalFiltro) {
+  const infoElemento = document.getElementById('resultado-busca-info')
+  if (!infoElemento) return
+
+  if (!termoBusca) {
+    infoElemento.textContent = ''
+    return
+  }
+
+  const complementoFiltro = totalFiltro !== questoesEmMemoria.length
+    ? ` de ${totalFiltro} neste atalho`
+    : ''
+  infoElemento.textContent = `${totalBusca} resultado(s) encontrado(s)${complementoFiltro}`
+}
+
+function filtrarQuestoesBusca() {
+  atualizarListaQuestoesCaderno()
 }
 
 function ordenarQuestoes(lista, criterio) {
   return [...lista].sort((a, b) => {
     const qa = a.questoes || a;
     const qb = b.questoes || b;
-    const matA = (a.materias?.nome || '').toLowerCase();
-    const matB = (b.materias?.nome || '').toLowerCase();
+    const matA = (qa.materias?.nome || '').toLowerCase();
+    const matB = (qb.materias?.nome || '').toLowerCase();
 
     switch (criterio) {
       case 'antigas':
-        return new Date(qa.criado_em) - new Date(qb.criado_em);
+        return compararDatasQuestao(qa.criado_em, qb.criado_em);
       
       case 'materia':
-        return matA.localeCompare(matB);
+        return matA.localeCompare(matB, 'pt-BR') || compararDatasQuestao(qb.criado_em, qa.criado_em);
       
       case 'diagnostico':
-        // Usa utilitário existente (assumindo que está global ou importado)
-        const scoreA = typeof avaliarQualidadeDiagnosticoQuestao === 'function' 
-          ? avaliarQualidadeDiagnosticoQuestao(qa) 
-          : 0;
-        const scoreB = typeof avaliarQualidadeDiagnosticoQuestao === 'function' 
-          ? avaliarQualidadeDiagnosticoQuestao(qb) 
-          : 0;
-        return scoreA - scoreB; // Menor score (pior) primeiro
+        return compararDiagnosticoQuestoes(qa, qb);
       
       case 'revisao':
-        if (!qa.revisar_novamente_em && !qb.revisar_novamente_em) return 0;
+        if (!qa.revisar_novamente_em && !qb.revisar_novamente_em) {
+          return compararDatasQuestao(qb.criado_em, qa.criado_em);
+        }
         if (!qa.revisar_novamente_em) return 1; // Nulos no fim
         if (!qb.revisar_novamente_em) return -1;
-        return new Date(qa.revisar_novamente_em) - new Date(qb.revisar_novamente_em);
+        return compararDatasQuestao(qa.revisar_novamente_em, qb.revisar_novamente_em) ||
+          compararDatasQuestao(qb.criado_em, qa.criado_em);
       
       case 'recente':
       default:
-        return new Date(qb.criado_em) - new Date(qa.criado_em);
+        return compararDatasQuestao(qb.criado_em, qa.criado_em);
     }
   });
+}
+
+function compararDiagnosticoQuestoes(a, b) {
+  const qualidadeA = typeof avaliarQualidadeDiagnosticoQuestao === 'function'
+    ? avaliarQualidadeDiagnosticoQuestao(a)
+    : { status: 'completo', pontos: 0 }
+  const qualidadeB = typeof avaliarQualidadeDiagnosticoQuestao === 'function'
+    ? avaliarQualidadeDiagnosticoQuestao(b)
+    : { status: 'completo', pontos: 0 }
+
+  return prioridadeDiagnosticoQuestao(qualidadeA.status) - prioridadeDiagnosticoQuestao(qualidadeB.status) ||
+    Number(qualidadeA.pontos || 0) - Number(qualidadeB.pontos || 0) ||
+    compararDatasQuestao(b.criado_em, a.criado_em)
+}
+
+function prioridadeDiagnosticoQuestao(status) {
+  const prioridade = {
+    incompleto: 0,
+    fraco: 1,
+    completo: 2
+  }
+  return prioridade[status] ?? 3
+}
+
+function compararDatasQuestao(dataA, dataB) {
+  const valorA = Date.parse(dataA || '')
+  const valorB = Date.parse(dataB || '')
+
+  if (Number.isNaN(valorA) && Number.isNaN(valorB)) return 0
+  if (Number.isNaN(valorA)) return 1
+  if (Number.isNaN(valorB)) return -1
+  return valorA - valorB
 }
 
 function criarCabecalhoGrupoQuestoes(titulo, resumo) {
@@ -2303,14 +2282,7 @@ async function excluirQuestao(id, card) {
   }
 
   card.remove()
-  carregarQuestoes()
-
-  // Mostra placeholder se não sobrou nenhuma
-  const lista = document.getElementById('lista-questoes')
-  if (lista.querySelectorAll('.card-questao').length === 0) {
-    document.getElementById('placeholder-questoes').style.display = 'block'
-  }
-
+  await carregarQuestoes()
   atualizarTelasAposRegistro()
 }
 
@@ -2802,6 +2774,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     normalizarStatusRevisao,
     questaoChutadaAcertada,
     normalizarTextoDuplicidade,
+    ordenarQuestoes,
     carregarQuestoesEmMemoria
   }
   
@@ -2816,5 +2789,6 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.normalizarStatusRevisao = normalizarStatusRevisao
   globalThis.questaoChutadaAcertada = questaoChutadaAcertada
   globalThis.normalizarTextoDuplicidade = normalizarTextoDuplicidade
+  globalThis.ordenarQuestoes = ordenarQuestoes
   globalThis.carregarQuestoesEmMemoria = carregarQuestoesEmMemoria
 }

@@ -7,7 +7,8 @@ const {
   normalizarTipoQuestao,
   normalizarStatusRevisao,
   questaoChutadaAcertada,
-  normalizarTextoDuplicidade
+  normalizarTextoDuplicidade,
+  ordenarQuestoes
 } = globalThis
 
 describe('escaparHtmlSeguro', () => {
@@ -121,5 +122,58 @@ describe('normalizarTextoDuplicidade', () => {
 
   it('Deve retornar string vazia para null', () => {
     expect(normalizarTextoDuplicidade(null)).toBe('')
+  })
+})
+
+describe('ordenarQuestoes', () => {
+  const questoes = [
+    {
+      id: 'antiga',
+      criado_em: '2025-01-01T10:00:00Z',
+      revisar_novamente_em: '2025-01-10',
+      materias: { nome: 'Zoologia' },
+      motivo_erro: 'A diagnosticar',
+      nivel_confianca: 'Não informado'
+    },
+    {
+      id: 'recente',
+      criado_em: '2025-01-03T10:00:00Z',
+      revisar_novamente_em: '2025-01-08',
+      materias: { nome: 'Administrativo' },
+      motivo_erro: 'Desatenção',
+      nivel_confianca: 'Dúvida',
+      conceito_chave: 'Conceito suficiente',
+      como_reconhecer: 'Reconhecer pelo comando da questão',
+      acao_corretiva: 'Revisar antes de responder',
+      comentario: 'Comentário útil para revisão'
+    },
+    {
+      id: 'meio',
+      criado_em: '2025-01-02T10:00:00Z',
+      revisar_novamente_em: '2025-01-09',
+      materias: { nome: 'Constitucional' },
+      motivo_erro: 'Pegadinha',
+      nivel_confianca: 'Baixa confiança'
+    }
+  ]
+
+  it('ordena mais recentes primeiro', () => {
+    expect(ordenarQuestoes(questoes, 'recente').map(q => q.id)).toEqual(['recente', 'meio', 'antiga'])
+  })
+
+  it('ordena mais antigas primeiro', () => {
+    expect(ordenarQuestoes(questoes, 'antigas').map(q => q.id)).toEqual(['antiga', 'meio', 'recente'])
+  })
+
+  it('ordena por matéria em ordem alfabética', () => {
+    expect(ordenarQuestoes(questoes, 'materia').map(q => q.id)).toEqual(['recente', 'meio', 'antiga'])
+  })
+
+  it('ordena revisão vencida primeiro pela data de revisão', () => {
+    expect(ordenarQuestoes(questoes, 'revisao').map(q => q.id)).toEqual(['recente', 'meio', 'antiga'])
+  })
+
+  it('ordena diagnóstico mais fraco primeiro', () => {
+    expect(ordenarQuestoes(questoes, 'diagnostico').map(q => q.id)).toEqual(['antiga', 'meio', 'recente'])
   })
 })
