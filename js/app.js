@@ -7,6 +7,17 @@ const SECOES_INTERFACE_AVANCADA = new Set(['edital', 'plano', 'planejamento', 's
 let avisoArquivamentoToken = 0
 let onboardingAtivoEstado = null
 let dadosIniciaisUsuarioCache = { userId: null, promise: null }
+let focoAntesOnboarding = null
+let passoOnboardingRenderizado = null
+
+const SELETOR_FOCO_MODAL_ONBOARDING = [
+  'a[href]',
+  'button:not([disabled])',
+  'textarea:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])'
+].join(',')
 
 const INICIALIZADORES_SECAO = {
   materias: () => inicializarMaterias(),
@@ -401,13 +412,27 @@ function abrirOnboardingAtivo() {
     mensagem: ''
   }
 
+  desativarArmadilhaFocoOnboarding()
   document.getElementById('modal-onboarding-ativo')?.remove()
+  focoAntesOnboarding = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  passoOnboardingRenderizado = null
 
   const modal = document.createElement('div')
   modal.id = 'modal-onboarding-ativo'
   modal.className = 'modal-overlay modal-onboarding-overlay'
-  modal.innerHTML = '<div class="modal-caixa modal-onboarding-caixa" id="onboarding-conteudo"></div>'
+  modal.innerHTML = `
+    <div
+      class="modal-caixa modal-onboarding-caixa"
+      id="onboarding-conteudo"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboarding-titulo"
+      tabindex="-1"
+    ></div>
+  `
   document.body.appendChild(modal)
+  modal.addEventListener('keydown', conterTabOnboarding)
+  document.addEventListener('focusin', manterFocoNoOnboarding, true)
 
   renderizarOnboardingAtivo()
 }
@@ -417,6 +442,8 @@ function renderizarOnboardingAtivo() {
   if (!container || !onboardingAtivoEstado) return
 
   const passo = onboardingAtivoEstado.passo
+  const passoMudou = passoOnboardingRenderizado !== passo
+  passoOnboardingRenderizado = passo
   container.innerHTML = `
     ${passo <= 4 ? criarProgressoOnboarding(passo) : ''}
     ${passo === 1 ? criarPassoBoasVindasOnboarding() : ''}
@@ -427,6 +454,67 @@ function renderizarOnboardingAtivo() {
   `
 
   vincularEventosOnboarding()
+  agendarFocoOnboarding(passoMudou)
+}
+
+function conterTabOnboarding(e) {
+  if (e.key !== 'Tab') return
+
+  const modal = document.getElementById('modal-onboarding-ativo')
+  if (!modal) return
+
+  const focaveis = obterElementosFocaveisOnboarding(modal)
+  if (focaveis.length === 0) {
+    e.preventDefault()
+    document.getElementById('onboarding-conteudo')?.focus()
+    return
+  }
+
+  const primeiro = focaveis[0]
+  const ultimo = focaveis[focaveis.length - 1]
+  const ativo = document.activeElement
+
+  if (e.shiftKey && (!modal.contains(ativo) || ativo === primeiro || ativo?.id === 'onboarding-titulo')) {
+    e.preventDefault()
+    ultimo.focus()
+    return
+  }
+
+  if (!e.shiftKey && (!modal.contains(ativo) || ativo === ultimo)) {
+    e.preventDefault()
+    primeiro.focus()
+  }
+}
+
+function manterFocoNoOnboarding(e) {
+  const modal = document.getElementById('modal-onboarding-ativo')
+  if (!modal || modal.contains(e.target)) return
+  agendarFocoOnboarding(false)
+}
+
+function agendarFocoOnboarding(preferirTitulo = false) {
+  requestAnimationFrame(() => {
+    const modal = document.getElementById('modal-onboarding-ativo')
+    const conteudo = document.getElementById('onboarding-conteudo')
+    if (!modal || !conteudo) return
+
+    const focoAtualDentro = modal.contains(document.activeElement)
+    if (focoAtualDentro && !preferirTitulo) return
+
+    const titulo = document.getElementById('onboarding-titulo')
+    const focaveis = obterElementosFocaveisOnboarding(modal)
+    const alvo = preferirTitulo ? (titulo || focaveis[0] || conteudo) : (focaveis[0] || titulo || conteudo)
+    alvo.focus({ preventScroll: true })
+  })
+}
+
+function obterElementosFocaveisOnboarding(modal) {
+  return Array.from(modal.querySelectorAll(SELETOR_FOCO_MODAL_ONBOARDING))
+    .filter(elemento => elemento instanceof HTMLElement && !elemento.disabled && elemento.getAttribute('aria-hidden') !== 'true')
+}
+
+function desativarArmadilhaFocoOnboarding() {
+  document.removeEventListener('focusin', manterFocoNoOnboarding, true)
 }
 
 function criarProgressoOnboarding(passo) {
@@ -445,7 +533,7 @@ function criarProgressoOnboarding(passo) {
 function criarPassoBoasVindasOnboarding() {
   return `
     <div class="onboarding-passo">
-      <h3>Bem-vindo ao Estudo Concurso</h3>
+      <h3 id="onboarding-titulo" tabindex="-1">Bem-vindo ao Estudo Concurso</h3>
       <p>Em 4 passos rápidos você configura o essencial para começar.</p>
       <button class="btn-primario" id="onboarding-comecar" type="button">Começar →</button>
     </div>
@@ -458,7 +546,7 @@ function criarPassoMateriaOnboarding() {
 
   return `
     <div class="onboarding-passo">
-      <h3>Primeira matéria</h3>
+      <h3 id="onboarding-titulo" tabindex="-1">Primeira matéria</h3>
       <p>Cadastre a primeira disciplina que vai aparecer no seu caderno de erros.</p>
       <div class="form-linha onboarding-form-linha">
         <input id="onboarding-materia-nome" class="input-texto" type="text" placeholder="Ex: Português, Matemática, Direito..." maxlength="80">
@@ -487,7 +575,7 @@ function criarPassoDiasRevisaoOnboarding() {
 
   return `
     <div class="onboarding-passo">
-      <h3>Dias de revisão</h3>
+      <h3 id="onboarding-titulo" tabindex="-1">Dias de revisão</h3>
       <p>Escolha quando o sistema deve organizar os erros acumulados para revisar.</p>
       <div class="onboarding-dias-grid">
         ${dias.map(dia => `
@@ -511,7 +599,7 @@ function criarPassoPrimeiroErroOnboarding() {
 
   return `
     <div class="onboarding-passo">
-      <h3>Primeiro erro</h3>
+      <h3 id="onboarding-titulo" tabindex="-1">Primeiro erro</h3>
       <p>Registre um erro simples agora ou pule para começar a usar o sistema.</p>
       <div class="onboarding-materia-fixa">
         Matéria selecionada: <strong>${escaparHtmlSeguro(onboardingAtivoEstado.materia?.nome || 'Primeira matéria')}</strong>
@@ -588,7 +676,7 @@ function criarPassoFinalOnboarding() {
 
   return `
     <div class="onboarding-passo onboarding-final">
-      <h3>Configuração inicial concluída</h3>
+      <h3 id="onboarding-titulo" tabindex="-1">Configuração inicial concluída</h3>
       <p>Você já tem o essencial para começar a usar o Estudo Concurso.</p>
       <ul>
         <li>Matéria: <strong>${escaparHtmlSeguro(onboardingAtivoEstado.materia?.nome || 'configurada')}</strong></li>
@@ -840,9 +928,13 @@ function concluirOnboardingAtivo(questaoSalva) {
 }
 
 function fecharOnboardingAtivo() {
+  desativarArmadilhaFocoOnboarding()
   document.getElementById('modal-onboarding-ativo')?.remove()
+  passoOnboardingRenderizado = null
   navegarPara('dashboard')
   if (typeof inicializarDashboard === 'function') inicializarDashboard()
+  focoAntesOnboarding?.focus?.({ preventScroll: true })
+  focoAntesOnboarding = null
 }
 
 function mostrarMsgOnboarding(texto, tipo = '') {
