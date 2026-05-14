@@ -11,6 +11,7 @@ function inicializarDesempenho() {
     return
   }
   desempenhoInicializado = true
+  registrarEventosDesempenho()
   carregarDesempenho()
 }
 
@@ -198,11 +199,17 @@ function renderizarLinhasMaterias(erradas, certas, sessaoId) {
 // ============================================
 // EVENTOS DELEGADOS — editar e excluir acertos
 // ============================================
-document.addEventListener('click', async (e) => {
+function registrarEventosDesempenho() {
+  document.addEventListener('click', lidarCliqueDesempenho)
+}
+
+async function lidarCliqueDesempenho(e) {
+  const alvo = e.target instanceof Element ? e.target : null
+  if (!alvo || !alvo.closest('#secao-desempenho')) return
 
   // ── EXCLUIR ──────────────────────────────
-  if (e.target.closest('.btn-excluir-acerto')) {
-    const btn      = e.target.closest('.btn-excluir-acerto')
+  if (alvo.closest('.btn-excluir-acerto')) {
+    const btn      = alvo.closest('.btn-excluir-acerto')
     const id       = btn.dataset.id
 
     if (!confirm('Excluir este registro de acertos?')) return
@@ -223,15 +230,15 @@ document.addEventListener('click', async (e) => {
   }
 
   // ── EDITAR ───────────────────────────────
-  if (e.target.closest('.btn-editar-acerto')) {
-    const btn      = e.target.closest('.btn-editar-acerto')
+  if (alvo.closest('.btn-editar-acerto')) {
+    const btn      = alvo.closest('.btn-editar-acerto')
     const id       = btn.dataset.id
     const qtdAtual = parseInt(btn.dataset.qtd)
 
     abrirModalEdicaoAcerto(id, qtdAtual)
     return
   }
-})
+}
 
 // ============================================
 // MODAL DE EDIÇÃO DE ACERTO
