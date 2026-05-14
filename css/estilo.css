@@ -1717,7 +1717,9 @@ button.dash-card.dash-card--principal {
 }
 
 .dash-card--revisao-critica .dash-card-label,
-.dash-card--revisao-critica .dash-card-subtexto {
+.dash-card--revisao-critica .dash-card-subtexto,
+.dash-card--revisao-critica .dash-card-icone,
+.dash-card--revisao-critica .dash-card-tag {
   color: var(--cor-texto);
 }
 

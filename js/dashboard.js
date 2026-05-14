@@ -155,7 +155,7 @@ function mostrarErroDashboard(containerId, titulo, mensagem, detalhe) {
 
   const btn = container.querySelector('button')
   if (btn) {
-    const novoBtn = btn.cloneNode(false)
+    const novoBtn = btn.cloneNode(true)
     btn.parentNode.replaceChild(novoBtn, btn)
     // CORREÇÃO: setTimeout quebra a pilha de chamadas síncrona
     novoBtn.addEventListener('click', () => {
@@ -587,14 +587,14 @@ async function carregarArquivamentoMensal(userId) {
   // Remove listeners antigos antes de adicionar novos
   const btnPdf = container.querySelector('#btn-gerar-pdf-mensal')
   if (btnPdf) {
-    const novoBtnPdf = btnPdf.cloneNode(false)
+    const novoBtnPdf = btnPdf.cloneNode(true)
     btnPdf.parentNode.replaceChild(novoBtnPdf, btnPdf)
     novoBtnPdf.addEventListener('click', () => gerarPdfArquivamentoMensal(userId, periodo))
   }
 
   const btnArquivar = container.querySelector('#btn-arquivar-limpar-mensal')
   if (btnArquivar) {
-    const novoBtnArquivar = btnArquivar.cloneNode(false)
+    const novoBtnArquivar = btnArquivar.cloneNode(true)
     btnArquivar.parentNode.replaceChild(novoBtnArquivar, btnArquivar)
     novoBtnArquivar.addEventListener('click', () => arquivarELimparMes(userId, periodo))
   }
@@ -1474,7 +1474,7 @@ async function carregarRelatorioErrosRecorrentes(userId) {
 
   // Remove listeners antigos antes de adicionar novos
   container.querySelectorAll('[data-dashboard-atalho]').forEach(btn => {
-    const novoBtn = btn.cloneNode(false)
+    const novoBtn = btn.cloneNode(true)
     btn.parentNode.replaceChild(novoBtn, btn)
   })
 
@@ -1883,7 +1883,7 @@ async function carregarCardsDashboard(userId) {
   `
 
   container.querySelectorAll('[data-dashboard-atalho]').forEach(btn => {
-    const novoBtn = btn.cloneNode(false)
+    const novoBtn = btn.cloneNode(true)
     btn.parentNode.replaceChild(novoBtn, btn)
   })
 
@@ -1896,7 +1896,7 @@ async function carregarCardsDashboard(userId) {
 
   const btnOcultar = container.querySelector('[data-dashboard-ocultar-checklist]')
   if (btnOcultar) {
-    const novoBtn = btnOcultar.cloneNode(false)
+    const novoBtn = btnOcultar.cloneNode(true)
     btnOcultar.parentNode.replaceChild(novoBtn, btnOcultar)
     novoBtn.addEventListener('click', () => {
       localStorage.setItem(CHAVE_CHECKLIST_INICIAL_OCULTO, '1')
