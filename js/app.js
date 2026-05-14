@@ -1194,8 +1194,7 @@ async function realizarLogout() {
   } catch (erro) {
     console.error('Erro ao preparar logout:', erro)
     // Em caso de erro, ainda permite o logout direto
-    await db.auth.signOut()
-    window.location.href = 'index.html'
+    await finalizarLogout()
   }
 }
 
@@ -1222,14 +1221,19 @@ function fecharModalSaida() {
 
 async function confirmarLogout() {
   if (!logoutPendente) return
-  
+
+  await finalizarLogout()
+}
+
+async function finalizarLogout() {
   try {
     await db.auth.signOut()
-    window.location.href = 'index.html'
   } catch (erro) {
     console.error('Erro ao efetuar logout:', erro)
-    await db.auth.signOut()
-    window.location.href = 'index.html'
+  } finally {
+    window.usuarioAtual = null
+    logoutPendente = null
+    window.location.replace(obterUrlArquivoApp('index.html'))
   }
 }
 
