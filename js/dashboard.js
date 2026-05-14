@@ -1810,7 +1810,7 @@ async function carregarCardsDashboard(userId) {
       .sort((a, b) => b[1] - a[1])[0][0]
   }
 
-  const streakResumo = await obterResumoStreakDashboard(userId)
+  const streakResumo = await obterResumoStreakGamificacao(userId)
   const container = document.getElementById('dashboard-cards')
   if (!container) return
 
@@ -1924,95 +1924,6 @@ function criarDonutAproveitamentoDashboard(aproveitamento) {
   `
 }
 
-async function obterResumoStreakDashboard(userId) {
-  if (typeof obterResumoStreakGamificacao === 'function') {
-    try {
-      return await obterResumoStreakGamificacao(userId)
-    } catch (erro) {
-      console.warn('Usando cálculo local de sequência no Dashboard.', erro)
-    }
-  }
-
-  const datas = new Set()
-  const [questoesResp, certasResp, configResp] = await Promise.all([
-    db.from('questoes').select('criado_em').eq('user_id', userId).order('criado_em', { ascending: true }).limit(2500),
-    db.from('questoes_certas').select('criado_em').eq('user_id', userId).order('criado_em', { ascending: true }).limit(2500),
-    db.from('configuracoes_revisao').select('ultima_revisao_geral').eq('user_id', userId).maybeSingle()
-  ])
-
-  if (questoesResp.error) throw criarErroConsultaDashboard('Não foi possível calcular sua sequência por questões registradas.', questoesResp.error)
-  if (certasResp.error) throw criarErroConsultaDashboard('Não foi possível calcular sua sequência por acertos registrados.', certasResp.error)
-
-  ;(questoesResp.data || []).forEach(item => adicionarDataStreakDashboard(datas, item.criado_em))
-  ;(certasResp.data || []).forEach(item => adicionarDataStreakDashboard(datas, item.criado_em))
-  if (configResp.data?.ultima_revisao_geral) adicionarDataStreakDashboard(datas, configResp.data.ultima_revisao_geral)
-  carregarRevisoesLocaisStreakDashboard(userId).forEach(data => adicionarDataStreakDashboard(datas, data))
-
-  const hoje = dataHoje()
-  const ontem = diaAnterior(hoje)
-  const atividadeHoje = datas.has(hoje)
-  const base = atividadeHoje ? hoje : datas.has(ontem) ? ontem : null
-  const streak = base ? contarSequenciaStreakDashboard(datas, base) : 0
-  const recorde = Math.max(calcularRecordeStreakDashboard(Array.from(datas).sort()), obterRecordeStreakDashboard(userId), streak)
-  salvarRecordeStreakDashboard(userId, recorde)
-
-  return {
-    streak,
-    recorde,
-    atividadeHoje,
-    sequenciaEmRisco: !atividadeHoje
-  }
-}
-
-function adicionarDataStreakDashboard(conjunto, valor) {
-  const data = String(valor || '').substring(0, 10)
-  if (/^\d{4}-\d{2}-\d{2}$/.test(data)) conjunto.add(data)
-}
-
-function contarSequenciaStreakDashboard(conjunto, dataInicial) {
-  let total = 0
-  let data = dataInicial
-  while (conjunto.has(data)) {
-    total++
-    data = diaAnterior(data)
-  }
-  return total
-}
-
-function calcularRecordeStreakDashboard(datas) {
-  let recorde = 0
-  let atual = 0
-  let anterior = null
-
-  datas.forEach(data => {
-    if (!anterior || diferencaDiasDashboard(anterior, data) === 1) {
-      atual++
-    } else {
-      atual = 1
-    }
-    recorde = Math.max(recorde, atual)
-    anterior = data
-  })
-
-  return recorde
-}
-
-function carregarRevisoesLocaisStreakDashboard(userId) {
-  try {
-    return JSON.parse(localStorage.getItem(`estudoConcursoRevisoesConcluidas:${userId}`) || '[]')
-  } catch {
-    return []
-  }
-}
-
-function obterRecordeStreakDashboard(userId) {
-  return Number(localStorage.getItem(`estudoConcursoRecordeStreak:${userId}`) || 0)
-}
-
-function salvarRecordeStreakDashboard(userId, recorde) {
-  localStorage.setItem(`estudoConcursoRecordeStreak:${userId}`, String(recorde))
-}
-
 function criarOnboardingDashboard(totalMaterias, totalGeral) {
   const checklistOculto = localStorage.getItem(CHAVE_CHECKLIST_INICIAL_OCULTO) === '1'
   const temMateria = totalMaterias > 0
@@ -2078,50 +1989,6 @@ function criarOnboardingDashboard(totalMaterias, totalGeral) {
     </div>
   `
 }
-
-// ─── STREAK ───────────────────────────────────────────────
-
-async function calcularStreak(userId) {
-  const { data: sessoes, error } = await db
-    .from('sessoes_estudo')
-    .select('data')
-    .eq('user_id', userId)
-    .order('data', { ascending: false })
-
-  if (error) {
-    throw criarErroConsultaDashboard('Não foi possível calcular sua sequência de estudos.', error)
-  }
-
-  if (!sessoes || sessoes.length === 0) return 0
-
-  const datas = [...new Set(sessoes.map(s => s.data.substring(0, 10)))]
-  const ultimaData = datas[0]
-  const distanciaAteHoje = diferencaDiasDashboard(ultimaData, dataHoje())
-
-  if (distanciaAteHoje > 1) return 0
-
-  let streak = 0
-  let diaEsperado = distanciaAteHoje === 0 ? dataHoje() : ultimaData
-
-  for (const data of datas) {
-    if (data === diaEsperado) {
-      streak++
-      diaEsperado = diaAnterior(data)
-    } else {
-      break
-    }
-  }
-
-  return streak
-}
-
-function diferencaDiasDashboard(dataInicio, dataFim) {
-  const inicio = new Date(`${dataInicio}T12:00:00`)
-  const fim = new Date(`${dataFim}T12:00:00`)
-  return Math.round((fim - inicio) / 86400000)
-}
-
-// ─── GRÁFICO ──────────────────────────────────────────────
 
 async function carregarGrafico(userId) {
   const dias = []
