@@ -1178,7 +1178,7 @@ async function realizarLogout() {
     let streakInfo = ''
     if (typeof obterResumoStreakGamificacao === 'function') {
       const resumo = await obterResumoStreakGamificacao(userId)
-      const diasSeguidos = resumo?.diasSeguidos || 0
+      const diasSeguidos = resumo?.streak || 0
       streakInfo = `${diasSeguidos}º dia${diasSeguidos !== 1 ? 's' : ''} seguido${diasSeguidos !== 1 ? 's' : ''}`
     } else {
       streakInfo = 'sequência em andamento'
