@@ -67,6 +67,14 @@ function obterUrlApp() {
   return obterUrlArquivo('app.html')
 }
 
+function ehLinkRedefinicaoSenhaAuth() {
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+  const searchParams = new URLSearchParams(window.location.search)
+  const tipo = hashParams.get('type') || searchParams.get('type')
+
+  return tipo === 'recovery' || Boolean(hashParams.get('access_token'))
+}
+
 // ============================================
 // CADASTRO
 // ============================================
@@ -157,7 +165,8 @@ async function verificarSessao() {
 }
 
 // Só executa se estiver na página de login
-if (document.getElementById('btn-entrar') || document.getElementById('btn-cadastrar')) {
+const ehPaginaLoginAuth = document.getElementById('btn-entrar') || document.getElementById('btn-cadastrar')
+if (ehPaginaLoginAuth && !ehLinkRedefinicaoSenhaAuth()) {
   verificarSessao()
 }
 
