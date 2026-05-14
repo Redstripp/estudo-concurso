@@ -89,7 +89,7 @@
       }
 
       destino.search = ''
-      destino.hash = hash
+      destino.hash = hash.startsWith('#') ? hash.slice(1) : hash
       window.location.href = destino.href
     }
   </script>
