@@ -1,6 +1,7 @@
 // js/sessoes.js
 
 let desempenhoInicializado = false
+let desempenhoEventosContainer = null
 
 // ============================================
 // INICIALIZAR MÓDULO (só roda uma vez)
@@ -200,12 +201,25 @@ function renderizarLinhasMaterias(erradas, certas, sessaoId) {
 // EVENTOS DELEGADOS — editar e excluir acertos
 // ============================================
 function registrarEventosDesempenho() {
-  document.addEventListener('click', lidarCliqueDesempenho)
+  const secao = document.getElementById('secao-desempenho')
+
+  document.removeEventListener('click', lidarCliqueDesempenho)
+  if (desempenhoEventosContainer && desempenhoEventosContainer !== secao) {
+    desempenhoEventosContainer.removeEventListener('click', lidarCliqueDesempenho)
+    desempenhoEventosContainer = null
+  }
+  if (!secao || desempenhoEventosContainer === secao) return
+
+  secao.addEventListener('click', lidarCliqueDesempenho)
+  desempenhoEventosContainer = secao
 }
 
 async function lidarCliqueDesempenho(e) {
   const alvo = e.target instanceof Element ? e.target : null
-  if (!alvo || !alvo.closest('#secao-desempenho')) return
+  const secao = e.currentTarget instanceof Element
+    ? e.currentTarget
+    : document.getElementById('secao-desempenho')
+  if (!alvo || !secao?.contains(alvo)) return
 
   // ── EXCLUIR ──────────────────────────────
   if (alvo.closest('.btn-excluir-acerto')) {
