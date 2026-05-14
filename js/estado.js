@@ -211,7 +211,6 @@ Estado.resetAll = function() {
 }
 
 // Exportações para testes (Vitest) e navegador
-if (typeof window !== 'undefined') {
-  // Ambiente navegador
-  window.Estado = Estado
+if (typeof globalThis !== 'undefined') {
+  globalThis.Estado = Estado
 }
