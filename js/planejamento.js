@@ -38,6 +38,7 @@ function inicializarPlanejamento() {
 
     document.getElementById('btn-salvar-planejamento')?.addEventListener('click', salvarItemPlanejamentoSemanal)
     document.getElementById('btn-aplicar-planejamento-hoje')?.addEventListener('click', () => gerarPlanoDiaPeloPlanejamento())
+    document.getElementById('btn-gerar-plano-semanal')?.addEventListener('click', () => gerarPlanoDiaPeloPlanejamento())
     document.getElementById('btn-salvar-meta-central')?.addEventListener('click', salvarMetaCentralPlanejamento)
     document.getElementById('meta-central-materia')?.addEventListener('input', atualizarPreviewMetaCentralPlanejamento)
     document.getElementById('planejamento-dia')?.addEventListener('change', atualizarPreviewMetaCentralPlanejamento)
@@ -56,8 +57,6 @@ function inicializarPlanejamento() {
 
   carregarPlanejamento()
 }
-
-document.getElementById('btn-gerar-plano-semanal')?.addEventListener('click', () => gerarPlanoDiaPeloPlanejamento())
 
 async function carregarPlanejamento() {
   try {
