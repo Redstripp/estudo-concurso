@@ -173,7 +173,7 @@ async function inicializar() {
   }
 
   if (!sessao) {
-    window.location.href = obterUrlArquivoApp('index.html')
+    await redirecionarParaArquivoApp('index.html', { replace: true })
     return
   }
 
@@ -197,6 +197,33 @@ async function inicializar() {
 }
 
 function obterUrlArquivoApp(nomeArquivo) {
+  const base = obterBaseArquivosApp()
+  if (base) return new URL(nomeArquivo, base).href
+
+  return obterUrlArquivoAppPeloCaminhoAtual(nomeArquivo)
+}
+
+function obterBaseArquivosApp() {
+  const scriptApp = obterScriptAppAtual()
+  if (!scriptApp?.src) return null
+
+  const url = new URL(scriptApp.src, window.location.href)
+  url.pathname = url.pathname.replace(/\/js\/app\.js$/, '/')
+  url.search = ''
+  url.hash = ''
+  return url.href
+}
+
+function obterScriptAppAtual() {
+  if (document.currentScript?.src?.includes('js/app.js')) {
+    return document.currentScript
+  }
+
+  return Array.from(document.scripts || [])
+    .find(script => /(^|\/)js\/app\.js(\?|#|$)/.test(script.getAttribute('src') || script.src || ''))
+}
+
+function obterUrlArquivoAppPeloCaminhoAtual(nomeArquivo) {
   const url = new URL(window.location.href)
   const partes = url.pathname.split('/')
   const ultimo = partes[partes.length - 1]
@@ -211,6 +238,65 @@ function obterUrlArquivoApp(nomeArquivo) {
   url.search = ''
   url.hash = ''
   return url.href
+}
+
+function obterUrlsCandidatasArquivoApp(nomeArquivo) {
+  return Array.from(new Set([
+    obterUrlArquivoApp(nomeArquivo),
+    new URL(nomeArquivo, new URL('.', window.location.href)).href,
+    obterUrlArquivoAppPeloCaminhoAtual(nomeArquivo)
+  ]))
+}
+
+async function redirecionarParaArquivoApp(nomeArquivo, opcoes = {}) {
+  const urls = obterUrlsCandidatasArquivoApp(nomeArquivo)
+  const destino = await escolherUrlArquivoAppDisponivel(urls)
+  navegarParaUrlApp(destino, opcoes)
+}
+
+async function escolherUrlArquivoAppDisponivel(urls) {
+  if (window.location.protocol === 'file:' || typeof fetch !== 'function') return urls[0]
+
+  for (const url of urls) {
+    if (await urlArquivoAppDisponivel(url)) return url
+  }
+
+  console.warn('Nenhum destino validado para redirecionamento. Usando fallback principal.', urls)
+  return urls[0]
+}
+
+async function urlArquivoAppDisponivel(url) {
+  try {
+    const resposta = await fetch(url, { method: 'HEAD', cache: 'no-store' })
+    if (resposta.ok || resposta.type === 'opaque') return true
+    if (![405, 501].includes(resposta.status)) return false
+  } catch (erro) {
+    return false
+  }
+
+  try {
+    const resposta = await fetch(url, { method: 'GET', cache: 'no-store' })
+    return resposta.ok || resposta.type === 'opaque'
+  } catch (erro) {
+    return false
+  }
+}
+
+function navegarParaUrlApp(url, opcoes = {}) {
+  try {
+    if (opcoes.replace && typeof window.location.replace === 'function') {
+      window.location.replace(url)
+      return
+    }
+    if (typeof window.location.assign === 'function') {
+      window.location.assign(url)
+      return
+    }
+  } catch (erro) {
+    console.warn('Falha ao redirecionar pela API de navegacao. Tentando href.', erro)
+  }
+
+  window.location.href = url
 }
 
 function obterDadosRedefinicaoSenha() {
@@ -1405,7 +1491,7 @@ async function finalizarLogout() {
     window.usuarioAtual = null
     limparCacheDadosIniciaisUsuario()
     logoutPendente = null
-    window.location.replace(obterUrlArquivoApp('index.html'))
+    await redirecionarParaArquivoApp('index.html', { replace: true })
   }
 }
 
