@@ -7,6 +7,20 @@ const SECOES_INTERFACE_AVANCADA = new Set(['edital', 'plano', 'planejamento', 's
 let avisoArquivamentoToken = 0
 let onboardingAtivoEstado = null
 
+const INICIALIZADORES_SECAO = {
+  materias: () => inicializarMaterias(),
+  edital: () => inicializarEdital(),
+  plano: () => inicializarPlanoDia(),
+  planejamento: () => inicializarPlanejamento(),
+  questoes: () => inicializarQuestoes(),
+  simulados: () => inicializarSimulados(),
+  desempenho: () => inicializarDesempenho(),
+  dashboard: () => inicializarDashboard(),
+  revisao: () => inicializarRevisao(),
+  estatisticas: () => inicializarEstatisticas(),
+  perfil: () => inicializarPerfil()
+}
+
 const AJUDA_SECOES = {
   dashboard: {
     titulo: 'Dashboard',
@@ -890,19 +904,32 @@ function navegarPara(secao) {
 
   localStorage.setItem(CHAVE_SECAO_ATUAL, secaoDestino)
 
-  if (secaoDestino === 'materias') inicializarMaterias()
-  if (secaoDestino === 'edital') inicializarEdital()
-  if (secaoDestino === 'plano') inicializarPlanoDia()
-  if (secaoDestino === 'planejamento') inicializarPlanejamento()
-  if (secaoDestino === 'questoes') inicializarQuestoes()
-  if (secaoDestino === 'simulados') inicializarSimulados()
-  if (secaoDestino === 'desempenho') inicializarDesempenho()
-  if (secaoDestino === 'dashboard') inicializarDashboard()
-  if (secaoDestino === 'revisao') inicializarRevisao()
-  if (secaoDestino === 'estatisticas') inicializarEstatisticas()
-  if (secaoDestino === 'perfil') inicializarPerfil()
+  inicializarSecaoComSeguranca(secaoDestino, secaoAtiva)
 
   verificarAvisoArquivamentoPendente()
+}
+
+function inicializarSecaoComSeguranca(secao, elementoSecao = document.getElementById(`secao-${secao}`)) {
+  const inicializador = INICIALIZADORES_SECAO[secao]
+  if (!inicializador) return
+
+  try {
+    inicializador()
+  } catch (erro) {
+    console.error(`Erro ao inicializar a seção "${secao}".`, erro)
+    mostrarErroInicializacaoSecao(elementoSecao)
+  }
+}
+
+function mostrarErroInicializacaoSecao(elementoSecao) {
+  if (!elementoSecao || elementoSecao.querySelector('[data-erro-inicializacao-secao]')) return
+
+  const corpo = elementoSecao.querySelector('.secao-corpo') || elementoSecao
+  const aviso = document.createElement('div')
+  aviso.className = 'texto-placeholder'
+  aviso.dataset.erroInicializacaoSecao = 'true'
+  aviso.textContent = 'Não foi possível carregar esta aba agora. Recarregue a página e tente novamente.'
+  corpo.prepend(aviso)
 }
 
 function atualizarTituloMobile(itemAtivo) {
@@ -1110,7 +1137,10 @@ function dataISOApp(data) {
 // TEMA CLARO / ESCURO
 // ============================================
 function inicializarTema() {
-  document.getElementById('btn-tema').addEventListener('click', async () => {
+  const btnTema = document.getElementById('btn-tema')
+  if (!btnTema) return
+
+  btnTema.addEventListener('click', async () => {
     const temaAtual = document.body.classList.contains('tema-escuro') ? 'escuro' : 'claro'
     const novoTema  = temaAtual === 'claro' ? 'escuro' : 'claro'
 
@@ -1131,11 +1161,11 @@ function aplicarTema(tema) {
   const texto = document.getElementById('texto-tema')
 
   if (tema === 'escuro') {
-    icone.textContent = '☀️'
-    texto.textContent = 'Tema claro'
+    if (icone) icone.textContent = '☀️'
+    if (texto) texto.textContent = 'Tema claro'
   } else {
-    icone.textContent = '🌙'
-    texto.textContent = 'Tema escuro'
+    if (icone) icone.textContent = '🌙'
+    if (texto) texto.textContent = 'Tema escuro'
   }
 }
 
@@ -1145,9 +1175,11 @@ function aplicarTema(tema) {
 function inicializarMenu() {
   const btnMenu = document.getElementById('btn-menu')
   const overlay = document.getElementById('overlay')
+  const sidebar = document.getElementById('sidebar')
+
+  if (!btnMenu || !overlay || !sidebar) return
 
   btnMenu.addEventListener('click', () => {
-    const sidebar = document.getElementById('sidebar')
     const abriu = sidebar.classList.toggle('aberta')
     overlay.classList.toggle('visivel', abriu)
     btnMenu.setAttribute('aria-expanded', String(abriu))
@@ -1157,8 +1189,8 @@ function inicializarMenu() {
 }
 
 function fecharSidebar() {
-  document.getElementById('sidebar').classList.remove('aberta')
-  document.getElementById('overlay').classList.remove('visivel')
+  document.getElementById('sidebar')?.classList.remove('aberta')
+  document.getElementById('overlay')?.classList.remove('visivel')
   document.getElementById('btn-menu')?.setAttribute('aria-expanded', 'false')
 }
 
@@ -1262,7 +1294,7 @@ async function finalizarLogout() {
 }
 
 function inicializarLogout() {
-  document.getElementById('btn-logout').addEventListener('click', async () => {
+  document.getElementById('btn-logout')?.addEventListener('click', async () => {
     await realizarLogout()
   })
 }
@@ -1277,14 +1309,20 @@ function inicializarPerfil() {
     carregarConquistasPerfil()
   }
 
+  if (!btn) return
+
   // Remove listener anterior para não duplicar
   const btnNovo = btn.cloneNode(true)
-  btn.parentNode.replaceChild(btnNovo, btn)
+  btn.parentNode?.replaceChild(btnNovo, btn)
 
   btnNovo.addEventListener('click', async () => {
-    const nova      = document.getElementById('nova-senha').value
-    const confirmar = document.getElementById('confirmar-senha').value
-    const msg       = document.getElementById('msg-senha')
+    const campoNova = document.getElementById('nova-senha')
+    const campoConfirmar = document.getElementById('confirmar-senha')
+    const msg = document.getElementById('msg-senha')
+    if (!campoNova || !campoConfirmar || !msg) return
+
+    const nova = campoNova.value
+    const confirmar = campoConfirmar.value
 
     msg.textContent = ''
     msg.className   = 'msg-materia'
@@ -1323,8 +1361,8 @@ function inicializarPerfil() {
 
     msg.textContent = '✅ Senha alterada com sucesso!'
     msg.className   = 'msg-materia sucesso'
-    document.getElementById('nova-senha').value      = ''
-    document.getElementById('confirmar-senha').value = ''
+    campoNova.value      = ''
+    campoConfirmar.value = ''
   })
 }
 

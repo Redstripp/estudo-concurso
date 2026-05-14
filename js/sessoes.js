@@ -21,11 +21,11 @@ function inicializarDesempenho() {
 async function carregarDesempenho() {
   const lista       = document.getElementById('lista-sessoes')
   const placeholder = document.getElementById('placeholder-sessoes')
+  if (!lista || !placeholder) return
 
   placeholder.textContent   = '⏳ Buscando seu histórico de sessões...'
   placeholder.style.display = 'block'
-  lista.innerHTML           = ''
-  lista.appendChild(placeholder)
+  lista.replaceChildren(placeholder)
 
   const { data: sessoes, error: erroSessoes } = await db
     .from('sessoes_estudo')

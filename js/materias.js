@@ -31,10 +31,12 @@ function inicializarMaterias() {
 async function carregarMaterias() {
   const lista = document.getElementById('lista-materias')
   const placeholder = document.getElementById('placeholder-materias')
+  if (!lista || !placeholder) return
 
   // Mostra estado de carregando
   placeholder.textContent = '⏳ Buscando suas matérias...'
   placeholder.style.display = 'block'
+  lista.replaceChildren(placeholder)
 
   const { data, error } = await db
     .from('materias')
@@ -47,18 +49,15 @@ async function carregarMaterias() {
     return
   }
 
-  // Limpa a lista (exceto o placeholder)
-  lista.innerHTML = ''
-
   if (!data || data.length === 0) {
     placeholder.textContent = '📚 Nenhuma matéria cadastrada ainda.'
-    lista.appendChild(placeholder)
+    lista.replaceChildren(placeholder)
     return
   }
 
   // Esconde placeholder e renderiza os cards
   placeholder.style.display = 'none'
-  lista.appendChild(placeholder)
+  lista.replaceChildren(placeholder)
 
   data.forEach(materia => {
     const card = criarCardMateria(materia)

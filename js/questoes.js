@@ -1896,7 +1896,7 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
     return
   }
 
-  lista.innerHTML = '<p class="texto-placeholder" id="placeholder-questoes">⏳ Buscando suas questões...</p>'
+  mostrarPlaceholderQuestoes(lista, '⏳ Buscando suas questões...')
 
   const { data, error } = await db
     .from('questoes')
@@ -1906,13 +1906,26 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
 
   if (error) {
     console.error(error)
-    lista.innerHTML = '<p class="texto-placeholder" id="placeholder-questoes">❌ Erro ao carregar questões. Execute os SQLs de melhoria e do edital no Supabase.</p>'
+    mostrarPlaceholderQuestoes(lista, '❌ Erro ao carregar questões. Execute os SQLs de melhoria e do edital no Supabase.')
     return
   }
 
   questoesEmMemoria = data || []
   renderizarAcoesCadernoErros(questoesEmMemoria)
   atualizarListaQuestoesCaderno({ marcarPrimeiroComoNovo })
+}
+
+function mostrarPlaceholderQuestoes(lista, texto) {
+  let placeholder = document.getElementById('placeholder-questoes')
+  if (!placeholder) {
+    placeholder = document.createElement('p')
+    placeholder.id = 'placeholder-questoes'
+    placeholder.className = 'texto-placeholder'
+  }
+
+  placeholder.textContent = texto
+  placeholder.style.display = 'block'
+  lista.replaceChildren(placeholder)
 }
 
 // Variável para controlar se o listener de delegação já foi adicionado
