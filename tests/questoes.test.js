@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 // Importa as funções reais de js/questoes.js via globalThis
 const {
-  escaparHtmlQuestao,
+  escaparHtmlSeguro,
   CONFIG_TIPO_QUESTAO,
   normalizarTipoQuestao,
   normalizarStatusRevisao,
@@ -10,33 +10,33 @@ const {
   normalizarTextoDuplicidade
 } = globalThis
 
-describe('escaparHtmlQuestao', () => {
+describe('escaparHtmlSeguro', () => {
   it('escapa < para &lt;', () => {
-    expect(escaparHtmlQuestao('<script>')).toBe('&lt;script&gt;')
+    expect(escaparHtmlSeguro('<script>')).toBe('&lt;script&gt;')
   })
 
   it('escapa > para &gt;', () => {
-    expect(escaparHtmlQuestao('a > b')).toBe('a &gt; b')
+    expect(escaparHtmlSeguro('a > b')).toBe('a &gt; b')
   })
 
   it('escapa & para &amp;', () => {
-    expect(escaparHtmlQuestao('A & B')).toBe('A &amp; B')
+    expect(escaparHtmlSeguro('A & B')).toBe('A &amp; B')
   })
 
   it('escapa aspas duplas para &quot;', () => {
-    expect(escaparHtmlQuestao('diz "oi"')).toBe('diz &quot;oi&quot;')
+    expect(escaparHtmlSeguro('diz "oi"')).toBe('diz &quot;oi&quot;')
   })
 
   it('retorna string vazia para null', () => {
-    expect(escaparHtmlQuestao(null)).toBe('')
+    expect(escaparHtmlSeguro(null)).toBe('')
   })
 
   it('retorna string vazia para undefined', () => {
-    expect(escaparHtmlQuestao(undefined)).toBe('')
+    expect(escaparHtmlSeguro(undefined)).toBe('')
   })
 
   it('não altera texto sem caracteres especiais', () => {
-    expect(escaparHtmlQuestao('texto normal')).toBe('texto normal')
+    expect(escaparHtmlSeguro('texto normal')).toBe('texto normal')
   })
 })
 

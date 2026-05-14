@@ -69,17 +69,8 @@ const PEGADINHAS_PREDEFINIDAS = [
 
 function renderizarOptionsEstudo(valores, valorAtual) {
   return valores.map(valor => `
-    <option value="${escaparHtmlQuestao(valor)}" ${valor === valorAtual ? 'selected' : ''}>${escaparHtmlQuestao(valor)}</option>
+    <option value="${escaparHtmlSeguro(valor)}" ${valor === valorAtual ? 'selected' : ''}>${escaparHtmlSeguro(valor)}</option>
   `).join('')
-}
-
-function escaparHtmlQuestao(valor) {
-  return String(valor ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;')
 }
 
 function normalizarTipoQuestao(q) {
@@ -404,7 +395,7 @@ function atualizarAssistenteDiagnosticoMinimo() {
   if (essenciais.length > 0) {
     box.innerHTML = `
       <strong>Para salvar, falta o essencial</strong>
-      <p>Complete: ${escaparHtmlQuestao(essenciais.join(', '))}.</p>
+      <p>Complete: ${escaparHtmlSeguro(essenciais.join(', '))}.</p>
     `
     return
   }
@@ -413,7 +404,7 @@ function atualizarAssistenteDiagnosticoMinimo() {
     box.innerHTML = `
       <strong>Pode salvar em modo rápido</strong>
       <p>Se deixar sem preencher, o sistema marca como "A diagnosticar" e mostra depois em diagnóstico a reforçar.</p>
-      <ul>${recomendados.slice(0, 4).map(item => `<li>${escaparHtmlQuestao(item)}</li>`).join('')}</ul>
+      <ul>${recomendados.slice(0, 4).map(item => `<li>${escaparHtmlSeguro(item)}</li>`).join('')}</ul>
     `
     return
   }
@@ -435,8 +426,8 @@ function renderizarChipsPegadinha(containerId, textareaId) {
   if (!container || !textarea) return
 
   container.innerHTML = PEGADINHAS_PREDEFINIDAS.map(pegadinha => `
-    <button class="pegadinha-chip" type="button" data-pegadinha="${escaparHtmlQuestao(pegadinha)}">
-      ${escaparHtmlQuestao(pegadinha)}
+    <button class="pegadinha-chip" type="button" data-pegadinha="${escaparHtmlSeguro(pegadinha)}">
+      ${escaparHtmlSeguro(pegadinha)}
     </button>
   `).join('')
 
@@ -794,8 +785,8 @@ function criarPainelComparacaoQuestao(titulo, q) {
   const alternativas = q.alternativas && typeof q.alternativas === 'object'
     ? Object.entries(q.alternativas).map(([letra, texto]) => `
         <div class="alternativa-card ${letra === q.alternativaCorreta ? 'alt-certa' : ''} ${letra === q.alternativaMarcada && letra !== q.alternativaCorreta ? 'alt-errada' : ''}">
-          <span class="alt-letra">${escaparHtmlQuestao(letra)}</span>
-          <span class="alt-texto">${escaparHtmlQuestao(texto)}</span>
+          <span class="alt-letra">${escaparHtmlSeguro(letra)}</span>
+          <span class="alt-texto">${escaparHtmlSeguro(texto)}</span>
         </div>
       `).join('')
     : '<p class="duplicada-vazio">Sem alternativas registradas.</p>'
@@ -812,26 +803,26 @@ function criarPainelComparacaoQuestao(titulo, q) {
 
   return `
     <section class="duplicada-painel">
-      <h4>${escaparHtmlQuestao(titulo)}</h4>
+      <h4>${escaparHtmlSeguro(titulo)}</h4>
       <div class="duplicada-meta">
-        <span>${escaparHtmlQuestao(q.materiaNome)}</span>
-        ${q.topicoNome ? `<span>${escaparHtmlQuestao(q.topicoNome)}</span>` : ''}
-        ${q.banca ? `<span>${escaparHtmlQuestao(q.banca)}</span>` : ''}
-        <span>${escaparHtmlQuestao(q.data)}</span>
-        <span>${escaparHtmlQuestao(obterRotuloTipoQuestao(q.tipoQuestao))}</span>
+        <span>${escaparHtmlSeguro(q.materiaNome)}</span>
+        ${q.topicoNome ? `<span>${escaparHtmlSeguro(q.topicoNome)}</span>` : ''}
+        ${q.banca ? `<span>${escaparHtmlSeguro(q.banca)}</span>` : ''}
+        <span>${escaparHtmlSeguro(q.data)}</span>
+        <span>${escaparHtmlSeguro(obterRotuloTipoQuestao(q.tipoQuestao))}</span>
       </div>
-      <p class="duplicada-enunciado">${escaparHtmlQuestao(q.enunciado)}</p>
+      <p class="duplicada-enunciado">${escaparHtmlSeguro(q.enunciado)}</p>
       <div class="lista-alternativas-card">${alternativas}</div>
       <div class="card-questao-alternativas">
-        <span class="tag-errada">Marquei: ${escaparHtmlQuestao(q.alternativaMarcada)}</span>
-        <span class="tag-certa">Correta: ${escaparHtmlQuestao(q.alternativaCorreta)}</span>
+        <span class="tag-errada">Marquei: ${escaparHtmlSeguro(q.alternativaMarcada)}</span>
+        <span class="tag-certa">Correta: ${escaparHtmlSeguro(q.alternativaCorreta)}</span>
       </div>
       ${diagnosticos.length > 0 ? `
         <div class="card-questao-diagnostico duplicada-diagnostico">
           ${diagnosticos.map(([rotulo, texto]) => `
             <div class="diagnostico-item">
-              <span class="diagnostico-rotulo">${escaparHtmlQuestao(rotulo)}</span>
-              <p>${escaparHtmlQuestao(texto)}</p>
+              <span class="diagnostico-rotulo">${escaparHtmlSeguro(rotulo)}</span>
+              <p>${escaparHtmlSeguro(texto)}</p>
             </div>
           `).join('')}
         </div>
@@ -1965,7 +1956,7 @@ function renderizarAcoesCadernoErros(questoes) {
     <div class="caderno-erros-filtros">
       ${filtros.map(([filtro, rotulo, total]) => `
         <button class="btn-secundario ${filtroCadernoErrosAtual === filtro ? 'ativo' : ''}" type="button" data-filtro-caderno="${filtro}">
-          ${escaparHtmlQuestao(rotulo)} <span>${total}</span>
+          ${escaparHtmlSeguro(rotulo)} <span>${total}</span>
         </button>
       `).join('')}
     </div>
@@ -2135,8 +2126,8 @@ function criarCabecalhoGrupoQuestoes(titulo, resumo) {
   const header = document.createElement('div')
   header.className = 'questoes-grupo-header'
   header.innerHTML = `
-    <h3 class="questoes-grupo-titulo">${escaparHtmlQuestao(titulo)}</h3>
-    <span class="questoes-grupo-resumo">${escaparHtmlQuestao(resumo)}</span>
+    <h3 class="questoes-grupo-titulo">${escaparHtmlSeguro(titulo)}</h3>
+    <span class="questoes-grupo-resumo">${escaparHtmlSeguro(resumo)}</span>
   `
   return header
 }
@@ -2181,8 +2172,8 @@ function criarCardQuestao(q) {
     ? `<div class="card-questao-diagnostico">
         ${diagnosticos.map(([rotulo, texto]) => `
           <div class="diagnostico-item">
-            <span class="diagnostico-rotulo">${escaparHtmlQuestao(rotulo)}</span>
-            <p>${escaparHtmlQuestao(texto)}</p>
+            <span class="diagnostico-rotulo">${escaparHtmlSeguro(rotulo)}</span>
+            <p>${escaparHtmlSeguro(texto)}</p>
           </div>
         `).join('')}
       </div>`
@@ -2196,8 +2187,8 @@ function criarCardQuestao(q) {
         const classeMarcada = marcadaIncorreta ? (ehChutada ? 'alt-chutada' : 'alt-errada') : ''
         return `
         <div class="alternativa-card ${classeMarcada} ${letra === q.alternativa_correta ? 'alt-certa' : ''}">
-          <span class="alt-letra">${escaparHtmlQuestao(letra)}</span>
-          <span class="alt-texto">${escaparHtmlQuestao(texto)}</span>
+          <span class="alt-letra">${escaparHtmlSeguro(letra)}</span>
+          <span class="alt-texto">${escaparHtmlSeguro(texto)}</span>
         </div>
       `
       }).join('')
@@ -2205,33 +2196,33 @@ function criarCardQuestao(q) {
 
   card.innerHTML = `
     <div class="card-questao-topo">
-      <span class="tag-materia">${escaparHtmlQuestao(nomeMateria)}</span>
+      <span class="tag-materia">${escaparHtmlSeguro(nomeMateria)}</span>
       <span class="card-questao-data">${data}</span>
     </div>
-    <p class="card-questao-enunciado">${escaparHtmlQuestao(enunciadoCurto)}</p>
+    <p class="card-questao-enunciado">${escaparHtmlSeguro(enunciadoCurto)}</p>
     <div class="lista-alternativas-card">${listaAlternativas}</div>
     <div class="card-questao-alternativas">
-      <span class="${classeTagMarcada}">${escaparHtmlQuestao(textoTagMarcada)}</span>
-      <span class="tag-certa">Correta: ${escaparHtmlQuestao(q.alternativa_correta)}</span>
+      <span class="${classeTagMarcada}">${escaparHtmlSeguro(textoTagMarcada)}</span>
+      <span class="tag-certa">Correta: ${escaparHtmlSeguro(q.alternativa_correta)}</span>
     </div>
     <div class="questao-tags-estudo">
       <span class="tag-tipo-questao ${obterClasseTipoQuestao(tipoQuestao)}">${rotuloTipo}</span>
       ${statusRevisao === 'recuperada' ? '<span class="tag-revisao tag-revisao--acerto">Recuperada no simulado</span>' : ''}
       ${totalErrosRevisao > 0 ? `<span class="tag-revisao tag-revisao--erro">${totalErrosRevisao} erro${totalErrosRevisao !== 1 ? 's' : ''} em revisão</span>` : ''}
-      ${q.edital_topicos?.titulo ? `<span class="tag-estudo">Edital: ${escaparHtmlQuestao(q.edital_topicos.titulo)}</span>` : ''}
-      ${q.banca ? `<span class="tag-estudo">Banca: ${escaparHtmlQuestao(q.banca)}</span>` : ''}
+      ${q.edital_topicos?.titulo ? `<span class="tag-estudo">Edital: ${escaparHtmlSeguro(q.edital_topicos.titulo)}</span>` : ''}
+      ${q.banca ? `<span class="tag-estudo">Banca: ${escaparHtmlSeguro(q.banca)}</span>` : ''}
       ${Number(q.revisao_etapa || 0) > 0 ? `<span class="tag-estudo">Ciclo 24/7/30: etapa ${Number(q.revisao_etapa || 0)}</span>` : ''}
-      ${q.motivo_erro ? `<span class="tag-estudo">${escaparHtmlQuestao(rotuloMotivo)}: ${escaparHtmlQuestao(q.motivo_erro)}</span>` : ''}
-      ${q.nivel_confianca ? `<span class="tag-estudo">Confiança: ${escaparHtmlQuestao(q.nivel_confianca)}</span>` : ''}
-      <span class="diagnostico-qualidade-tag ${qualidadeDiagnostico.classe}">${escaparHtmlQuestao(qualidadeDiagnostico.rotulo)}</span>
+      ${q.motivo_erro ? `<span class="tag-estudo">${escaparHtmlSeguro(rotuloMotivo)}: ${escaparHtmlSeguro(q.motivo_erro)}</span>` : ''}
+      ${q.nivel_confianca ? `<span class="tag-estudo">Confiança: ${escaparHtmlSeguro(q.nivel_confianca)}</span>` : ''}
+      <span class="diagnostico-qualidade-tag ${qualidadeDiagnostico.classe}">${escaparHtmlSeguro(qualidadeDiagnostico.rotulo)}</span>
     </div>
-    ${q.comentario ? `<p class="card-questao-comentario">💬 ${escaparHtmlQuestao(q.comentario)}</p>` : ''}
-    ${q.pegadinha_banca ? `<p class="card-questao-comentario card-questao-pegadinha"><strong>Pegadinhas da questão:</strong> ${escaparHtmlQuestao(q.pegadinha_banca)}</p>` : ''}
+    ${q.comentario ? `<p class="card-questao-comentario">💬 ${escaparHtmlSeguro(q.comentario)}</p>` : ''}
+    ${q.pegadinha_banca ? `<p class="card-questao-comentario card-questao-pegadinha"><strong>Pegadinhas da questão:</strong> ${escaparHtmlSeguro(q.pegadinha_banca)}</p>` : ''}
     ${alertaCadastro}
     ${qualidadeDiagnostico.status !== 'completo' ? `
       <div class="diagnostico-qualidade-alerta ${qualidadeDiagnostico.classe}">
-        <strong>${escaparHtmlQuestao(qualidadeDiagnostico.rotulo)}</strong>
-        <span>${escaparHtmlQuestao(resumoQualidade)}</span>
+        <strong>${escaparHtmlSeguro(qualidadeDiagnostico.rotulo)}</strong>
+        <span>${escaparHtmlSeguro(resumoQualidade)}</span>
       </div>
     ` : ''}
     ${blocoDiagnostico}
@@ -2316,22 +2307,22 @@ function abrirModalEdicao(q) {
 
   const camposAlternativas = letras.map(letra => `
     <div class="linha-alternativa">
-      <span class="badge-letra">${escaparHtmlQuestao(letra)}</span>
-      <input type="text" class="input-texto edit-alt" data-letra="${escaparHtmlQuestao(letra)}"
-        value="${escaparHtmlQuestao(q.alternativas[letra] || '')}" />
+      <span class="badge-letra">${escaparHtmlSeguro(letra)}</span>
+      <input type="text" class="input-texto edit-alt" data-letra="${escaparHtmlSeguro(letra)}"
+        value="${escaparHtmlSeguro(q.alternativas[letra] || '')}" />
     </div>
   `).join('')
 
   const botoesAlternativas = letras.map(letra => `
     <button type="button"
       class="btn-letra edit-btn-marcada ${letra === q.alternativa_marcada ? 'selecionado-errado' : ''}"
-      data-letra="${escaparHtmlQuestao(letra)}">${escaparHtmlQuestao(letra)}</button>
+      data-letra="${escaparHtmlSeguro(letra)}">${escaparHtmlSeguro(letra)}</button>
   `).join('')
 
   const botoesCorreta = letras.map(letra => `
     <button type="button"
       class="btn-letra edit-btn-correta ${letra === q.alternativa_correta ? 'selecionado-certo' : ''}"
-      data-letra="${escaparHtmlQuestao(letra)}">${escaparHtmlQuestao(letra)}</button>
+      data-letra="${escaparHtmlSeguro(letra)}">${escaparHtmlSeguro(letra)}</button>
   `).join('')
 
   const modal = document.createElement('div')
@@ -2360,13 +2351,13 @@ function abrirModalEdicao(q) {
         </div>
         <div class="campo-form">
           <label class="campo-label">Banca</label>
-          <input id="edit-banca" class="input-texto" type="text" maxlength="80" value="${escaparHtmlQuestao(q.banca || '')}" />
+          <input id="edit-banca" class="input-texto" type="text" maxlength="80" value="${escaparHtmlSeguro(q.banca || '')}" />
         </div>
       </div>
 
       <div class="campo-form">
         <label class="campo-label">Enunciado</label>
-        <textarea id="edit-enunciado" class="input-texto input-textarea" rows="4">${escaparHtmlQuestao(q.enunciado)}</textarea>
+        <textarea id="edit-enunciado" class="input-texto input-textarea" rows="4">${escaparHtmlSeguro(q.enunciado)}</textarea>
       </div>
 
       <div class="campo-form">
@@ -2393,14 +2384,14 @@ function abrirModalEdicao(q) {
 
       <div class="form-grid-duas-colunas">
         <div class="campo-form">
-          <label class="campo-label" id="edit-label-motivo-questao">${escaparHtmlQuestao(configEdicao.labelMotivo)}</label>
+          <label class="campo-label" id="edit-label-motivo-questao">${escaparHtmlSeguro(configEdicao.labelMotivo)}</label>
           <select id="edit-motivo-erro" class="input-texto">
             <option value="">Selecione...</option>
             ${renderizarOptionsEstudo(configEdicao.motivos, q.motivo_erro || '')}
           </select>
         </div>
         <div class="campo-form">
-          <label class="campo-label" id="edit-label-confianca-questao">${escaparHtmlQuestao(configEdicao.labelConfianca)}</label>
+          <label class="campo-label" id="edit-label-confianca-questao">${escaparHtmlSeguro(configEdicao.labelConfianca)}</label>
           <select id="edit-nivel-confianca" class="input-texto">
             <option value="">Selecione...</option>
             ${renderizarOptionsEstudo(configEdicao.niveis, q.nivel_confianca || '')}
@@ -2410,13 +2401,13 @@ function abrirModalEdicao(q) {
 
       <div class="campo-form">
         <label class="campo-label">Comentário (opcional)</label>
-        <textarea id="edit-comentario" class="input-texto input-textarea" rows="2">${escaparHtmlQuestao(q.comentario || '')}</textarea>
+        <textarea id="edit-comentario" class="input-texto input-textarea" rows="2">${escaparHtmlSeguro(q.comentario || '')}</textarea>
       </div>
 
       <div class="campo-form">
         <label class="campo-label">Pegadinhas da Questão (opcional)</label>
         <div class="pegadinha-chips" id="edit-pegadinha-chips" aria-label="Pegadinhas rápidas"></div>
-        <textarea id="edit-pegadinha-banca" class="input-texto input-textarea" rows="2" placeholder="Ex: palavra absoluta, exceção escondida, alternativa parcialmente correta, troca de conceito...">${escaparHtmlQuestao(q.pegadinha_banca || '')}</textarea>
+        <textarea id="edit-pegadinha-banca" class="input-texto input-textarea" rows="2" placeholder="Ex: palavra absoluta, exceção escondida, alternativa parcialmente correta, troca de conceito...">${escaparHtmlSeguro(q.pegadinha_banca || '')}</textarea>
       </div>
 
       <div class="assistente-prompt">
@@ -2435,15 +2426,15 @@ function abrirModalEdicao(q) {
       <div class="caderno-erros-grid">
         <div class="campo-form">
           <label class="campo-label">Conceito ou regra que resolve</label>
-          <textarea id="edit-conceito-chave" class="input-texto input-textarea" rows="2">${escaparHtmlQuestao(q.conceito_chave || '')}</textarea>
+          <textarea id="edit-conceito-chave" class="input-texto input-textarea" rows="2">${escaparHtmlSeguro(q.conceito_chave || '')}</textarea>
         </div>
         <div class="campo-form">
           <label class="campo-label">Como reconhecer na próxima vez</label>
-          <textarea id="edit-como-reconhecer" class="input-texto input-textarea" rows="2">${escaparHtmlQuestao(q.como_reconhecer || '')}</textarea>
+          <textarea id="edit-como-reconhecer" class="input-texto input-textarea" rows="2">${escaparHtmlSeguro(q.como_reconhecer || '')}</textarea>
         </div>
         <div class="campo-form caderno-erros-grid-full">
           <label class="campo-label">Ação corretiva</label>
-          <textarea id="edit-acao-corretiva" class="input-texto input-textarea" rows="2">${escaparHtmlQuestao(q.acao_corretiva || '')}</textarea>
+          <textarea id="edit-acao-corretiva" class="input-texto input-textarea" rows="2">${escaparHtmlSeguro(q.acao_corretiva || '')}</textarea>
         </div>
       </div>
 
@@ -2668,7 +2659,7 @@ function adicionarLinhaAcerto() {
   const selectOrigem = document.getElementById('q-materia')
   const opcoes = Array.from(selectOrigem.options)
     .filter(o => o.value !== '')
-    .map(o => `<option value="${escaparHtmlQuestao(o.value)}">${escaparHtmlQuestao(o.text)}</option>`)
+    .map(o => `<option value="${escaparHtmlSeguro(o.value)}">${escaparHtmlSeguro(o.text)}</option>`)
     .join('')
 
   if (opcoes.length === 0) {
@@ -2768,7 +2759,6 @@ function formularioQuestaoTemConteudo() {
 if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
   // Ambiente Node/Vitest
   const exportsObj = {
-    escaparHtmlQuestao,
     CONFIG_TIPO_QUESTAO,
     normalizarTipoQuestao,
     normalizarStatusRevisao,
@@ -2783,7 +2773,6 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   }
   
   // Para Vitest com type: module
-  globalThis.escaparHtmlQuestao = escaparHtmlQuestao
   globalThis.CONFIG_TIPO_QUESTAO = CONFIG_TIPO_QUESTAO
   globalThis.normalizarTipoQuestao = normalizarTipoQuestao
   globalThis.normalizarStatusRevisao = normalizarStatusRevisao
