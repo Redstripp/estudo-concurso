@@ -511,9 +511,11 @@ function renderizarResumoRetaFinal(resumo) {
     </div>
     <div class="edital-reta-final-acoes">
       <button class="btn-secundario" id="btn-editar-reta-final" type="button">Editar reta final</button>
+      <button class="btn-secundario btn-secundario--perigo" id="btn-excluir-reta-final" type="button">Excluir reta final</button>
     </div>
   `
   container.querySelector('#btn-editar-reta-final')?.addEventListener('click', editarRetaFinalEdital)
+  container.querySelector('#btn-excluir-reta-final')?.addEventListener('click', excluirRetaFinalEdital)
 }
 
 function editarRetaFinalEdital() {
@@ -526,6 +528,40 @@ function editarRetaFinalEdital() {
     msg.textContent = 'Edite o concurso ou a data e clique em Atualizar reta final.'
     msg.className = 'msg-materia'
   }
+}
+
+async function excluirRetaFinalEdital() {
+  if (!confirm('Deseja excluir a reta final? Os assuntos do edital e pegadinhas não serão apagados.')) return
+
+  const msg = document.getElementById('msg-edital-config')
+  const botoes = document.querySelectorAll('#btn-editar-reta-final, #btn-excluir-reta-final')
+  botoes.forEach(btn => { btn.disabled = true })
+  if (msg) {
+    msg.textContent = 'Excluindo reta final...'
+    msg.className = 'msg-materia'
+  }
+
+  const { error } = await db
+    .from('edital_config')
+    .delete()
+    .eq('user_id', window.usuarioAtual.id)
+
+  botoes.forEach(btn => { btn.disabled = false })
+
+  if (error) {
+    console.error(error)
+    if (msg) {
+      msg.textContent = 'Erro ao excluir reta final. Tente novamente.'
+      msg.className = 'msg-materia erro'
+    }
+    return
+  }
+
+  if (msg) {
+    msg.textContent = 'Reta final excluída.'
+    msg.className = 'msg-materia sucesso'
+  }
+  await carregarEdital()
 }
 
 function calcularDiasAteProva(dataProva) {

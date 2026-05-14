@@ -3290,12 +3290,25 @@ body.modo-foco .conteudo-principal {
 
 .edital-reta-final-acoes {
   display: flex;
+  gap: 0.5rem;
   justify-content: flex-end;
   margin-top: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .edital-reta-final-acoes .btn-secundario {
   margin-top: 0;
+}
+
+.btn-secundario--perigo {
+  border-color: var(--cor-erro);
+  color: var(--cor-erro);
+}
+
+.btn-secundario--perigo:hover {
+  background: var(--cor-erro);
+  border-color: var(--cor-erro);
+  color: white;
 }
 
 .edital-resumo-grid {
