@@ -1,12 +1,42 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 // Importa as funções reais de js/gamificacao.js via globalThis
 const {
+  avaliarConquistasUsuario,
   adicionarDias,
   calcularRecordeGamificacao,
   contarSequenciaGamificacao,
   adicionarDataNormalizadaGamificacao
 } = globalThis
+
+describe('avaliarConquistasUsuario', () => {
+  it('deve retornar lista vazia quando a coleta de dados falhar', async () => {
+    const windowOriginal = globalThis.window
+    const tinhaDb = Object.prototype.hasOwnProperty.call(globalThis, 'db')
+    const dbOriginal = globalThis.db
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      globalThis.window = { usuarioAtual: { id: 'user-erro' } }
+      globalThis.db = {
+        from: () => {
+          throw new Error('Tabela indisponivel')
+        }
+      }
+
+      await expect(avaliarConquistasUsuario()).resolves.toEqual([])
+      expect(warnSpy).toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+      globalThis.window = windowOriginal
+      if (tinhaDb) {
+        globalThis.db = dbOriginal
+      } else {
+        delete globalThis.db
+      }
+    }
+  })
+})
 
 describe('calcularRecordeGamificacao', () => {
   it('Array vazio deve retornar 0', () => {

@@ -185,19 +185,30 @@ async function avaliarConquistasUsuario(opcoes = {}) {
   if (!userId) return []
 
   const mostrarToasts = opcoes.mostrarToasts !== false
-  const dados = await buscarDadosConquistasGamificacao(userId)
-  const conquistadasAtuais = await buscarBadgesConquistados(userId)
-  const novas = BADGES_GAMIFICACAO
-    .filter(badge => dados.condicoes[badge.chave])
-    .filter(badge => !conquistadasAtuais.has(badge.chave))
+  let novas = []
 
-  for (const badge of novas) {
-    const salva = await salvarBadgeConquistado(userId, badge.chave)
-    if (salva && mostrarToasts) mostrarToastConquista(badge)
+  try {
+    const dados = await buscarDadosConquistasGamificacao(userId)
+    const conquistadasAtuais = await buscarBadgesConquistados(userId)
+    novas = BADGES_GAMIFICACAO
+      .filter(badge => dados.condicoes[badge.chave])
+      .filter(badge => !conquistadasAtuais.has(badge.chave))
+
+    for (const badge of novas) {
+      const salva = await salvarBadgeConquistado(userId, badge.chave)
+      if (salva && mostrarToasts) mostrarToastConquista(badge)
+    }
+  } catch (erro) {
+    console.warn('Nao foi possivel avaliar conquistas do usuario agora.', erro)
+    novas = []
   }
 
   if (opcoes.atualizarPerfil) {
-    await carregarConquistasPerfil({ avaliar: false })
+    try {
+      await carregarConquistasPerfil({ avaliar: false })
+    } catch (erro) {
+      console.warn('Nao foi possivel atualizar conquistas no perfil agora.', erro)
+    }
   }
 
   return novas
@@ -410,6 +421,7 @@ function salvarRecordeStreakLocal(userId, recorde) {
 if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
   // Ambiente Node/Vitest
   const exportsObj = {
+    avaliarConquistasUsuario,
     calcularRecordeGamificacao,
     contarSequenciaGamificacao,
     adicionarDataNormalizadaGamificacao
@@ -421,6 +433,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   }
   
   // Para Vitest com type: module
+  globalThis.avaliarConquistasUsuario = avaliarConquistasUsuario
   globalThis.calcularRecordeGamificacao = calcularRecordeGamificacao
   globalThis.contarSequenciaGamificacao = contarSequenciaGamificacao
   globalThis.adicionarDataNormalizadaGamificacao = adicionarDataNormalizadaGamificacao
