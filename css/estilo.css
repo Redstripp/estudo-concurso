@@ -1716,6 +1716,11 @@ button.dash-card.dash-card--principal {
   color: var(--cor-erro);
 }
 
+.dash-card--revisao-critica .dash-card-label,
+.dash-card--revisao-critica .dash-card-subtexto {
+  color: var(--cor-texto);
+}
+
 .dash-donut {
   align-items: center;
   align-self: center;
