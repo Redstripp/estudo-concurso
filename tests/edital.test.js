@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 
-const { validarDataProvaEdital, filtrarTopicosEditalPorMateria } = globalThis
+const {
+  validarDataProvaEdital,
+  filtrarTopicosEditalPorMateria,
+  obterTextoBotaoConfigEdital
+} = globalThis
 
 describe('validarDataProvaEdital', () => {
   it('permite campo vazio para limpar a data da prova', () => {
@@ -53,5 +57,20 @@ describe('filtrarTopicosEditalPorMateria', () => {
       topicos[0],
       topicos[2]
     ])
+  })
+})
+
+describe('obterTextoBotaoConfigEdital', () => {
+  it('usa texto de atualização quando a reta final já tem concurso ou data', () => {
+    expect(obterTextoBotaoConfigEdital({ concurso_alvo: 'TJ', data_prova: null }))
+      .toBe('Atualizar reta final')
+    expect(obterTextoBotaoConfigEdital({ concurso_alvo: null, data_prova: '2026-06-01' }))
+      .toBe('Atualizar reta final')
+  })
+
+  it('usa texto de criação quando não existe reta final preenchida', () => {
+    expect(obterTextoBotaoConfigEdital(null)).toBe('Salvar reta final')
+    expect(obterTextoBotaoConfigEdital({ concurso_alvo: null, data_prova: null }))
+      .toBe('Salvar reta final')
   })
 })

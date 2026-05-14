@@ -146,12 +146,26 @@ function popularSelectTopicosEdital(selectId, materiaId = '', topicoAtualId = ''
 }
 
 function preencherFormularioConfigEdital(config) {
-  document.getElementById('edital-concurso').value = config?.concurso_alvo || ''
-  document.getElementById('edital-data-prova').value = config?.data_prova || ''
+  const campoConcurso = document.getElementById('edital-concurso')
+  const campoDataProva = document.getElementById('edital-data-prova')
+  if (campoConcurso) campoConcurso.value = config?.concurso_alvo || ''
+  if (campoDataProva) campoDataProva.value = config?.data_prova || ''
+  atualizarTextoBotaoConfigEdital(config)
   const infoMeta = document.getElementById('edital-meta-central-info')
   if (infoMeta) {
     infoMeta.textContent = `Usa ${obterMetaCentralEdital()} questões por matéria, definido no Planejamento.`
   }
+}
+
+function atualizarTextoBotaoConfigEdital(config) {
+  const btn = document.getElementById('btn-salvar-edital-config')
+  if (btn && !btn.disabled) btn.textContent = obterTextoBotaoConfigEdital(config)
+}
+
+function obterTextoBotaoConfigEdital(config) {
+  return config?.concurso_alvo || config?.data_prova
+    ? 'Atualizar reta final'
+    : 'Salvar reta final'
 }
 
 function obterMetaCentralEdital() {
@@ -197,7 +211,7 @@ async function salvarConfigEdital() {
 
   if (btn) {
     btn.disabled = false
-    btn.textContent = 'Salvar reta final'
+    btn.textContent = obterTextoBotaoConfigEdital({ concurso_alvo: concurso, data_prova: validacaoData.data })
   }
 
   if (error) {
@@ -495,7 +509,23 @@ function renderizarResumoRetaFinal(resumo) {
         <strong>${questoesSugeridas} questões/dia</strong>
       </div>
     </div>
+    <div class="edital-reta-final-acoes">
+      <button class="btn-secundario" id="btn-editar-reta-final" type="button">Editar reta final</button>
+    </div>
   `
+  container.querySelector('#btn-editar-reta-final')?.addEventListener('click', editarRetaFinalEdital)
+}
+
+function editarRetaFinalEdital() {
+  const campoConcurso = document.getElementById('edital-concurso')
+  const msg = document.getElementById('msg-edital-config')
+  campoConcurso?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  campoConcurso?.focus()
+  atualizarTextoBotaoConfigEdital(editalEstado.config)
+  if (msg) {
+    msg.textContent = 'Edite o concurso ou a data e clique em Atualizar reta final.'
+    msg.className = 'msg-materia'
+  }
 }
 
 function calcularDiasAteProva(dataProva) {
@@ -742,4 +772,5 @@ function mostrarErroEdital(mensagem) {
 if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
   globalThis.validarDataProvaEdital = validarDataProvaEdital
   globalThis.filtrarTopicosEditalPorMateria = filtrarTopicosEditalPorMateria
+  globalThis.obterTextoBotaoConfigEdital = obterTextoBotaoConfigEdital
 }

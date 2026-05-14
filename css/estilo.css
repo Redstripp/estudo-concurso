@@ -3288,6 +3288,16 @@ body.modo-foco .conteudo-principal {
   font-size: 1.1rem;
 }
 
+.edital-reta-final-acoes {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+.edital-reta-final-acoes .btn-secundario {
+  margin-top: 0;
+}
+
 .edital-resumo-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -3440,6 +3450,10 @@ body.modo-foco .conteudo-principal {
 
   .edital-bloco-topo--com-filtro,
   .edital-filtro-assuntos {
+    width: 100%;
+  }
+
+  .edital-reta-final-acoes .btn-secundario {
     width: 100%;
   }
 
