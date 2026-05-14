@@ -1351,6 +1351,13 @@ function criarCardTreinoPegadinha(q) {
   return card
 }
 
+// Exportacoes apenas para testes (Vitest)
+if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  globalThis.calcularProximaRevisao24730 = calcularProximaRevisao24730
+  globalThis.calcularEtapaRevisao24730 = calcularEtapaRevisao24730
+  globalThis.calcularIntervaloRepeticaoEtapa24730 = calcularIntervaloRepeticaoEtapa24730
+}
+
 function criarAlternativasTreinoPegadinha(q) {
   if (!q.alternativas || typeof q.alternativas !== 'object') return ''
   return Object.entries(q.alternativas).map(([letra, texto]) => `
@@ -1735,10 +1742,19 @@ function calcularProximaRevisao24730(q, hoje, acertou, nivelConfianca = 'Confian
   if (!acertou) return adicionarDias(hoje, 1)
 
   const etapaAtual = Number(q.revisao_etapa || 0)
+  if (nivelConfianca !== 'Confiante') {
+    return adicionarDias(hoje, calcularIntervaloRepeticaoEtapa24730(etapaAtual))
+  }
+
   if (etapaAtual <= 0) return adicionarDias(hoje, 7)
   if (etapaAtual === 1) return adicionarDias(hoje, 30)
-  if (nivelConfianca !== 'Confiante') return adicionarDias(hoje, 30)
   return null
+}
+
+function calcularIntervaloRepeticaoEtapa24730(etapaAtual) {
+  if (Number(etapaAtual || 0) <= 0) return 1
+  if (Number(etapaAtual || 0) === 1) return 7
+  return 30
 }
 
 function calcularEtapaRevisao24730(q, acertou, nivelConfianca = 'Confiante', proximaRevisao = null) {
