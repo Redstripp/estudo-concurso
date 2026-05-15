@@ -1611,6 +1611,8 @@ async function salvarQuestao(opcoes = {}) {
   const configTipoQuestao = obterConfigTipoQuestao(tipoQuestao)
   const btn        = document.getElementById('btn-salvar-questao')
   const alternativas = dadosQuestao.alternativas
+  const textoBotaoSalvar = btn.dataset.textoOriginal || btn.textContent
+  btn.dataset.textoOriginal = textoBotaoSalvar
 
   if (modoRegistroQuestao === 'rapido') {
     if (!configTipoQuestao.motivos.includes(motivoErro)) {
@@ -1690,7 +1692,7 @@ async function salvarQuestao(opcoes = {}) {
     const duplicada = await buscarPossivelQuestaoDuplicada(dadosQuestao)
     if (duplicada) {
       btn.disabled = false
-      btn.textContent = '💾 Salvar Questão'
+      btn.textContent = textoBotaoSalvar
       abrirModalQuestaoDuplicada(dadosQuestao, duplicada)
       return
     }
@@ -1703,7 +1705,7 @@ async function salvarQuestao(opcoes = {}) {
   if (!sessao) {
     mostrarMsgQuestao('Erro ao criar sessão de estudo.', 'erro')
     btn.disabled    = false
-    btn.textContent = '💾 Salvar Questão'
+    btn.textContent = textoBotaoSalvar
     return
   }
 
@@ -1739,13 +1741,13 @@ async function salvarQuestao(opcoes = {}) {
     mostrarMsgQuestao('Erro ao salvar questão. Execute os SQLs de melhoria e do edital no Supabase se ainda não fez.', 'erro')
 
     // Feedback visual de erro no botão
-    const textoOriginalErro = btn.textContent
     btn.style.background = 'var(--cor-erro)'
     btn.textContent = '✗ Erro ao salvar'
 
     setTimeout(() => {
       btn.style.background = ''
-      btn.textContent = '💾 Salvar Questão'
+      btn.disabled = false
+      btn.textContent = textoBotaoSalvar
     }, 3000)
 
     return
@@ -1768,13 +1770,13 @@ async function salvarQuestao(opcoes = {}) {
   limparFormularioQuestaoAposSalvar()
 
   // Feedback visual de sucesso no botão
-  const textoOriginal = btn.textContent
   btn.style.background = 'var(--cor-sucesso)'
   btn.textContent = '✓ Salvo!'
 
   setTimeout(() => {
     btn.style.background = ''
-    btn.textContent = textoOriginal
+    btn.disabled = false
+    btn.textContent = textoBotaoSalvar
   }, 2000)
 
   mostrarMsgQuestao('Questão salva com sucesso!', 'sucesso')
