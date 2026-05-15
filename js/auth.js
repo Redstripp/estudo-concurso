@@ -46,6 +46,14 @@ function setBotaoCarregando(btn, carregando) {
   btn.textContent = carregando ? 'Aguarde...' : btn.dataset.texto
 }
 
+function supabaseAuthDisponivel() {
+  if (typeof db !== 'undefined' && db?.auth) return true
+
+  console.error('Configuracao do Supabase nao encontrada. Verifique o arquivo js/config.js.')
+  mostrarMensagem('Configuracao do Supabase nao encontrada. Verifique o arquivo js/config.js.', 'erro')
+  return false
+}
+
 function obterUrlArquivo(nomeArquivo) {
   const base = obterBaseArquivosAuth()
   if (base) return new URL(nomeArquivo, base).href
@@ -159,6 +167,8 @@ if (btnEntrar) {
       mostrarMensagem('Preencha e-mail e senha.', 'erro')
       return
     }
+
+    if (!supabaseAuthDisponivel()) return
   
     setBotaoCarregando(btnEntrar, true)
   
@@ -181,6 +191,8 @@ if (btnEntrar) {
 // (evita voltar para o login se já autenticado)
 // ============================================
 async function verificarSessao() {
+  if (!supabaseAuthDisponivel()) return
+
   const { data } = await db.auth.getSession()
   if (data.session) {
     window.location.href = obterUrlApp()
