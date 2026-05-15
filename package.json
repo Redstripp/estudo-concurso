@@ -5,10 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
     "check:js": "node scripts/check-js.mjs",
     "test": "vitest run"
   },
   "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.0.13",
     "vitest": "^4.1.6"
   },
   "dependencies": {
