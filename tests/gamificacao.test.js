@@ -3,6 +3,9 @@ import { describe, it, expect, vi } from 'vitest'
 // Importa as funções reais de js/gamificacao.js via globalThis
 const {
   avaliarConquistasUsuario,
+  buscarDadosConquistasGamificacao,
+  obterResumoStreakGamificacao,
+  normalizarResumoGamificacaoBanco,
   adicionarDias,
   calcularRecordeGamificacao,
   contarSequenciaGamificacao,
@@ -34,6 +37,109 @@ describe('avaliarConquistasUsuario', () => {
       } else {
         delete globalThis.db
       }
+    }
+  })
+})
+
+describe('resumo de gamificacao via RPC', () => {
+  it('normaliza o payload retornado pela funcao do banco', () => {
+    expect(normalizarResumoGamificacaoBanco({
+      total_questoes: 100,
+      total_diagnostico_completo: 4,
+      total_diagnostico_forte: 2,
+      motivo_repetido: true,
+      revisao_concluida: true,
+      streak: 7,
+      recorde: 9,
+      atividade_hoje: true,
+      sequencia_em_risco: false
+    })).toEqual({
+      totalQuestoes: 100,
+      totalDiagnosticoCompleto: 4,
+      totalDiagnosticoForte: 2,
+      motivoRepetido: true,
+      revisaoConcluida: true,
+      streak: {
+        streak: 7,
+        recorde: 9,
+        atividadeHoje: true,
+        sequenciaEmRisco: false,
+        datas: []
+      }
+    })
+  })
+
+  it('busca conquistas pela RPC sem carregar linhas brutas de questoes', async () => {
+    const dbOriginal = globalThis.db
+    const localStorageOriginal = globalThis.localStorage
+    const rpc = vi.fn(async () => ({
+      data: {
+        total_questoes: 100,
+        total_diagnostico_completo: 1,
+        total_diagnostico_forte: 10,
+        motivo_repetido: true,
+        revisao_concluida: true,
+        streak: 7,
+        recorde: 30,
+        atividade_hoje: true,
+        sequencia_em_risco: false
+      },
+      error: null
+    }))
+    const from = vi.fn(() => {
+      throw new Error('Nao deve buscar registros brutos')
+    })
+
+    globalThis.db = { rpc, from }
+
+    try {
+      const dados = await buscarDadosConquistasGamificacao('user-rpc')
+
+      expect(rpc).toHaveBeenCalledWith('obter_resumo_gamificacao')
+      expect(from).not.toHaveBeenCalled()
+      expect(dados.condicoes).toMatchObject({
+        primeiro_erro: true,
+        questoes_100: true,
+        diagnostico_completo: true,
+        diagnostico_forte_10: true,
+        cacador_padroes: true,
+        streak_30: true
+      })
+    } finally {
+      globalThis.db = dbOriginal
+      globalThis.localStorage = localStorageOriginal
+    }
+  })
+
+  it('combina atividade local de hoje com streak calculado no banco ate ontem', async () => {
+    const dbOriginal = globalThis.db
+    const hoje = globalThis.dataHoje()
+    const chave = 'estudoConcursoRevisoesConcluidas:user-streak'
+
+    localStorage.setItem(chave, JSON.stringify([hoje]))
+    globalThis.db = {
+      rpc: vi.fn(async () => ({
+        data: {
+          streak: 4,
+          recorde: 4,
+          atividade_hoje: false,
+          sequencia_em_risco: true
+        },
+        error: null
+      }))
+    }
+
+    try {
+      const resumo = await obterResumoStreakGamificacao('user-streak')
+
+      expect(resumo.streak).toBe(5)
+      expect(resumo.recorde).toBe(5)
+      expect(resumo.atividadeHoje).toBe(true)
+      expect(resumo.sequenciaEmRisco).toBe(false)
+    } finally {
+      localStorage.removeItem(chave)
+      localStorage.removeItem('estudoConcursoRecordeStreak:user-streak')
+      globalThis.db = dbOriginal
     }
   })
 })

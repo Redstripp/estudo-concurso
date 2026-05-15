@@ -69,21 +69,38 @@ const BADGES_GAMIFICACAO = [
 
 async function obterResumoStreakGamificacao(userId = window.usuarioAtual?.id) {
   if (!userId) {
-    return { streak: 0, recorde: 0, atividadeHoje: false, sequenciaEmRisco: false, datas: [] }
+    return criarResumoStreakVazioGamificacao()
   }
 
-  const datas = await buscarDatasAtividadeGamificacao(userId)
+  try {
+    const resumo = await buscarResumoGamificacaoBanco(userId)
+    return resumo.streak
+  } catch (erro) {
+    console.warn('Resumo de gamificacao usando fallback local. Execute o SQL da funcao obter_resumo_gamificacao.', erro)
+    return calcularResumoStreakPorDatasGamificacao(carregarRevisoesConcluidasLocais(userId), userId)
+  }
+}
+
+function criarResumoStreakVazioGamificacao() {
+  return { streak: 0, recorde: 0, atividadeHoje: false, sequenciaEmRisco: false, datas: [] }
+}
+
+function calcularResumoStreakPorDatasGamificacao(datasEntrada, userId = null, opcoes = {}) {
+  const datasNormalizadas = new Set()
+  ;(datasEntrada || []).forEach(data => adicionarDataNormalizadaGamificacao(datasNormalizadas, data))
+
+  const datas = Array.from(datasNormalizadas).sort()
   const hoje = dataHoje()
   const ontem = adicionarDias(hoje, -1)
-  const conjunto = new Set(datas)
+  const conjunto = datasNormalizadas
   const atividadeHoje = conjunto.has(hoje)
   const base = atividadeHoje ? hoje : conjunto.has(ontem) ? ontem : null
   const streak = base ? contarSequenciaGamificacao(conjunto, base) : 0
   const recordeCalculado = calcularRecordeGamificacao(datas)
-  const recordeSalvo = obterRecordeStreakLocal(userId)
+  const recordeSalvo = userId ? obterRecordeStreakLocal(userId) : 0
   const recorde = Math.max(recordeCalculado, recordeSalvo, streak)
 
-  salvarRecordeStreakLocal(userId, recorde)
+  if (userId && opcoes.salvarRecorde !== false) salvarRecordeStreakLocal(userId, recorde)
 
   return {
     streak,
@@ -94,46 +111,74 @@ async function obterResumoStreakGamificacao(userId = window.usuarioAtual?.id) {
   }
 }
 
-async function buscarDatasAtividadeGamificacao(userId) {
-  const datas = new Set()
-  const hoje = dataHoje()
-  const dataLimite = adicionarDias(hoje, -120)
+async function buscarResumoGamificacaoBanco(userId) {
+  if (!db?.rpc) throw new Error('Cliente Supabase sem suporte a RPC.')
 
-  const [questoesResp, certasResp, configResp] = await Promise.all([
-    db
-      .from('questoes')
-      .select('criado_em')
-      .eq('user_id', userId)
-      .gte('criado_em', dataLimite)
-      .order('criado_em', { ascending: true })
-      .limit(2000),
-    db
-      .from('questoes_certas')
-      .select('criado_em')
-      .eq('user_id', userId)
-      .gte('criado_em', dataLimite)
-      .order('criado_em', { ascending: true })
-      .limit(2000),
-    db
-      .from('configuracoes_revisao')
-      .select('ultima_revisao_geral')
-      .eq('user_id', userId)
-      .maybeSingle()
-  ])
-
-  if (questoesResp.error) {
-    throw criarErroGamificacao('Nao foi possivel calcular sua sequencia por questoes registradas.', questoesResp.error)
-  }
-  if (certasResp.error) {
-    throw criarErroGamificacao('Nao foi possivel calcular sua sequencia por acertos registrados.', certasResp.error)
+  const { data, error } = await db.rpc('obter_resumo_gamificacao')
+  if (error) {
+    throw criarErroGamificacao('Nao foi possivel buscar o resumo de gamificacao no banco.', error)
   }
 
-  ;(questoesResp.data || []).forEach(item => adicionarDataNormalizadaGamificacao(datas, item.criado_em))
-  ;(certasResp.data || []).forEach(item => adicionarDataNormalizadaGamificacao(datas, item.criado_em))
-  if (configResp.data?.ultima_revisao_geral) adicionarDataNormalizadaGamificacao(datas, configResp.data.ultima_revisao_geral)
-  carregarRevisoesConcluidasLocais(userId).forEach(data => adicionarDataNormalizadaGamificacao(datas, data))
+  const resumo = normalizarResumoGamificacaoBanco(data)
+  return {
+    ...resumo,
+    streak: mesclarStreakBancoComLocal(userId, resumo.streak)
+  }
+}
 
-  return Array.from(datas).sort()
+function normalizarResumoGamificacaoBanco(data) {
+  const resumo = Array.isArray(data) ? data[0] : data
+  const streak = {
+    streak: Number(resumo?.streak || resumo?.streak_atual || 0),
+    recorde: Number(resumo?.recorde || resumo?.recorde_streak || 0),
+    atividadeHoje: Boolean(resumo?.atividade_hoje),
+    sequenciaEmRisco: Boolean(resumo?.sequencia_em_risco),
+    datas: []
+  }
+
+  return {
+    totalQuestoes: Number(resumo?.total_questoes || 0),
+    totalDiagnosticoCompleto: Number(resumo?.total_diagnostico_completo || 0),
+    totalDiagnosticoForte: Number(resumo?.total_diagnostico_forte || 0),
+    motivoRepetido: Boolean(resumo?.motivo_repetido),
+    revisaoConcluida: Boolean(resumo?.revisao_concluida),
+    streak
+  }
+}
+
+function mesclarStreakBancoComLocal(userId, streakBanco) {
+  const local = calcularResumoStreakPorDatasGamificacao(
+    carregarRevisoesConcluidasLocais(userId),
+    null,
+    { salvarRecorde: false }
+  )
+
+  let streak = Number(streakBanco?.streak || 0)
+  const atividadeHojeBanco = Boolean(streakBanco?.atividadeHoje)
+  const atividadeHoje = atividadeHojeBanco || local.atividadeHoje
+
+  if (local.atividadeHoje && !atividadeHojeBanco && streakBanco?.sequenciaEmRisco) {
+    streak += 1
+  }
+
+  streak = Math.max(streak, local.streak)
+
+  const recorde = Math.max(
+    Number(streakBanco?.recorde || 0),
+    local.recorde,
+    obterRecordeStreakLocal(userId),
+    streak
+  )
+
+  salvarRecordeStreakLocal(userId, recorde)
+
+  return {
+    streak,
+    recorde,
+    atividadeHoje,
+    sequenciaEmRisco: streak > 0 && !atividadeHoje,
+    datas: local.datas
+  }
 }
 
 function criarErroGamificacao(mensagem, erroOriginal) {
@@ -215,22 +260,53 @@ async function avaliarConquistasUsuario(opcoes = {}) {
 }
 
 async function buscarDadosConquistasGamificacao(userId) {
-  const [questoesResp, configResp, revisoesResp, streak] = await Promise.all([
+  let resumo
+  try {
+    resumo = await buscarResumoGamificacaoBanco(userId)
+  } catch (erro) {
+    console.warn('Resumo de conquistas usando fallback minimo. Execute o SQL da funcao obter_resumo_gamificacao.', erro)
+    resumo = await buscarResumoConquistasMinimo(userId)
+  }
+
+  const revisaoConcluida = Boolean(
+    resumo.revisaoConcluida ||
+    carregarRevisoesConcluidasLocais(userId).length
+  )
+  const maiorStreak = Math.max(resumo.streak.streak, resumo.streak.recorde)
+
+  return {
+    questoes: [],
+    streak: resumo.streak,
+    condicoes: {
+      primeiro_erro: resumo.totalQuestoes >= 1,
+      streak_3: maiorStreak >= 3,
+      questoes_10: resumo.totalQuestoes >= 10,
+      diagnostico_completo: resumo.totalDiagnosticoCompleto >= 1,
+      primeira_revisao: revisaoConcluida,
+      questoes_100: resumo.totalQuestoes >= 100,
+      cacador_padroes: resumo.motivoRepetido,
+      streak_7: maiorStreak >= 7,
+      diagnostico_forte_10: resumo.totalDiagnosticoForte >= 10,
+      streak_30: maiorStreak >= 30
+    }
+  }
+}
+
+async function buscarResumoConquistasMinimo(userId) {
+  const [questoesResp, revisoesResp, configResp] = await Promise.all([
     db
       .from('questoes')
-      .select('id, motivo_erro, conceito_chave, como_reconhecer, acao_corretiva, pegadinha_banca, criado_em')
-      .eq('user_id', userId)
-      .limit(5000),
-    db
-      .from('configuracoes_revisao')
-      .select('ultima_revisao_geral')
-      .eq('user_id', userId)
-      .maybeSingle(),
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId),
     db
       .from('questoes_revisoes')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId),
-    obterResumoStreakGamificacao(userId)
+    db
+      .from('configuracoes_revisao')
+      .select('ultima_revisao_geral')
+      .eq('user_id', userId)
+      .maybeSingle()
   ])
 
   if (questoesResp.error) {
@@ -240,50 +316,18 @@ async function buscarDadosConquistasGamificacao(userId) {
     throw criarErroGamificacao('Nao foi possivel avaliar suas revisoes concluidas.', revisoesResp.error)
   }
 
-  const questoes = questoesResp.data || []
-  const totalQuestoes = questoes.length
-  const totalDiagnosticoCompleto = questoes.filter(q =>
-    campoConquistaPreenchido(q.conceito_chave) &&
-    campoConquistaPreenchido(q.como_reconhecer) &&
-    campoConquistaPreenchido(q.acao_corretiva)
-  ).length
-  const totalDiagnosticoForte = questoes.filter(q =>
-    typeof avaliarQualidadeDiagnosticoQuestao === 'function' &&
-    avaliarQualidadeDiagnosticoQuestao(q).status === 'completo'
-  ).length
-  const motivoRepetido = Object.values(questoes.reduce((acc, q) => {
-    const motivo = String(q.motivo_erro || '').trim()
-    if (!motivo || motivo === 'A diagnosticar') return acc
-    acc[motivo] = (acc[motivo] || 0) + 1
-    return acc
-  }, {})).some(total => total >= 5)
-  const revisaoConcluida = Boolean(
-    (revisoesResp.count || 0) > 0 ||
-    configResp.data?.ultima_revisao_geral ||
-    carregarRevisoesConcluidasLocais(userId).length
-  )
-  const maiorStreak = Math.max(streak.streak, streak.recorde)
+  const datasStreak = []
+  if (configResp.data?.ultima_revisao_geral) datasStreak.push(configResp.data.ultima_revisao_geral)
+  carregarRevisoesConcluidasLocais(userId).forEach(data => datasStreak.push(data))
 
   return {
-    questoes,
-    streak,
-    condicoes: {
-      primeiro_erro: totalQuestoes >= 1,
-      streak_3: maiorStreak >= 3,
-      questoes_10: totalQuestoes >= 10,
-      diagnostico_completo: totalDiagnosticoCompleto >= 1,
-      primeira_revisao: revisaoConcluida,
-      questoes_100: totalQuestoes >= 100,
-      cacador_padroes: motivoRepetido,
-      streak_7: maiorStreak >= 7,
-      diagnostico_forte_10: totalDiagnosticoForte >= 10,
-      streak_30: maiorStreak >= 30
-    }
+    totalQuestoes: Number(questoesResp.count || 0),
+    totalDiagnosticoCompleto: 0,
+    totalDiagnosticoForte: 0,
+    motivoRepetido: false,
+    revisaoConcluida: Boolean((revisoesResp.count || 0) > 0 || configResp.data?.ultima_revisao_geral),
+    streak: calcularResumoStreakPorDatasGamificacao(datasStreak, userId)
   }
-}
-
-function campoConquistaPreenchido(valor) {
-  return String(valor || '').trim().length >= 3
 }
 
 async function carregarConquistasPerfil(opcoes = {}) {
@@ -422,6 +466,9 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   // Ambiente Node/Vitest
   const exportsObj = {
     avaliarConquistasUsuario,
+    buscarDadosConquistasGamificacao,
+    obterResumoStreakGamificacao,
+    normalizarResumoGamificacaoBanco,
     calcularRecordeGamificacao,
     contarSequenciaGamificacao,
     adicionarDataNormalizadaGamificacao
@@ -434,6 +481,9 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   
   // Para Vitest com type: module
   globalThis.avaliarConquistasUsuario = avaliarConquistasUsuario
+  globalThis.buscarDadosConquistasGamificacao = buscarDadosConquistasGamificacao
+  globalThis.obterResumoStreakGamificacao = obterResumoStreakGamificacao
+  globalThis.normalizarResumoGamificacaoBanco = normalizarResumoGamificacaoBanco
   globalThis.calcularRecordeGamificacao = calcularRecordeGamificacao
   globalThis.contarSequenciaGamificacao = contarSequenciaGamificacao
   globalThis.adicionarDataNormalizadaGamificacao = adicionarDataNormalizadaGamificacao

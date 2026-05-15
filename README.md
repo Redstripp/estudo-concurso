@@ -72,6 +72,7 @@ Essas URLs precisam estar cadastradas no Supabase. Se faltar a pasta do reposito
 - Para habilitar edital verticalizado, reta final, pegadinhas da banca e ciclo 24h/7d/30d, execute uma vez `supabase-edital-concurso.sql`.
 - Para habilitar planejamento semanal, fila diaria inteligente e Lei Seca, execute uma vez `supabase-planejamento-inteligente.sql`.
 - Para sincronizar os dias de revisao configuraveis entre navegadores, execute uma vez `supabase-configuracao-revisao.sql`.
+- Para calcular streak e conquistas de gamificacao sem trafegar listas grandes para o navegador, execute uma vez `supabase-gamificacao-resumo.sql`.
 - Para habilitar a assistente de IA integrada com limite diario por usuario, execute uma vez `supabase-ia-assistente.sql`.
 
 O schema cria as tabelas:
@@ -170,5 +171,6 @@ O primeiro comando faz uma checagem de sintaxe nos arquivos JavaScript. O segund
 |-- supabase-edital-concurso.sql
 |-- supabase-planejamento-inteligente.sql
 |-- supabase-configuracao-revisao.sql
+|-- supabase-gamificacao-resumo.sql
 `-- supabase-ia-assistente.sql
 ```
