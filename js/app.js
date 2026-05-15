@@ -973,10 +973,9 @@ async function salvarPrimeiroErroOnboarding() {
 
     if (error) throw error
 
-    await db
-      .from('sessoes_estudo')
-      .update({ total_questoes: Number(sessao.total_questoes || 0) + 1 })
-      .eq('id', sessao.id)
+    if (typeof recalcularTotalQuestoesSessao === 'function') {
+      await recalcularTotalQuestoesSessao(sessao.id)
+    }
 
     if (typeof atualizarTelasAposRegistro === 'function') atualizarTelasAposRegistro()
     concluirOnboardingAtivo(true)

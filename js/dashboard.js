@@ -1076,6 +1076,10 @@ async function arquivarELimparMes(userId, periodo) {
 
     if (erroDelete) throw erroDelete
 
+    if (typeof recalcularTotalQuestoesSessao === 'function') {
+      await Promise.all((dados.sessoes || []).map(sessao => recalcularTotalQuestoesSessao(sessao.id)))
+    }
+
     msg.textContent = 'Resumo salvo e questões detalhadas limpas.'
     msg.className = 'msg-materia sucesso'
     await inicializarDashboard()

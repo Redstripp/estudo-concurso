@@ -1,5 +1,5 @@
 import { createReadStream, existsSync, statSync } from 'node:fs'
-import { extname, join, normalize, resolve } from 'node:path'
+import { extname, isAbsolute, join, normalize, relative, resolve } from 'node:path'
 import { createServer } from 'node:http'
 import { fileURLToPath } from 'node:url'
 
@@ -18,8 +18,9 @@ function resolverCaminho(url) {
   const pathname = decodeURIComponent(new URL(url, `http://localhost:${port}`).pathname)
   const relativo = pathname === '/' ? 'index.html' : pathname.slice(1)
   const caminho = resolve(join(root, normalize(relativo)))
+  const caminhoRelativo = relative(root, caminho)
 
-  if (!caminho.startsWith(root)) return null
+  if (caminhoRelativo.startsWith('..') || isAbsolute(caminhoRelativo)) return null
   if (!existsSync(caminho) || !statSync(caminho).isFile()) return null
 
   return caminho

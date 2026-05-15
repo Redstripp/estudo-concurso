@@ -7,7 +7,6 @@ import { JSDOM } from 'jsdom'
 
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'http://localhost' })
 globalThis.document = dom.window.document
-globalThis.window = dom.window
 
 await import('../js/utils.js')
 await import('../js/auth.js')
@@ -16,3 +15,7 @@ await import('../js/questoes.js')
 await import('../js/revisao.js')
 await import('../js/edital.js')
 await import('../js/planejamento.js')
+
+globalThis.window = dom.window
+globalThis.localStorage = dom.window.localStorage
+globalThis.HTMLElement = dom.window.HTMLElement

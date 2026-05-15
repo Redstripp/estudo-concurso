@@ -170,6 +170,7 @@ function renderizarLinhasMaterias(erradas, certas, sessaoId) {
           <button class="btn-acao-mini btn-editar-acerto"
             data-id="${reg.id}"
             data-qtd="${reg.quantidade}"
+            data-sessao="${sessaoId}"
             type="button"
             title="Editar quantidade">✏️</button>
           <button class="btn-acao-mini btn-excluir-acerto"
@@ -225,6 +226,7 @@ async function lidarCliqueDesempenho(e) {
   if (alvo.closest('.btn-excluir-acerto')) {
     const btn      = alvo.closest('.btn-excluir-acerto')
     const id       = btn.dataset.id
+    const sessaoId = btn.dataset.sessao
 
     if (!confirm('Excluir este registro de acertos?')) return
 
@@ -239,6 +241,9 @@ async function lidarCliqueDesempenho(e) {
       return
     }
 
+    if (typeof recalcularTotalQuestoesSessao === 'function') {
+      await recalcularTotalQuestoesSessao(sessaoId)
+    }
     carregarDesempenho()
     return
   }
@@ -248,8 +253,9 @@ async function lidarCliqueDesempenho(e) {
     const btn      = alvo.closest('.btn-editar-acerto')
     const id       = btn.dataset.id
     const qtdAtual = parseInt(btn.dataset.qtd)
+    const sessaoId = btn.dataset.sessao
 
-    abrirModalEdicaoAcerto(id, qtdAtual)
+    abrirModalEdicaoAcerto(id, qtdAtual, sessaoId)
     return
   }
 }
@@ -257,7 +263,7 @@ async function lidarCliqueDesempenho(e) {
 // ============================================
 // MODAL DE EDIÇÃO DE ACERTO
 // ============================================
-function abrirModalEdicaoAcerto(id, qtdAtual) {
+function abrirModalEdicaoAcerto(id, qtdAtual, sessaoId) {
   document.getElementById('modal-acerto-edicao')?.remove()
 
   const modal = document.createElement('div')
@@ -319,6 +325,9 @@ function abrirModalEdicaoAcerto(id, qtdAtual) {
         return
       }
 
+      if (typeof recalcularTotalQuestoesSessao === 'function') {
+        await recalcularTotalQuestoesSessao(sessaoId)
+      }
       modal.remove()
       carregarDesempenho()
     })

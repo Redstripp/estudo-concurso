@@ -1591,6 +1591,43 @@ async function obterOuCriarSessaoDeHoje() {
   return novaSessao
 }
 
+async function recalcularTotalQuestoesSessao(sessaoId) {
+  if (!sessaoId || typeof window === 'undefined' || !window.usuarioAtual?.id) return
+
+  const userId = window.usuarioAtual.id
+  const [erradasResp, certasResp] = await Promise.all([
+    db
+      .from('questoes')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('sessao_id', sessaoId),
+    db
+      .from('questoes_certas')
+      .select('quantidade')
+      .eq('user_id', userId)
+      .eq('sessao_id', sessaoId)
+  ])
+
+  if (erradasResp.error || certasResp.error) {
+    console.warn('Nao foi possivel recalcular o total da sessao.', erradasResp.error || certasResp.error)
+    return
+  }
+
+  const totalErradas = Number(erradasResp.count) || 0
+  const totalCertas = (certasResp.data || [])
+    .reduce((acc, registro) => acc + (Number(registro.quantidade) || 0), 0)
+
+  const { error } = await db
+    .from('sessoes_estudo')
+    .update({ total_questoes: totalErradas + totalCertas })
+    .eq('id', sessaoId)
+    .eq('user_id', userId)
+
+  if (error) {
+    console.warn('Nao foi possivel atualizar o total da sessao.', error)
+  }
+}
+
 // ============================================
 // SALVAR QUESTÃO
 // ============================================
@@ -1762,10 +1799,7 @@ async function salvarQuestao(opcoes = {}) {
     })
   }
 
-  await db
-    .from('sessoes_estudo')
-    .update({ total_questoes: sessao.total_questoes + 1 })
-    .eq('id', sessao.id)
+  await recalcularTotalQuestoesSessao(sessao.id)
 
   limparFormularioQuestaoAposSalvar()
 
@@ -2318,17 +2352,20 @@ function criarCardQuestao(q) {
 async function excluirQuestao(id, card) {
   if (!confirm('Tem certeza que deseja excluir esta questão?')) return
 
-  const { error } = await db
+  const { data: questaoExcluida, error } = await db
     .from('questoes')
     .delete()
     .eq('id', id)
     .eq('user_id', window.usuarioAtual.id)
+    .select('sessao_id')
+    .maybeSingle()
 
   if (error) {
     alert('Erro ao excluir. Tente novamente.')
     return
   }
 
+  await recalcularTotalQuestoesSessao(questaoExcluida?.sessao_id)
   card.remove()
   await carregarQuestoes()
   atualizarTelasAposRegistro()
@@ -2797,6 +2834,7 @@ async function salvarAcertos() {
   }
 
   mostrarMsgAcertos('✅ Acertos registrados com sucesso!', 'sucesso')
+  await recalcularTotalQuestoesSessao(sessao.id)
   document.getElementById('linhas-acertos').innerHTML = ''
   adicionarLinhaAcerto()
   if (typeof avaliarConquistasUsuario === 'function') {
@@ -2831,7 +2869,8 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     normalizarTextoDuplicidade,
     ordenarQuestoes,
     carregarQuestoesEmMemoria,
-    obterOuCriarSessaoDeHoje
+    obterOuCriarSessaoDeHoje,
+    recalcularTotalQuestoesSessao
   }
   
   // Compatibilidade com ES modules no Vitest
@@ -2849,4 +2888,5 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.ordenarQuestoes = ordenarQuestoes
   globalThis.carregarQuestoesEmMemoria = carregarQuestoesEmMemoria
   globalThis.obterOuCriarSessaoDeHoje = obterOuCriarSessaoDeHoje
+  globalThis.recalcularTotalQuestoesSessao = recalcularTotalQuestoesSessao
 }

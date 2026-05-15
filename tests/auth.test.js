@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 // Importa as funções reais de js/auth.js via globalThis
 const {
@@ -70,39 +70,34 @@ describe('setBotaoCarregando', () => {
 })
 
 describe('ehLinkRedefinicaoSenhaAuth', () => {
-  let originalHash, originalSearch
+  let originalUrl
 
   beforeEach(() => {
-    originalHash = window.location.hash
-    originalSearch = window.location.search
+    originalUrl = window.location.href
   })
 
   it('deve retornar true quando hash tem type=recovery', () => {
-    window.location.hash = '#type=recovery'
+    window.history.replaceState({}, '', '/#type=recovery')
     expect(ehLinkRedefinicaoSenhaAuth()).toBe(true)
   })
 
   it('deve retornar true quando search tem type=recovery', () => {
-    window.location.hash = ''
-    window.location.search = '?type=recovery'
+    window.history.replaceState({}, '', '/?type=recovery')
     expect(ehLinkRedefinicaoSenhaAuth()).toBe(true)
   })
 
   it('deve retornar false quando não há type=recovery', () => {
-    window.location.hash = '#type=signup'
-    window.location.search = ''
+    window.history.replaceState({}, '', '/#type=signup')
     expect(ehLinkRedefinicaoSenhaAuth()).toBe(false)
   })
 
   it('deve retornar false quando não há parâmetros', () => {
-    window.location.hash = ''
-    window.location.search = ''
+    window.history.replaceState({}, '', '/')
     expect(ehLinkRedefinicaoSenhaAuth()).toBe(false)
   })
 
   afterEach(() => {
-    window.location.hash = originalHash
-    window.location.search = originalSearch
+    window.history.replaceState({}, '', originalUrl)
   })
 })
 

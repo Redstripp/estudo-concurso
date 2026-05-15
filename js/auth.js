@@ -257,3 +257,35 @@ if (formRecuperar && linkEsqueceu && linkVoltarLogin && btnRecuperar) {
     mostrarMensagem('Link enviado! Verifique seu e-mail.', 'sucesso')
   })
 }
+
+// Exportações apenas para testes (Vitest)
+// No navegador, essas linhas são ignoradas pois o script é carregado como tradicional
+if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  const exportsObj = {
+    mostrarMensagem,
+    limparMensagem,
+    setBotaoCarregando,
+    obterUrlArquivo,
+    obterBaseArquivosAuth,
+    obterScriptAuthAtual,
+    obterUrlApp,
+    ehLinkRedefinicaoSenhaAuth,
+    verificarSessao,
+    traduzirErro
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = exportsObj
+  }
+
+  globalThis.mostrarMensagem = mostrarMensagem
+  globalThis.limparMensagem = limparMensagem
+  globalThis.setBotaoCarregando = setBotaoCarregando
+  globalThis.obterUrlArquivo = obterUrlArquivo
+  globalThis.obterBaseArquivosAuth = obterBaseArquivosAuth
+  globalThis.obterScriptAuthAtual = obterScriptAuthAtual
+  globalThis.obterUrlApp = obterUrlApp
+  globalThis.ehLinkRedefinicaoSenhaAuth = ehLinkRedefinicaoSenhaAuth
+  globalThis.verificarSessao = verificarSessao
+  globalThis.traduzirErro = traduzirErro
+}
