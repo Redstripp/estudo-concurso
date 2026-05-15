@@ -45,7 +45,8 @@ async function carregarMaterias() {
     .order('criado_em', { ascending: true })
 
   if (error) {
-    placeholder.textContent = '❌ Erro ao carregar matérias.'
+    console.error(error)
+    placeholder.textContent = '❌ Não foi possível carregar suas matérias. Verifique sua conexão e tente novamente.'
     return
   }
 
@@ -1714,7 +1715,8 @@ async function adicionarMateria() {
   btn.textContent = '+ Adicionar'
 
   if (error) {
-    mostrarMsgMateria('Erro ao salvar. Tente novamente.', 'erro')
+    console.error(error)
+    mostrarMsgMateria('Não foi possível salvar a matéria. Verifique sua conexão e tente novamente.', 'erro')
     return
   }
 
@@ -1752,7 +1754,8 @@ async function excluirMateria(id, nome) {
     .eq('user_id', window.usuarioAtual.id)
 
   if (error) {
-    alert('Erro ao excluir. Tente novamente.')
+    console.error(error)
+    alert('Não foi possível excluir a matéria. Verifique sua conexão e tente novamente.')
     return
   }
 

@@ -217,7 +217,7 @@ async function salvarConfigEdital() {
   if (error) {
     console.error(error)
     if (msg) {
-      msg.textContent = 'Erro ao salvar. Execute o SQL do edital no Supabase.'
+      msg.textContent = 'Não foi possível salvar a reta final. Execute o SQL do edital no Supabase e tente novamente.'
       msg.className = 'msg-materia erro'
     }
     return
@@ -315,7 +315,7 @@ async function salvarTopicoEdital() {
 
   if (error) {
     console.error(error)
-    msg.textContent = 'Erro ao salvar assunto. Execute o SQL do edital no Supabase.'
+    msg.textContent = 'Não foi possível salvar o assunto. Execute o SQL do edital no Supabase e tente novamente.'
     msg.className = 'msg-materia erro'
     return
   }
@@ -551,7 +551,7 @@ async function excluirRetaFinalEdital() {
   if (error) {
     console.error(error)
     if (msg) {
-      msg.textContent = 'Erro ao excluir reta final. Tente novamente.'
+      msg.textContent = 'Não foi possível excluir a reta final. Verifique sua conexão e tente novamente.'
       msg.className = 'msg-materia erro'
     }
     return
@@ -659,7 +659,7 @@ async function atualizarStatusTopicoEdital(id, status) {
 
   if (error) {
     console.error(error)
-    alert('Erro ao atualizar status do assunto.')
+    alert('Não foi possível atualizar o status do assunto. Verifique sua conexão e tente novamente.')
     return
   }
 
@@ -677,7 +677,7 @@ async function excluirTopicoEdital(id) {
 
   if (error) {
     console.error(error)
-    alert('Erro ao excluir assunto.')
+    alert('Não foi possível excluir o assunto. Verifique sua conexão e tente novamente.')
     return
   }
 
@@ -716,7 +716,7 @@ async function salvarPegadinhaBanca() {
 
   if (error) {
     console.error(error)
-    msg.textContent = 'Erro ao salvar pegadinha. Execute o SQL do edital no Supabase.'
+    msg.textContent = 'Não foi possível salvar a pegadinha. Execute o SQL do edital no Supabase e tente novamente.'
     msg.className = 'msg-materia erro'
     return
   }
@@ -768,7 +768,7 @@ async function excluirPegadinhaBanca(id) {
 
   if (error) {
     console.error(error)
-    alert('Erro ao excluir pegadinha.')
+    alert('Não foi possível excluir a pegadinha. Verifique sua conexão e tente novamente.')
     return
   }
 

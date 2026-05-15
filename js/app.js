@@ -1555,7 +1555,8 @@ function inicializarPerfil() {
     btnNovo.textContent = '💾 Salvar nova senha'
 
     if (error) {
-      msg.textContent = 'Erro ao alterar senha. Tente novamente.'
+      console.error(error)
+      msg.textContent = 'Não foi possível alterar a senha. Verifique sua sessão e tente novamente.'
       msg.className   = 'msg-materia erro'
       return
     }
@@ -1652,7 +1653,7 @@ async function exportarBackup() {
     msg.className = 'msg-materia sucesso'
   } catch (erro) {
     console.error(erro)
-    msg.textContent = 'Erro ao exportar backup. Tente novamente.'
+    msg.textContent = 'Não foi possível exportar o backup. Verifique sua conexão e tente novamente.'
     msg.className = 'msg-materia erro'
   } finally {
     btn.disabled = false

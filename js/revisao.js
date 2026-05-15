@@ -447,7 +447,8 @@ async function filtrarRevisao() {
   const { data, error } = await buscarQuestoesRevisao()
 
   if (error) {
-    lista.innerHTML = '<p class="texto-placeholder">❌ Erro ao buscar questões.</p>'
+    console.error(error)
+    lista.innerHTML = '<p class="texto-placeholder">❌ Não foi possível carregar as questões de revisão. Verifique sua conexão e tente novamente.</p>'
     return
   }
 
@@ -533,7 +534,7 @@ async function gerarFilaRevisaoInteligente(opcoes = {}) {
       container.innerHTML = `
         <div class="estado-erro">
           <h3 class="estado-erro-titulo">Nao foi possivel gerar a fila</h3>
-          <p class="estado-erro-texto">${escaparHtmlSeguro(erro.message || 'Verifique sua conexao e tente novamente.')}</p>
+          <p class="estado-erro-texto">Verifique sua conexao, confira a configuracao do Supabase e tente novamente.</p>
           <button class="btn-secundario" type="button" id="btn-tentar-fila-revisao">Tentar novamente</button>
         </div>
       `
@@ -1263,7 +1264,8 @@ async function iniciarTreinoRevisao() {
   const { data, error } = await buscarQuestoesRevisao()
 
   if (error) {
-    lista.innerHTML = '<p class="texto-placeholder">❌ Erro ao preparar o treino.</p>'
+    console.error(error)
+    lista.innerHTML = '<p class="texto-placeholder">❌ Não foi possível preparar o treino de revisão. Verifique sua conexão e tente novamente.</p>'
     if (btnModoFoco) btnModoFoco.style.display = 'none'
     return
   }
@@ -1314,7 +1316,7 @@ async function iniciarTreinoPegadinhas() {
     renderizarTreinoPegadinha()
   } catch (erro) {
     console.error(erro)
-    if (lista) lista.innerHTML = '<p class="texto-placeholder">Nao foi possivel preparar o treino de pegadinhas.</p>'
+    if (lista) lista.innerHTML = '<p class="texto-placeholder">Nao foi possivel preparar o treino de pegadinhas. Verifique sua conexao e tente novamente.</p>'
   }
 }
 
@@ -1742,7 +1744,7 @@ async function registrarTreinoRevisao(q, resultado) {
 
   if (erroHistorico) {
     console.error(erroHistorico)
-    msg.textContent = 'Erro ao registrar revisão.'
+    msg.textContent = 'Não foi possível registrar a revisão. Verifique sua conexão e tente novamente.'
     return
   }
 
@@ -1763,7 +1765,7 @@ async function registrarTreinoRevisao(q, resultado) {
 
   if (erroQuestao) {
     console.error(erroQuestao)
-    msg.textContent = 'Histórico salvo, mas a fila não foi atualizada.'
+    msg.textContent = 'Histórico salvo, mas não foi possível atualizar a fila. Recarregue a página para conferir o estado atual.'
     return
   }
 

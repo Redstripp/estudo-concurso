@@ -1740,7 +1740,7 @@ async function salvarQuestao(opcoes = {}) {
 
   const sessao = await obterOuCriarSessaoDeHoje()
   if (!sessao) {
-    mostrarMsgQuestao('Erro ao criar sessão de estudo.', 'erro')
+    mostrarMsgQuestao('Não foi possível preparar a sessão de estudo de hoje. Verifique sua conexão e tente novamente.', 'erro')
     btn.disabled    = false
     btn.textContent = textoBotaoSalvar
     return
@@ -1775,7 +1775,7 @@ async function salvarQuestao(opcoes = {}) {
 
   if (erroQuestao) {
     console.error(erroQuestao)
-    mostrarMsgQuestao('Erro ao salvar questão. Execute os SQLs de melhoria e do edital no Supabase se ainda não fez.', 'erro')
+    mostrarMsgQuestao('Não foi possível salvar a questão. Confira os SQLs de melhoria e do edital no Supabase e tente novamente.', 'erro')
 
     // Feedback visual de erro no botão
     btn.style.background = 'var(--cor-erro)'
@@ -1953,7 +1953,7 @@ async function carregarQuestoes(marcarPrimeiroComoNovo = false) {
 
   if (error) {
     console.error(error)
-    mostrarPlaceholderQuestoes(lista, '❌ Erro ao carregar questões. Execute os SQLs de melhoria e do edital no Supabase.')
+    mostrarPlaceholderQuestoes(lista, '❌ Não foi possível carregar as questões. Confira os SQLs de melhoria e do edital no Supabase e tente novamente.')
     return
   }
 
@@ -2361,7 +2361,8 @@ async function excluirQuestao(id, card) {
     .maybeSingle()
 
   if (error) {
-    alert('Erro ao excluir. Tente novamente.')
+    console.error(error)
+    alert('Não foi possível excluir a questão. Verifique sua conexão e tente novamente.')
     return
   }
 
@@ -2686,7 +2687,8 @@ function abrirModalEdicao(q) {
       .eq('user_id', window.usuarioAtual.id)
 
     if (error) {
-      document.getElementById('msg-edicao').textContent = 'Erro ao salvar. Tente novamente.'
+      console.error(error)
+      document.getElementById('msg-edicao').textContent = 'Não foi possível salvar as alterações da questão. Verifique sua conexão e tente novamente.'
       document.getElementById('msg-edicao').className = 'msg-materia erro'
       return
     }
@@ -2814,7 +2816,7 @@ async function salvarAcertos() {
   // Reutiliza a mesma função de sessão já existente no arquivo
   const sessao = await obterOuCriarSessaoDeHoje()
   if (!sessao) {
-    mostrarMsgAcertos('Erro ao obter sessão. Tente novamente.', 'erro')
+    mostrarMsgAcertos('Não foi possível preparar a sessão de estudo de hoje. Verifique sua conexão e tente novamente.', 'erro')
     return
   }
 
@@ -2828,8 +2830,8 @@ async function salvarAcertos() {
   const { error } = await db.from('questoes_certas').insert(inserir)
 
   if (error) {
-    mostrarMsgAcertos('Erro ao salvar. Tente novamente.', 'erro')
     console.error(error)
+    mostrarMsgAcertos('Não foi possível salvar os acertos. Verifique sua conexão e tente novamente.', 'erro')
     return
   }
 

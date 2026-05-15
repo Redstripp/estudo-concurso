@@ -36,11 +36,11 @@ describe('traduzirErro', () => {
   })
 
   it('deve retornar mensagem genérica para erro desconhecido', () => {
-    expect(traduzirErro('Erro desconhecido')).toBe('Ocorreu um erro. Tente novamente.')
+    expect(traduzirErro('Erro desconhecido')).toBe('Não foi possível concluir a ação. Verifique os dados, sua conexão e tente novamente.')
   })
 
   it('deve retornar mensagem genérica para string vazia', () => {
-    expect(traduzirErro('')).toBe('Ocorreu um erro. Tente novamente.')
+    expect(traduzirErro('')).toBe('Não foi possível concluir a ação. Verifique os dados, sua conexão e tente novamente.')
   })
 })
 

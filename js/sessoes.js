@@ -34,7 +34,14 @@ async function carregarDesempenho() {
     .eq('user_id', window.usuarioAtual.id)
     .order('data', { ascending: false })
 
-  if (erroSessoes || !sessoes || sessoes.length === 0) {
+  if (erroSessoes) {
+    console.error(erroSessoes)
+    placeholder.textContent = 'Não foi possível carregar seu histórico de sessões. Verifique sua conexão e tente novamente.'
+    atualizarResumoTopo(0, 0)
+    return
+  }
+
+  if (!sessoes || sessoes.length === 0) {
     placeholder.textContent = '📅 Nenhuma sessão de estudo registrada ainda.'
     atualizarResumoTopo(0, 0)
     return
@@ -237,7 +244,8 @@ async function lidarCliqueDesempenho(e) {
       .eq('user_id', window.usuarioAtual.id)
 
     if (error) {
-      alert('Erro ao excluir. Tente novamente.')
+      console.error(error)
+      alert('Não foi possível excluir este registro de acertos. Verifique sua conexão e tente novamente.')
       return
     }
 
@@ -319,8 +327,9 @@ function abrirModalEdicaoAcerto(id, qtdAtual, sessaoId) {
         .eq('user_id', window.usuarioAtual.id)
 
       if (error) {
+        console.error(error)
         const msg = document.getElementById('msg-edicao-acerto')
-        msg.textContent = 'Erro ao salvar. Tente novamente.'
+        msg.textContent = 'Não foi possível atualizar a quantidade. Verifique sua conexão e tente novamente.'
         msg.className   = 'msg-materia erro'
         return
       }

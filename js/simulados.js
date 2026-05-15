@@ -73,8 +73,8 @@ async function gerarSimuladoRevisao() {
 
   if (error) {
     console.error(error)
-    mostrarMsgSimuladoRevisao('Erro ao buscar questões. Execute o SQL de melhoria no Supabase.', 'erro')
-    container.innerHTML = '<p class="texto-placeholder">Não foi possível gerar o simulado agora.</p>'
+    mostrarMsgSimuladoRevisao('Não foi possível buscar as questões de revisão. Execute o SQL de melhoria no Supabase e tente novamente.', 'erro')
+    container.innerHTML = '<p class="texto-placeholder">Não foi possível gerar o simulado agora. Verifique sua conexão e tente novamente.</p>'
     return
   }
 
@@ -356,7 +356,7 @@ async function registrarResultadoRevisao(q, resultado, card, respostaMarcada, ni
 
   if (erroHistorico) {
     console.error(erroHistorico)
-    feedback.textContent = 'Erro ao salvar o resultado. Execute o SQL de melhoria no Supabase.'
+    feedback.textContent = 'Não foi possível salvar o resultado. Execute o SQL de melhoria no Supabase e tente novamente.'
     feedback.className = 'simulado-revisao-feedback simulado-revisao-feedback--erro'
     botoesResultado.forEach(btn => { btn.disabled = false })
     return
@@ -488,7 +488,7 @@ async function salvarDiagnosticoSimulado(q, card) {
 
   if (erroQuestao) {
     console.error(erroQuestao)
-    feedback.textContent = 'Erro ao salvar diagnóstico. Execute o SQL de melhoria no Supabase.'
+    feedback.textContent = 'Não foi possível salvar o diagnóstico. Execute o SQL de melhoria no Supabase e tente novamente.'
     feedback.className = 'simulado-diagnostico-feedback simulado-revisao-feedback--erro'
     botao.disabled = false
     return
@@ -707,7 +707,7 @@ async function salvarSimulado() {
 
   if (error) {
     console.error(error)
-    mostrarMsgSimulado('Erro ao salvar. Execute o SQL de melhoria no Supabase se ainda não fez.', 'erro')
+    mostrarMsgSimulado('Não foi possível salvar o simulado. Execute o SQL de melhoria no Supabase se ainda não fez.', 'erro')
     return
   }
 
@@ -829,7 +829,8 @@ async function excluirSimulado(id) {
     .eq('user_id', window.usuarioAtual.id)
 
   if (error) {
-    mostrarMsgSimulado('Erro ao excluir simulado.', 'erro')
+    console.error(error)
+    mostrarMsgSimulado('Não foi possível excluir o simulado. Verifique sua conexão e tente novamente.', 'erro')
     return
   }
 

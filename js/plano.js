@@ -77,7 +77,8 @@ async function carregarMateriasPlano() {
     .order('nome', { ascending: true })
 
   if (error) {
-    select.innerHTML = '<option value="">Erro ao carregar matérias</option>'
+    console.error(error)
+    select.innerHTML = '<option value="">Não foi possível carregar as matérias</option>'
     return
   }
 
@@ -122,7 +123,7 @@ async function salvarMateriaNoPlano() {
 
   if (error) {
     console.error(error)
-    mostrarMsgPlano('Erro ao salvar. Execute o SQL de melhoria no Supabase se ainda não fez.', 'erro')
+    mostrarMsgPlano('Não foi possível adicionar a matéria ao Plano do Dia. Execute o SQL de melhoria no Supabase se ainda não fez.', 'erro')
     return
   }
 
@@ -417,7 +418,8 @@ async function atualizarMetaPlano(id, card) {
     .eq('user_id', window.usuarioAtual.id)
 
   if (error) {
-    mostrarMsgPlano('Erro ao atualizar meta.', 'erro')
+    console.error(error)
+    mostrarMsgPlano('Não foi possível atualizar a meta da matéria. Verifique sua conexão e tente novamente.', 'erro')
     return
   }
 
@@ -433,7 +435,8 @@ async function removerMateriaPlano(id) {
     .eq('user_id', window.usuarioAtual.id)
 
   if (error) {
-    mostrarMsgPlano('Erro ao remover matéria.', 'erro')
+    console.error(error)
+    mostrarMsgPlano('Não foi possível remover a matéria do Plano do Dia. Verifique sua conexão e tente novamente.', 'erro')
     return
   }
 

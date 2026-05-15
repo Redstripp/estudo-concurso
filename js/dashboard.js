@@ -1034,7 +1034,7 @@ async function gerarPdfArquivamentoMensal(userId, periodo) {
     console.error(erro)
     if (!janela.closed) janela.close()
     if (msg) {
-      msg.textContent = 'Erro ao gerar relatório.'
+      msg.textContent = 'Não foi possível gerar o relatório. Verifique se o navegador permitiu a nova janela e tente novamente.'
       msg.className = 'msg-materia erro'
     }
   }
@@ -1088,7 +1088,7 @@ async function arquivarELimparMes(userId, periodo) {
     console.error(erro)
     msg.textContent = erro?.message?.includes('estatisticas_mensais')
       ? 'Execute o arquivo supabase-arquivamento-mensal.sql no Supabase e tente novamente.'
-      : 'Erro ao arquivar e limpar o ciclo.'
+      : 'Não foi possível arquivar e limpar o ciclo. Verifique sua conexão e tente novamente.'
     msg.className = 'msg-materia erro'
   }
 }

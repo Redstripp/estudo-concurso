@@ -217,7 +217,7 @@ function traduzirErro(mensagem) {
     'Password should be at least 6 characters': 'A senha deve ter no mínimo 6 caracteres.',
     'Unable to validate email address: invalid format': 'Formato de e-mail inválido.',
   }
-  return erros[mensagem] || 'Ocorreu um erro. Tente novamente.'
+  return erros[mensagem] || 'Não foi possível concluir a ação. Verifique os dados, sua conexão e tente novamente.'
 }
 
 // ============================================

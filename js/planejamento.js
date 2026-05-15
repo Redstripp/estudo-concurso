@@ -147,8 +147,9 @@ async function salvarMetaCentralPlanejamento() {
     .eq('id', window.usuarioAtual.id)
 
   if (error) {
+    console.error(error)
     if (msg) {
-      msg.textContent = 'Erro ao salvar a meta central.'
+      msg.textContent = 'Não foi possível salvar a meta central. Verifique sua conexão e tente novamente.'
       msg.className = 'msg-materia erro'
     }
     return
@@ -249,7 +250,7 @@ async function salvarItemPlanejamentoSemanal() {
 
   if (error) {
     console.error(error)
-    mostrarMsgPlanejamento('Erro ao salvar. Execute o SQL do planejamento no Supabase.', 'erro')
+    mostrarMsgPlanejamento('Não foi possível salvar o planejamento semanal. Execute o SQL do planejamento no Supabase e tente novamente.', 'erro')
     return
   }
 
@@ -300,7 +301,8 @@ async function removerItemPlanejamento(id) {
     .eq('user_id', window.usuarioAtual.id)
 
   if (error) {
-    mostrarMsgPlanejamento('Erro ao remover matéria do planejamento.', 'erro')
+    console.error(error)
+    mostrarMsgPlanejamento('Não foi possível remover a matéria do planejamento. Verifique sua conexão e tente novamente.', 'erro')
     return
   }
 
@@ -335,8 +337,8 @@ async function gerarPlanoDiaPeloPlanejamento(dataAlvo) {
 
   if (error) {
     console.error(error)
-    mostrarMsgPlanejamento('Erro ao gerar Plano do Dia pelo planejamento semanal.', 'erro')
-    if (typeof mostrarMsgPlano === 'function') mostrarMsgPlano('Erro ao gerar pelo planejamento semanal.', 'erro')
+    mostrarMsgPlanejamento('Não foi possível gerar o Plano do Dia pelo planejamento semanal. Verifique sua conexão e tente novamente.', 'erro')
+    if (typeof mostrarMsgPlano === 'function') mostrarMsgPlano('Não foi possível gerar pelo planejamento semanal. Verifique sua conexão e tente novamente.', 'erro')
     return
   }
 
@@ -589,7 +591,8 @@ async function adicionarMateriaFilaAoPlano(materiaId, meta, data) {
   }, { onConflict: 'user_id,data,materia_id' })
 
   if (error) {
-    mostrarMsgPlanejamento('Erro ao adicionar prioridade ao Plano do Dia.', 'erro')
+    console.error(error)
+    mostrarMsgPlanejamento('Não foi possível adicionar a prioridade ao Plano do Dia. Verifique sua conexão e tente novamente.', 'erro')
     return
   }
 
@@ -617,7 +620,7 @@ async function gerarSimuladoPorAssunto() {
 
   if (error) {
     console.error(error)
-    mostrarMsgSimuladoAssunto('Erro ao buscar questões desse assunto.', 'erro')
+    mostrarMsgSimuladoAssunto('Não foi possível buscar questões desse assunto. Verifique sua conexão e tente novamente.', 'erro')
     return
   }
 
@@ -780,7 +783,7 @@ async function salvarItemLeiSeca() {
 
   if (error) {
     console.error(error)
-    mostrarMsgLeiSeca('Erro ao salvar item de Lei Seca. Execute o SQL do planejamento.', 'erro')
+    mostrarMsgLeiSeca('Não foi possível salvar o item de Lei Seca. Execute o SQL do planejamento e tente novamente.', 'erro')
     return
   }
 
@@ -876,7 +879,8 @@ async function registrarRevisaoLeiSeca(id, acertou) {
     .eq('user_id', window.usuarioAtual.id)
 
   if (error) {
-    mostrarMsgLeiSeca('Erro ao registrar revisão de Lei Seca.', 'erro')
+    console.error(error)
+    mostrarMsgLeiSeca('Não foi possível registrar a revisão de Lei Seca. Verifique sua conexão e tente novamente.', 'erro')
     return
   }
 
@@ -894,7 +898,8 @@ async function excluirItemLeiSeca(id) {
     .eq('user_id', window.usuarioAtual.id)
 
   if (error) {
-    mostrarMsgLeiSeca('Erro ao excluir item.', 'erro')
+    console.error(error)
+    mostrarMsgLeiSeca('Não foi possível excluir o item de Lei Seca. Verifique sua conexão e tente novamente.', 'erro')
     return
   }
 
