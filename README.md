@@ -107,6 +107,7 @@ Para ativar em producao:
    - `DEEPSEEK_API_KEY`: chave da API da DeepSeek.
    - `SUPABASE_SERVICE_ROLE_KEY`: service role key do seu projeto Supabase.
    - `IA_LIMITE_DIARIO`: opcional, padrao `20` analises por usuario/dia.
+   - `IA_ALLOWED_ORIGINS`: opcional, origens separadas por virgula autorizadas no CORS. Padrao: `https://redstripp.github.io`.
    - `IA_PROVIDER`: opcional, padrao `deepseek`.
    - `IA_MODEL`: opcional, padrao `deepseek-v4-flash`.
    - `IA_BASE_URL` e `IA_API_KEY`: opcionais para usar outro provedor compativel com OpenAI, como Qwen/DashScope.

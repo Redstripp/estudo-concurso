@@ -1,9 +1,10 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
+const ORIGEM_APP_PRODUCAO = 'https://redstripp.github.io'
+const CORS_HEADERS_BASE = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Vary': 'Origin'
 }
 
 type QuestaoPayload = {
@@ -38,12 +39,16 @@ type CotaIA = {
 }
 
 serve(async (req) => {
+  if (origemCorsBloqueada(req)) {
+    return responderJson({ erro: 'Origem nao permitida.' }, 403, req)
+  }
+
   if (req.method === 'OPTIONS') {
-    return responderJson({ ok: true })
+    return responderJson({ ok: true }, 200, req)
   }
 
   if (req.method !== 'POST') {
-    return responderJson({ erro: 'Metodo nao permitido.' }, 405)
+    return responderJson({ erro: 'Metodo nao permitido.' }, 405, req)
   }
 
   try {
@@ -56,7 +61,7 @@ serve(async (req) => {
     const questaoLimpa = sanitizarQuestao(questao || {})
 
     if (!questaoLimpa.enunciado && !questaoLimpa.comentario && !questaoLimpa.alternativas_formatadas) {
-      return responderJson({ erro: 'Envie enunciado, alternativas ou comentario para analise.' }, 400)
+      return responderJson({ erro: 'Envie enunciado, alternativas ou comentario para analise.' }, 400, req)
     }
 
     validarConfiguracaoIA()
@@ -68,7 +73,7 @@ serve(async (req) => {
       return responderJson({
         erro: 'Limite diario de analises com IA atingido.',
         cota
-      }, 429)
+      }, 429, req)
     }
 
     const campos = await chamarModeloIA(questaoLimpa)
@@ -76,23 +81,61 @@ serve(async (req) => {
     return responderJson({
       campos,
       cota
-    })
+    }, 200, req)
   } catch (erro) {
     console.error('Erro na assistente de IA:', erro)
     return responderJson({
       erro: erro instanceof Error ? erro.message : 'Erro inesperado na assistente de IA.'
-    }, definirStatusErro(erro))
+    }, definirStatusErro(erro), req)
   }
 })
 
-function responderJson(corpo: unknown, status = 200) {
+function responderJson(corpo: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(corpo), {
     status,
     headers: {
-      ...CORS_HEADERS,
+      ...criarCorsHeaders(req),
       'Content-Type': 'application/json; charset=utf-8'
     }
   })
+}
+
+function criarCorsHeaders(req?: Request) {
+  const origemPermitida = req ? obterOrigemCorsPermitida(req) : ORIGEM_APP_PRODUCAO
+  return {
+    ...CORS_HEADERS_BASE,
+    ...(origemPermitida ? { 'Access-Control-Allow-Origin': origemPermitida } : {})
+  }
+}
+
+function origemCorsBloqueada(req: Request) {
+  const origem = req.headers.get('Origin')
+  return Boolean(origem && !obterOrigemCorsPermitida(req))
+}
+
+function obterOrigemCorsPermitida(req: Request) {
+  const origem = req.headers.get('Origin')
+  if (!origem) return ORIGEM_APP_PRODUCAO
+
+  const origemNormalizada = normalizarOrigemCors(origem)
+  return obterOrigensCorsPermitidas().includes(origemNormalizada)
+    ? origemNormalizada
+    : ''
+}
+
+function obterOrigensCorsPermitidas() {
+  return (Deno.env.get('IA_ALLOWED_ORIGINS') || ORIGEM_APP_PRODUCAO)
+    .split(',')
+    .map(normalizarOrigemCors)
+    .filter(Boolean)
+}
+
+function normalizarOrigemCors(origem: string) {
+  try {
+    return new URL(origem.trim()).origin
+  } catch {
+    return origem.trim().replace(/\/+$/, '')
+  }
 }
 
 async function obterUsuarioAutenticado(supabaseUrl: string, anonKey: string, authHeader: string) {
