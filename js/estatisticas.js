@@ -811,3 +811,16 @@ function criarCardEstatisticaMateria(m, metaCentral) {
 
   return card
 }
+
+// Exportações apenas para testes (Vitest)
+if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  globalThis.montarRelatorioEvolucao = montarRelatorioEvolucao
+  globalThis.normalizarTipoQuestaoRelatorio = normalizarTipoQuestaoRelatorio
+  globalThis.contarValoresEstatisticas = contarValores
+  globalThis.formatarDataBREstatisticas = formatarDataBR
+  globalThis.agruparErradasPorMateria = agruparErradasPorMateria
+  globalThis.agruparCertasPorMateria = agruparCertasPorMateria
+  globalThis.calcularResumoPeriodo = calcularResumoPeriodo
+  globalThis.formatarDeltaRelatorio = formatarDeltaRelatorio
+  globalThis.escaparHtmlEstatisticas = escaparHtmlEstatisticas
+}

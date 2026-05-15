@@ -5,17 +5,34 @@
 // Mock do DOM para testes que rodam fora do navegador
 import { JSDOM } from 'jsdom'
 
-const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'http://localhost' })
+const dom = new JSDOM(`
+  <!DOCTYPE html>
+  <html>
+    <body>
+      <p id="msg-auth" class="msg-feedback"></p>
+      <script src="/js/auth.js"></script>
+    </body>
+  </html>
+`, { url: 'http://localhost' })
 globalThis.document = dom.window.document
 
 await import('../js/utils.js')
 await import('../js/auth.js')
+await import('../js/materias.js')
 await import('../js/gamificacao.js')
 await import('../js/questoes.js')
+await import('../js/sessoes.js')
+await import('../js/dashboard.js')
 await import('../js/revisao.js')
 await import('../js/edital.js')
+await import('../js/estatisticas.js')
+await import('../js/plano.js')
+await import('../js/simulados.js')
 await import('../js/planejamento.js')
 
 globalThis.window = dom.window
 globalThis.localStorage = dom.window.localStorage
+globalThis.sessionStorage = dom.window.sessionStorage
+globalThis.Element = dom.window.Element
 globalThis.HTMLElement = dom.window.HTMLElement
+globalThis.Node = dom.window.Node

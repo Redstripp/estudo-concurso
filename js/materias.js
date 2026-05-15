@@ -1767,3 +1767,11 @@ function mostrarMsgMateria(texto, tipo) {
   msg.textContent = texto
   msg.className = `msg-materia ${tipo}`
 }
+
+// Exportações apenas para testes (Vitest)
+if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  globalThis.obterIconeMateria = obterIconeMateria
+  globalThis.criarCardMateria = criarCardMateria
+  globalThis.salvarMateriaUsuario = salvarMateriaUsuario
+  globalThis.mostrarMsgMateria = mostrarMsgMateria
+}

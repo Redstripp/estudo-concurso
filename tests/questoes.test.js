@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 // Importa as funções reais de js/questoes.js via globalThis
 const {
@@ -10,7 +10,8 @@ const {
   questaoChutadaAcertada,
   normalizarTextoDuplicidade,
   ordenarQuestoes,
-  obterOuCriarSessaoDeHoje
+  obterOuCriarSessaoDeHoje,
+  recalcularTotalQuestoesSessao
 } = globalThis
 
 describe('escaparHtmlSeguro', () => {
@@ -245,6 +246,50 @@ describe('obterOuCriarSessaoDeHoje', () => {
     } finally {
       globalThis.db = dbAnterior
       globalThis.window = windowAnterior
+    }
+  })
+})
+
+describe('recalcularTotalQuestoesSessao', () => {
+  it('recalcula total da sessao somando erradas e acertos registrados', async () => {
+    const dbAnterior = globalThis.db
+    const usuarioAnterior = window.usuarioAtual
+    const questoesChain = {
+      error: null,
+      count: 2,
+      select: vi.fn(() => questoesChain),
+      eq: vi.fn(() => questoesChain)
+    }
+    const certasChain = {
+      error: null,
+      data: [{ quantidade: 3 }, { quantidade: 2 }],
+      select: vi.fn(() => certasChain),
+      eq: vi.fn(() => certasChain)
+    }
+    const sessaoChain = {
+      error: null,
+      update: vi.fn(() => sessaoChain),
+      eq: vi.fn(() => sessaoChain)
+    }
+    const from = vi.fn(tabela => {
+      if (tabela === 'questoes') return questoesChain
+      if (tabela === 'questoes_certas') return certasChain
+      if (tabela === 'sessoes_estudo') return sessaoChain
+      throw new Error(`Tabela inesperada: ${tabela}`)
+    })
+
+    globalThis.db = { from }
+    window.usuarioAtual = { id: 'user-1' }
+
+    try {
+      await recalcularTotalQuestoesSessao('sessao-1')
+
+      expect(sessaoChain.update).toHaveBeenCalledWith({ total_questoes: 7 })
+      expect(sessaoChain.eq).toHaveBeenCalledWith('id', 'sessao-1')
+      expect(sessaoChain.eq).toHaveBeenCalledWith('user_id', 'user-1')
+    } finally {
+      globalThis.db = dbAnterior
+      window.usuarioAtual = usuarioAnterior
     }
   })
 })

@@ -464,8 +464,8 @@ function intervaloSemana(dataStr) {
   fim.setDate(inicio.getDate() + 6)
 
   return {
-    inicio: dataISO(inicio),
-    fim: dataISO(fim)
+    inicio: dataISOPlanoInterno(inicio),
+    fim: dataISOPlanoInterno(fim)
   }
 }
 
@@ -479,7 +479,7 @@ function dataISOHoje() {
   return dataHoje()
 }
 
-function dataISO(data) {
+function dataISOPlanoInterno(data) {
   if (!data) {
     const hoje = new Date()
     return hoje.toISOString().split('T')[0]
@@ -497,4 +497,15 @@ function mostrarMsgPlano(texto, tipo) {
   if (!msg) return
   msg.textContent = texto
   msg.className = `msg-materia ${tipo}`
+}
+
+// Exportações apenas para testes (Vitest)
+if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  globalThis.montarItemPlano = montarItemPlano
+  globalThis.criarCardPlano = criarCardPlano
+  globalThis.intervaloSemanaPlano = intervaloSemana
+  globalThis.diferencaDiasPlano = diferencaDias
+  globalThis.dataISOHojePlano = dataISOHoje
+  globalThis.dataISOPlano = dataISOPlanoInterno
+  globalThis.mostrarMsgPlano = mostrarMsgPlano
 }

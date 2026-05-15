@@ -6,7 +6,17 @@ const {
   campoDiagnosticoPreenchido,
   valorDiagnostico,
   formatarQuantidadeQuestoes,
-  avaliarQualidadeDiagnosticoQuestao
+  contarOcorrenciasValores,
+  avaliarQualidadeDiagnosticoQuestao,
+  criarResumoQualidadeDiagnostico,
+  criarAlertaCadastroFracoQuestao,
+  calcularPorcentagem,
+  formatarData,
+  dataISO,
+  adicionarDias,
+  calcularDiasAteProva,
+  diaAnterior,
+  formatarDataCurta
 } = globalThis
 
 describe('escaparHtmlSeguro', () => {
@@ -135,5 +145,59 @@ describe('formatarQuantidadeQuestoes', () => {
 
   it('null deve retornar "0 questões"', () => {
     expect(formatarQuantidadeQuestoes(null)).toBe('0 questões')
+  })
+})
+
+describe('utilitarios gerais', () => {
+  it('contarOcorrenciasValores agrega, ignora vazios sem fallback e ordena', () => {
+    expect(contarOcorrenciasValores(['B', 'A', 'B', '', null])).toEqual([
+      { nome: 'B', total: 2 },
+      { nome: 'A', total: 1 }
+    ])
+  })
+
+  it('contarOcorrenciasValores usa fallback quando configurado', () => {
+    expect(contarOcorrenciasValores(['A', '', null], { fallback: 'Sem valor' })).toEqual([
+      { nome: 'Sem valor', total: 2 },
+      { nome: 'A', total: 1 }
+    ])
+  })
+
+  it('valorDiagnostico aceita nomes snake_case e camelCase', () => {
+    expect(valorDiagnostico({ motivo_erro: 'Conteudo' }, 'motivo_erro', 'motivoErro')).toBe('Conteudo')
+    expect(valorDiagnostico({ motivoErro: 'Atencao' }, 'motivo_erro', 'motivoErro')).toBe('Atencao')
+  })
+
+  it('cria resumo e alerta de diagnostico fraco', () => {
+    const qualidade = {
+      status: 'fraco',
+      classe: 'diagnostico-qualidade--fraco',
+      resumo: 'Resumo padrao',
+      ausentes: ['conceito'],
+      avisos: ['comentario']
+    }
+
+    expect(criarResumoQualidadeDiagnostico(qualidade)).toBe('Falta conceito, comentario.')
+    expect(criarAlertaCadastroFracoQuestao(qualidade)).toContain('cadastro-fraco-alerta')
+    expect(criarAlertaCadastroFracoQuestao({ status: 'completo' })).toBe('')
+  })
+
+  it('calcula porcentagem com duas casas e trata total zero', () => {
+    expect(calcularPorcentagem(1, 3)).toBe(33.33)
+    expect(calcularPorcentagem(5, 0)).toBe(0)
+  })
+
+  it('formata e desloca datas', () => {
+    expect(formatarData(new Date('2026-05-15T12:00:00'))).toBe('15/05/2026')
+    expect(formatarData(new Date('invalida'))).toBe('')
+    expect(dataISO(new Date('2026-05-15T12:00:00'))).toBe('2026-05-15')
+    expect(adicionarDias('2026-05-15', 2)).toBe('2026-05-17')
+    expect(diaAnterior('2026-05-15')).toBe('2026-05-14')
+    expect(formatarDataCurta('2026-05-15')).toBe('15/05/2026')
+  })
+
+  it('calcularDiasAteProva retorna null para datas ausentes ou invalidas', () => {
+    expect(calcularDiasAteProva('')).toBeNull()
+    expect(calcularDiasAteProva('data-invalida')).toBeNull()
   })
 })

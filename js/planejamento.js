@@ -966,4 +966,8 @@ function mostrarErroPlanejamento(mensagem) {
 
 if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
   globalThis.montarRelatorioProntoProva = montarRelatorioProntoProva
+  globalThis.montarFilaInteligente = montarFilaInteligente
+  globalThis.converterDiaSemanaPlanejamento = converterDiaSemanaPlanejamento
+  globalThis.adicionarDiasPlanejamento = adicionarDiasPlanejamento
+  globalThis.dataPlanejamentoISO = dataPlanejamentoISO
 }

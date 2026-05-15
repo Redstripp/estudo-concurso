@@ -29,6 +29,24 @@ No PowerShell do Windows, se o `npm` cair na politica de execucao, use `npm.cmd 
 
 Tambem da para abrir `index.html` diretamente no navegador, mas usar servidor local evita problemas com redirecionamentos e politicas do navegador.
 
+## Configuracao local segura
+
+- `js/config.js` contem credenciais locais do Supabase e deve ficar fora do Git.
+- `js/config.example.js` e o modelo versionado para novos desenvolvedores.
+- Para criar sua configuracao local, copie o modelo:
+
+```bash
+cp js/config.example.js js/config.js
+```
+
+No PowerShell:
+
+```powershell
+Copy-Item js/config.example.js js/config.js
+```
+
+Depois edite apenas o `js/config.js` local com a URL e a anon key do seu projeto.
+
 ## Configuracao do Supabase
 
 Em Authentication > URL Configuration:
@@ -105,11 +123,17 @@ Antes da limpeza, os totais ficam salvos em `estatisticas_mensais`, e as telas d
 
 ```bash
 npm run check:js
+npm test
 ```
 
-No PowerShell do Windows, a alternativa equivalente e `npm.cmd run check:js`.
+No PowerShell do Windows, use:
 
-Esse comando faz uma checagem de sintaxe nos arquivos JavaScript.
+```powershell
+npm.cmd run check:js
+npm.cmd test
+```
+
+O primeiro comando faz uma checagem de sintaxe nos arquivos JavaScript. O segundo roda a suite unitária com Vitest.
 
 ## Checklist manual antes de publicar
 

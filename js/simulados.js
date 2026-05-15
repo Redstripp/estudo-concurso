@@ -884,3 +884,17 @@ function mostrarMsgSimuladoRevisao(texto, tipo) {
   msg.textContent = texto
   msg.className = `msg-materia ${tipo}`
 }
+
+// Exportações apenas para testes (Vitest)
+if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  globalThis.calcularProximaRevisaoSimulado = calcularProximaRevisaoSimulado
+  globalThis.calcularEtapaRevisaoSimulado24730 = calcularEtapaRevisaoSimulado24730
+  globalThis.normalizarTipoQuestaoSimulado = normalizarTipoQuestaoSimulado
+  globalThis.obterRotuloFiltroTipo = obterRotuloFiltroTipo
+  globalThis.obterRotuloPeriodoSimuladoRevisao = obterRotuloPeriodoSimuladoRevisao
+  globalThis.filtrarQuestoesPorPeriodoRevisao = filtrarQuestoesPorPeriodoRevisao
+  globalThis.formatarDataISOParaSimulado = formatarDataISOParaSimulado
+  globalThis.adicionarDiasDataISO = adicionarDiasDataISO
+  globalThis.embaralharQuestoes = embaralharQuestoes
+  globalThis.formatarDataSimulado = formatarDataSimulado
+}

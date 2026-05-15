@@ -332,3 +332,10 @@ function abrirModalEdicaoAcerto(id, qtdAtual, sessaoId) {
       carregarDesempenho()
     })
 }
+
+// Exportações apenas para testes (Vitest)
+if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  globalThis.atualizarResumoTopo = atualizarResumoTopo
+  globalThis.criarCardSessao = criarCardSessao
+  globalThis.renderizarLinhasMaterias = renderizarLinhasMaterias
+}

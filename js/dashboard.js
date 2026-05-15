@@ -2143,11 +2143,6 @@ function formatarDiaSemanaGrafico(dataStr) {
   return ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'][dia]
 }
 
-function formatarDataCurta(dataStr) {
-  const [, mes, dia] = dataStr.split('-')
-  return `${dia}/${mes}`
-}
-
 // ─── RANKING DE MATÉRIAS ─────────────────────────────────
 
 async function carregarRankingMaterias(userId) {
@@ -2218,4 +2213,17 @@ async function carregarRankingMaterias(userId) {
   `
 
   container.appendChild(secaoRanking)
+}
+
+// Exportações apenas para testes (Vitest)
+if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  globalThis.criarEstadoVazioDashboard = criarEstadoVazioDashboard
+  globalThis.criarCardsDashboardVazios = criarCardsDashboardVazios
+  globalThis.criarPeriodoArquivamento = criarPeriodoArquivamento
+  globalThis.montarResumoArquivamentoMensal = montarResumoArquivamentoMensal
+  globalThis.criarResumoMateriaArquivamento = criarResumoMateriaArquivamento
+  globalThis.normalizarTipoArquivamento = normalizarTipoArquivamento
+  globalThis.formatarDataBRArquivamento = formatarDataBRArquivamento
+  globalThis.obterClasseAproveitamentoDashboard = obterClasseAproveitamentoDashboard
+  globalThis.criarDonutAproveitamentoDashboard = criarDonutAproveitamentoDashboard
 }

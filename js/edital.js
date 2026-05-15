@@ -477,7 +477,7 @@ function renderizarResumoRetaFinal(resumo) {
   if (!container) return
 
   const config = editalEstado.config
-  const diasRestantes = calcularDiasAteProva(config?.data_prova)
+  const diasRestantes = calcularDiasAteProvaEdital(config?.data_prova)
   const concurso = config?.concurso_alvo || 'Concurso alvo'
   const meta = obterMetaCentralEdital()
 
@@ -564,7 +564,7 @@ async function excluirRetaFinalEdital() {
   await carregarEdital()
 }
 
-function calcularDiasAteProva(dataProva) {
+function calcularDiasAteProvaEdital(dataProva) {
   if (!dataProva) return null
   const hoje = new Date()
   hoje.setHours(0, 0, 0, 0)
