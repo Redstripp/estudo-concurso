@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "isolatedModules": false
+  },
+  "include": [
+    "js/**/*.js",
+    "scripts/**/*.mjs",
+    "tests/**/*.js",
+    "vite.config.js"
+  ]
+}
