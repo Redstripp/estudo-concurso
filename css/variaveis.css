@@ -9,7 +9,7 @@
   --raio-borda:      12px;
   --raio-borda-sm:   8px;
   --raio-borda-lg:   16px;
-  --transicao:       all 0.2s ease;
+  --transicao:       background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   --largura-sidebar: 260px;
 
   /* Tema claro como padrão no :root
