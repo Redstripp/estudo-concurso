@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { campoDiagnosticoPreenchido, valorDiagnostico } from '../src/utils/diagnostico.ts';
+import {
+  campoDiagnosticoPreenchido,
+  criarResumoQualidadeDiagnostico,
+  valorDiagnostico
+} from '../src/utils/diagnostico.ts';
 
 describe('valorDiagnostico em TypeScript', () => {
   it('retorna o campo snake_case quando preenchido', () => {
@@ -50,7 +54,7 @@ describe('campoDiagnosticoPreenchido em TypeScript', () => {
 
   it('mantem os valores sentinela como nao preenchidos', () => {
     expect(campoDiagnosticoPreenchido('A diagnosticar')).toBe(false);
-    expect(campoDiagnosticoPreenchido('Não informado')).toBe(false);
+    expect(campoDiagnosticoPreenchido('NÃ£o informado')).toBe(false);
   });
 
   it('converte numeros e booleanos com String antes de validar', () => {
@@ -69,5 +73,71 @@ describe('campoDiagnosticoPreenchido em TypeScript', () => {
   it('respeita tamanhoMinimo depois do trim', () => {
     expect(campoDiagnosticoPreenchido(' abc ', 3)).toBe(true);
     expect(campoDiagnosticoPreenchido(' abc ', 4)).toBe(false);
+  });
+});
+
+describe('criarResumoQualidadeDiagnostico em TypeScript', () => {
+  it('retorna o resumo quando o diagnostico esta completo', () => {
+    expect(criarResumoQualidadeDiagnostico({
+      ausentes: [],
+      avisos: [],
+      resumo: 'Tem dados suficientes para alimentar bem a revisao inteligente.'
+    })).toBe('Tem dados suficientes para alimentar bem a revisao inteligente.');
+  });
+
+  it('retorna string vazia para diagnostico vazio ou ausente', () => {
+    expect(criarResumoQualidadeDiagnostico({})).toBe('');
+    expect(criarResumoQualidadeDiagnostico(null)).toBe('');
+    expect(criarResumoQualidadeDiagnostico(undefined)).toBe('');
+  });
+
+  it('combina ausentes e avisos em diagnostico parcialmente preenchido', () => {
+    expect(criarResumoQualidadeDiagnostico({
+      ausentes: ['conceito'],
+      avisos: ['comentario']
+    })).toBe('Falta conceito, comentario.');
+  });
+
+  it('respeita o limite legado de quatro itens e adiciona reticencias', () => {
+    expect(criarResumoQualidadeDiagnostico({
+      ausentes: ['causa do erro', 'confianca', 'conceito'],
+      avisos: ['assunto', 'comentario']
+    })).toBe('Falta causa do erro, confianca, conceito, assunto....');
+  });
+
+  it('respeita limite customizado', () => {
+    expect(criarResumoQualidadeDiagnostico({
+      ausentes: ['causa do erro', 'confianca'],
+      avisos: ['assunto']
+    }, 2)).toBe('Falta causa do erro, confianca....');
+  });
+
+  it('preserva campos com string vazia', () => {
+    expect(criarResumoQualidadeDiagnostico({
+      ausentes: [''],
+      avisos: []
+    })).toBe('Falta .');
+  });
+
+  it('preserva campos com espacos', () => {
+    expect(criarResumoQualidadeDiagnostico({
+      ausentes: ['   '],
+      avisos: []
+    })).toBe('Falta    .');
+  });
+
+  it('trata ausentes e avisos null ou undefined como listas vazias', () => {
+    expect(criarResumoQualidadeDiagnostico({
+      ausentes: null,
+      avisos: undefined,
+      resumo: 'Resumo padrao'
+    })).toBe('Resumo padrao');
+  });
+
+  it('retorna string vazia para objeto sem os campos esperados', () => {
+    expect(criarResumoQualidadeDiagnostico({
+      status: 'fraco',
+      classe: 'diagnostico-qualidade--fraco'
+    })).toBe('');
   });
 });
