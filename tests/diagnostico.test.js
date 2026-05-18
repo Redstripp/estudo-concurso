@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  avaliarQualidadeDiagnosticoQuestao,
   campoDiagnosticoPreenchido,
   criarResumoQualidadeDiagnostico,
   valorDiagnostico
@@ -139,5 +140,146 @@ describe('criarResumoQualidadeDiagnostico em TypeScript', () => {
       status: 'fraco',
       classe: 'diagnostico-qualidade--fraco'
     })).toBe('');
+  });
+});
+
+describe('avaliarQualidadeDiagnosticoQuestao em TypeScript', () => {
+  it('retorna diagnostico forte para questao com diagnostico completo', () => {
+    expect(avaliarQualidadeDiagnosticoQuestao({
+      motivo_erro: 'Falha ao interpretar o enunciado',
+      nivel_confianca: 'Baixa confianca',
+      conceito_chave: 'Aplicacao correta da regra de competencia',
+      como_reconhecer: 'Observar os termos do comando da questao',
+      acao_corretiva: 'Revisar o resumo e refazer questoes do tema',
+      pegadinha_banca: 'A banca troca o sujeito da pergunta',
+      edital_topico_id: 'topico-1',
+      comentario: 'Comentario com detalhes suficientes'
+    })).toEqual({
+      status: 'completo',
+      rotulo: 'Diagnóstico forte',
+      classe: 'diagnostico-qualidade--forte',
+      resumo: 'Tem dados suficientes para alimentar bem a revisão inteligente.',
+      ausentes: [],
+      avisos: [],
+      pontos: 8
+    });
+  });
+
+  it('retorna diagnostico fraco para questao parcialmente preenchida', () => {
+    expect(avaliarQualidadeDiagnosticoQuestao({
+      motivo_erro: 'Falta de atencao',
+      nivel_confianca: 'Media confianca',
+      conceito_chave: 'Regra principal do assunto',
+      como_reconhecer: 'Comparar o texto com a regra',
+      acao_corretiva: 'Refazer questoes semelhantes'
+    })).toEqual({
+      status: 'fraco',
+      rotulo: 'Diagnóstico fraco',
+      classe: 'diagnostico-qualidade--fraco',
+      resumo: 'Dá para revisar, mas faltam detalhes para o sistema entender melhor o padrão.',
+      ausentes: [],
+      avisos: ['sem assunto do edital', 'sem comentário ou pegadinha'],
+      pontos: 5
+    });
+  });
+
+  it('retorna diagnostico incompleto para questao sem diagnostico', () => {
+    expect(avaliarQualidadeDiagnosticoQuestao()).toEqual({
+      status: 'incompleto',
+      rotulo: 'Diagnóstico incompleto',
+      classe: 'diagnostico-qualidade--incompleto',
+      resumo: 'Complete os campos essenciais para a questão entrar melhor na inteligência do sistema.',
+      ausentes: ['causa do erro', 'confiança', 'conceito ou regra', 'como reconhecer', 'ação corretiva'],
+      avisos: ['sem assunto do edital', 'sem comentário ou pegadinha'],
+      pontos: 0
+    });
+  });
+
+  it('mantem o retorno de objeto vazio igual ao legado', () => {
+    expect(avaliarQualidadeDiagnosticoQuestao({})).toEqual({
+      status: 'incompleto',
+      rotulo: 'Diagnóstico incompleto',
+      classe: 'diagnostico-qualidade--incompleto',
+      resumo: 'Complete os campos essenciais para a questão entrar melhor na inteligência do sistema.',
+      ausentes: ['causa do erro', 'confiança', 'conceito ou regra', 'como reconhecer', 'ação corretiva'],
+      avisos: ['sem assunto do edital', 'sem comentário ou pegadinha'],
+      pontos: 0
+    });
+  });
+
+  it('preserva campos com string vazia', () => {
+    expect(avaliarQualidadeDiagnosticoQuestao({
+      motivo_erro: '',
+      nivel_confianca: '',
+      conceito_chave: '',
+      como_reconhecer: '',
+      acao_corretiva: '',
+      pegadinha_banca: '',
+      edital_topico_id: '',
+      comentario: ''
+    })).toEqual({
+      status: 'incompleto',
+      rotulo: 'Diagnóstico incompleto',
+      classe: 'diagnostico-qualidade--incompleto',
+      resumo: 'Complete os campos essenciais para a questão entrar melhor na inteligência do sistema.',
+      ausentes: ['causa do erro', 'confiança', 'conceito ou regra', 'como reconhecer', 'ação corretiva'],
+      avisos: ['sem assunto do edital', 'sem comentário ou pegadinha'],
+      pontos: 0
+    });
+  });
+
+  it('preserva campos com espacos', () => {
+    expect(avaliarQualidadeDiagnosticoQuestao({
+      motivo_erro: '   ',
+      nivel_confianca: '   ',
+      conceito_chave: '   ',
+      como_reconhecer: '   ',
+      acao_corretiva: '   ',
+      pegadinha_banca: '   ',
+      edital_topico_id: '   ',
+      comentario: '   '
+    })).toEqual({
+      status: 'incompleto',
+      rotulo: 'Diagnóstico incompleto',
+      classe: 'diagnostico-qualidade--incompleto',
+      resumo: 'Complete os campos essenciais para a questão entrar melhor na inteligência do sistema.',
+      ausentes: ['causa do erro', 'confiança', 'conceito ou regra', 'como reconhecer', 'ação corretiva'],
+      avisos: ['sem assunto do edital', 'sem comentário ou pegadinha'],
+      pontos: 0
+    });
+  });
+
+  it('preserva o uso de edital_topicos.titulo quando nao ha edital_topico_id', () => {
+    const resultado = avaliarQualidadeDiagnosticoQuestao({
+      motivo_erro: 'Falta de atencao',
+      nivel_confianca: 'Media confianca',
+      conceito_chave: 'Regra principal do assunto',
+      como_reconhecer: 'Comparar o texto com a regra',
+      acao_corretiva: 'Refazer questoes semelhantes',
+      edital_topicos: { titulo: 'Direito Constitucional' }
+    });
+
+    expect(resultado.avisos).toEqual(['sem comentário ou pegadinha']);
+    expect(resultado.pontos).toBe(6);
+    expect(resultado.status).toBe('fraco');
+  });
+
+  it('preserva a exigencia de pegadinha quando o motivo parece pegadinha', () => {
+    const resultado = avaliarQualidadeDiagnosticoQuestao({
+      motivo_erro: 'Caiu em pegadinha da banca',
+      nivel_confianca: 'Media',
+      conceito_chave: 'Regra principal do assunto',
+      como_reconhecer: 'Comparar o texto com a regra',
+      acao_corretiva: 'Refazer questoes semelhantes',
+      edital_topico_id: 'topico-1',
+      comentario: 'Comentario com detalhes suficientes'
+    });
+
+    expect(resultado.ausentes).toEqual(['pegadinha da questão']);
+    expect(resultado.status).toBe('fraco');
+  });
+
+  it('preserva o erro legado para questao null', () => {
+    expect(() => avaliarQualidadeDiagnosticoQuestao(null)).toThrow();
   });
 });
