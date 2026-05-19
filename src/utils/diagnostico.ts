@@ -1,3 +1,5 @@
+import { escaparHtmlSeguro } from './html';
+
 export function valorDiagnostico(
   q: Record<string, unknown> | null | undefined,
   snake: string,
@@ -25,6 +27,29 @@ export function criarResumoQualidadeDiagnostico(
   const faltando = [...(qualidade?.ausentes || []), ...(qualidade?.avisos || [])];
   if (faltando.length === 0) return qualidade?.resumo || '';
   return `Falta ${faltando.slice(0, limite).join(', ')}${faltando.length > limite ? '...' : ''}.`;
+}
+
+export interface QualidadeDiagnosticoAlerta extends QualidadeDiagnosticoResumo {
+  status?: string | null;
+  classe?: string | null;
+}
+
+export function criarAlertaCadastroFracoQuestao(
+  qualidade: QualidadeDiagnosticoAlerta | null | undefined
+): string {
+  if (!qualidade || qualidade.status === 'completo') return '';
+
+  const titulo = qualidade.status === 'incompleto'
+    ? 'Pouco útil para revisão'
+    : 'Cadastro pode melhorar';
+  const texto = criarResumoQualidadeDiagnostico(qualidade, 5);
+
+  return `
+    <div class="cadastro-fraco-alerta ${qualidade.classe}">
+      <strong>${escaparHtmlSeguro(titulo)}</strong>
+      <span>${escaparHtmlSeguro(texto)}</span>
+    </div>
+  `;
 }
 
 export type QualidadeDiagnosticoStatus = 'completo' | 'fraco' | 'incompleto';

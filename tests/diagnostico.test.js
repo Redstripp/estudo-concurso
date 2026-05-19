@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   avaliarQualidadeDiagnosticoQuestao,
   campoDiagnosticoPreenchido,
+  criarAlertaCadastroFracoQuestao,
   criarResumoQualidadeDiagnostico,
   valorDiagnostico
 } from '../src/utils/diagnostico.ts';
+
+const { criarAlertaCadastroFracoQuestao: criarAlertaCadastroFracoQuestaoLegado } = globalThis;
 
 describe('valorDiagnostico em TypeScript', () => {
   it('retorna o campo snake_case quando preenchido', () => {
@@ -140,6 +143,105 @@ describe('criarResumoQualidadeDiagnostico em TypeScript', () => {
       status: 'fraco',
       classe: 'diagnostico-qualidade--fraco'
     })).toBe('');
+  });
+});
+
+describe('criarAlertaCadastroFracoQuestao em TypeScript', () => {
+  it('retorna string vazia para qualidade undefined', () => {
+    expect(criarAlertaCadastroFracoQuestao(undefined)).toBe('');
+    expect(criarAlertaCadastroFracoQuestao(undefined)).toBe(criarAlertaCadastroFracoQuestaoLegado(undefined));
+  });
+
+  it('retorna string vazia para qualidade null', () => {
+    expect(criarAlertaCadastroFracoQuestao(null)).toBe('');
+    expect(criarAlertaCadastroFracoQuestao(null)).toBe(criarAlertaCadastroFracoQuestaoLegado(null));
+  });
+
+  it('retorna string vazia para status completo', () => {
+    const qualidade = {
+      status: 'completo',
+      classe: 'diagnostico-qualidade--forte',
+      resumo: 'Resumo forte',
+      ausentes: [],
+      avisos: []
+    };
+
+    expect(criarAlertaCadastroFracoQuestao(qualidade)).toBe('');
+    expect(criarAlertaCadastroFracoQuestao(qualidade)).toBe(criarAlertaCadastroFracoQuestaoLegado(qualidade));
+  });
+
+  it('preserva alerta para status incompleto', () => {
+    const qualidade = {
+      status: 'incompleto',
+      classe: 'diagnostico-qualidade--incompleto',
+      ausentes: ['causa do erro'],
+      avisos: ['sem assunto do edital']
+    };
+    const resultado = criarAlertaCadastroFracoQuestao(qualidade);
+
+    expect(resultado).toBe(criarAlertaCadastroFracoQuestaoLegado(qualidade));
+    expect(resultado).toContain('cadastro-fraco-alerta diagnostico-qualidade--incompleto');
+    expect(resultado).toContain('<strong>Pouco útil para revisão</strong>');
+    expect(resultado).toContain('<span>Falta causa do erro, sem assunto do edital.</span>');
+  });
+
+  it('preserva alerta para status fraco', () => {
+    const qualidade = {
+      status: 'fraco',
+      classe: 'diagnostico-qualidade--fraco',
+      ausentes: ['conceito'],
+      avisos: ['comentario']
+    };
+    const resultado = criarAlertaCadastroFracoQuestao(qualidade);
+
+    expect(resultado).toBe(criarAlertaCadastroFracoQuestaoLegado(qualidade));
+    expect(resultado).toContain('cadastro-fraco-alerta diagnostico-qualidade--fraco');
+    expect(resultado).toContain('<strong>Cadastro pode melhorar</strong>');
+    expect(resultado).toContain('<span>Falta conceito, comentario.</span>');
+  });
+
+  it('usa Cadastro pode melhorar para outro status nao completo', () => {
+    const qualidade = {
+      status: 'pendente',
+      classe: 'diagnostico-qualidade--fraco',
+      resumo: 'Resumo pendente',
+      ausentes: [],
+      avisos: []
+    };
+    const resultado = criarAlertaCadastroFracoQuestao(qualidade);
+
+    expect(resultado).toBe(criarAlertaCadastroFracoQuestaoLegado(qualidade));
+    expect(resultado).toContain('<strong>Cadastro pode melhorar</strong>');
+    expect(resultado).toContain('<span>Resumo pendente</span>');
+  });
+
+  it('escapa HTML perigoso no resumo dentro do span', () => {
+    const qualidade = {
+      status: 'fraco',
+      classe: 'diagnostico-qualidade--fraco',
+      resumo: '<script>alert("x")</script>',
+      ausentes: [],
+      avisos: []
+    };
+    const resultado = criarAlertaCadastroFracoQuestao(qualidade);
+
+    expect(resultado).toBe(criarAlertaCadastroFracoQuestaoLegado(qualidade));
+    expect(resultado).toContain('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;');
+    expect(resultado).not.toContain('<script>');
+  });
+
+  it('preserva exatamente a string HTML legada', () => {
+    expect(criarAlertaCadastroFracoQuestao({
+      status: 'fraco',
+      classe: 'diagnostico-qualidade--fraco',
+      ausentes: ['conceito'],
+      avisos: ['comentario']
+    })).toBe(`
+    <div class="cadastro-fraco-alerta diagnostico-qualidade--fraco">
+      <strong>Cadastro pode melhorar</strong>
+      <span>Falta conceito, comentario.</span>
+    </div>
+  `);
   });
 });
 
