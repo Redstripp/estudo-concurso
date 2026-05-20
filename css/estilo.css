@@ -4354,6 +4354,53 @@ body.modo-foco .conteudo-principal {
   color: var(--cor-erro);
 }
 
+.modal-caixa--preview-ia {
+  max-width: 760px;
+}
+
+.preview-resposta-ia-subtitulo {
+  color: var(--cor-texto-suave);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  margin: -0.25rem 0 0.25rem;
+}
+
+.preview-resposta-ia-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.preview-resposta-ia-bloco {
+  background: var(--cor-fundo-input);
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: 0.85rem;
+}
+
+.preview-resposta-ia-bloco h4 {
+  color: var(--cor-primaria);
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 0 0 0.45rem;
+}
+
+.preview-resposta-ia-texto {
+  color: var(--cor-texto);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.preview-resposta-ia-vazio {
+  color: var(--cor-texto-suave);
+  font-style: italic;
+}
+
+.preview-resposta-ia-acoes {
+  margin-top: 0.25rem;
+}
+
 .texto-backup {
   color: var(--cor-texto-suave);
   font-size: 0.9rem;
@@ -5236,6 +5283,10 @@ body.modo-foco .conteudo-principal {
   }
 
   .prompt-chatgpt-acoes .btn-secundario {
+    width: 100%;
+  }
+
+  .preview-resposta-ia-acoes .btn-primario {
     width: 100%;
   }
 

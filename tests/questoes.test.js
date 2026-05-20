@@ -12,6 +12,7 @@ const {
   alterarQuantidadeAlternativas,
   ordenarQuestoes,
   montarPromptDiagnosticoChatGPT,
+  previsualizarRespostaChatGPT,
   aplicarRespostaChatGPT,
   extrairCamposRespostaChatGPT,
   identificarCampoRespostaChatGPT,
@@ -407,6 +408,52 @@ Revisar o tema e refazer questões.</textarea>
     expect(document.getElementById('q-comentario').value).toBe('Explicação gerada pela IA.')
     expect(document.getElementById('q-acao-corretiva').value).toBe('Revisar o tema e refazer questões.')
     expect(document.getElementById('msg-resposta-chatgpt').textContent).toContain('Comentário')
+  })
+
+  it('mostra previa antes de preencher os campos da resposta da IA', () => {
+    document.body.innerHTML = `
+      <div id="modal-resposta-chatgpt">
+        <div class="modal-caixa">
+          <textarea id="texto-resposta-chatgpt">COMENTÁRIO:
+Explicação gerada pela IA.
+
+PEGADINHAS:
+Primeira pegadinha.
+
+CONCEITO:
+Conceito central.
+
+AÇÃO CORRETIVA:
+Revisar o tema.</textarea>
+          <p id="msg-resposta-chatgpt"></p>
+        </div>
+      </div>
+      <textarea id="q-comentario">Comentário manual anterior</textarea>
+      <textarea id="q-pegadinha-banca"></textarea>
+      <div id="q-pegadinha-chips"></div>
+      <textarea id="q-conceito-chave"></textarea>
+      <textarea id="q-como-reconhecer"></textarea>
+      <textarea id="q-acao-corretiva"></textarea>
+    `
+    const modal = document.getElementById('modal-resposta-chatgpt')
+
+    previsualizarRespostaChatGPT(modal, 'cadastro')
+
+    expect(document.querySelector('.preview-resposta-ia-grid')).not.toBeNull()
+    expect(document.querySelectorAll('.preview-resposta-ia-bloco')).toHaveLength(5)
+    expect(document.body.textContent).toContain('Prévia da resposta da IA')
+    expect(document.body.textContent).toContain('Confira os campos identificados antes de preencher o caderno de erros.')
+    expect(document.body.textContent).toContain('Não identificado na resposta da IA.')
+    expect(document.getElementById('q-comentario').value).toBe('Comentário manual anterior')
+
+    document.getElementById('btn-confirmar-preview-resposta-chatgpt').click()
+
+    expect(document.getElementById('q-comentario').value).toBe('Explicação gerada pela IA.')
+    expect(document.getElementById('q-pegadinha-banca').value).toBe('Primeira pegadinha.')
+    expect(document.getElementById('q-conceito-chave').value).toBe('Conceito central.')
+    expect(document.getElementById('q-como-reconhecer').value).toBe('')
+    expect(document.getElementById('q-acao-corretiva').value).toBe('Revisar o tema.')
+    expect(document.getElementById('modal-resposta-chatgpt')).toBeNull()
   })
 })
 
