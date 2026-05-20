@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 
 // Importa as funções reais de js/questoes.js via globalThis
 const {
+  MODELO_RESPOSTA_CHATGPT,
   escaparHtmlSeguro,
   CONFIG_TIPO_QUESTAO,
   normalizarTipoQuestao,
@@ -12,6 +13,7 @@ const {
   alterarQuantidadeAlternativas,
   ordenarQuestoes,
   montarPromptDiagnosticoChatGPT,
+  copiarModeloRespostaChatGPT,
   previsualizarRespostaChatGPT,
   aplicarRespostaChatGPT,
   extrairCamposRespostaChatGPT,
@@ -328,6 +330,47 @@ describe('prompt manual da IA', () => {
     expect(posicoes.every(posicao => posicao > -1)).toBe(true)
     expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b))
     expect(prompt).not.toContain('\nACAO:\n')
+  })
+})
+
+describe('modelo de resposta da IA', () => {
+  it('mantem o modelo no formato entendido pelo parser', () => {
+    expect(MODELO_RESPOSTA_CHATGPT).toBe(`COMENTÁRIO:
+[Explique a questão com base no material fornecido.]
+
+PEGADINHAS:
+[Liste as pegadinhas.]
+
+CONCEITO:
+[Explique o conceito central.]
+
+RECONHECER:
+[Explique como reconhecer na próxima vez.]
+
+AÇÃO CORRETIVA:
+[Explique o que devo fazer para não errar novamente.]`)
+  })
+
+  it('copia o modelo de resposta para a area de transferencia', async () => {
+    const writeText = vi.fn().mockResolvedValue()
+    const descritorNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { clipboard: { writeText } },
+      configurable: true
+    })
+    const botao = document.createElement('button')
+    botao.textContent = 'Copiar modelo de resposta'
+
+    await copiarModeloRespostaChatGPT({ currentTarget: botao })
+
+    expect(writeText).toHaveBeenCalledWith(MODELO_RESPOSTA_CHATGPT)
+    expect(botao.textContent).toBe('Modelo copiado.')
+
+    if (descritorNavigator) {
+      Object.defineProperty(globalThis, 'navigator', descritorNavigator)
+    } else {
+      delete globalThis.navigator
+    }
   })
 })
 
