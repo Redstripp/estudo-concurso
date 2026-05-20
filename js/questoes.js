@@ -1254,6 +1254,7 @@ function gerarPromptChatGPT() {
   const selectTopico = document.getElementById('q-edital-topico')
   const topico = selectTopico?.value ? selectTopico.selectedOptions?.[0]?.text?.trim() || '' : ''
   const banca = document.getElementById('q-banca')?.value.trim() || ''
+  const motivoErro = document.getElementById('q-motivo-erro')?.value || ''
   const pegadinha = document.getElementById('q-pegadinha-banca')?.value.trim() || ''
   const alternativas = coletarTextosAlternativas()
   const textoAlternativas = formatarAlternativasPrompt(alternativas)
@@ -1270,6 +1271,7 @@ function gerarPromptChatGPT() {
     textoMarcada,
     textoCorreta,
     comentario,
+    motivoErro,
     pegadinha
   })
 }
@@ -1284,6 +1286,7 @@ function gerarPromptChatGPTEdicao() {
   const selectTopico = document.getElementById('edit-edital-topico')
   const topico = selectTopico?.value ? selectTopico.selectedOptions?.[0]?.text?.trim() || '' : ''
   const banca = document.getElementById('edit-banca')?.value.trim() || ''
+  const motivoErro = document.getElementById('edit-motivo-erro')?.value || ''
   const pegadinha = document.getElementById('edit-pegadinha-banca')?.value.trim() || ''
   const tipoQuestao = document.getElementById('edit-tipo-questao')?.value || ''
   const alternativas = coletarTextosAlternativasEdicao()
@@ -1301,16 +1304,27 @@ function gerarPromptChatGPTEdicao() {
     textoMarcada,
     textoCorreta,
     comentario,
+    motivoErro,
     pegadinha
   })
 }
 
 function montarPromptDiagnosticoChatGPT(dados) {
+  const temComentario = Boolean(String(dados.comentario || '').trim())
+  const orientacaoComentario = temComentario
+    ? 'Use o comentário do professor/alunos como fonte principal para entender a questão. Não substitua nem reescreva o comentário original. Se o comentário tiver informações conflitantes, priorize a explicação mais técnica/provável. Se faltar informação, diga isso de forma objetiva. Não invente regra, artigo ou fundamento que não apareça no material.'
+    : 'Como não há comentário original, analise o enunciado, as alternativas, a alternativa correta, a alternativa marcada e o motivo do erro, se houver. Gere também o campo COMENTÁRIO explicando por que a alternativa correta está correta e, se possível, por que a resposta marcada está errada. Não invente lei, artigo, súmula ou fundamento que não apareça no enunciado, nas alternativas ou nos dados fornecidos. Se faltarem dados suficientes, diga objetivamente que faltam informações.'
+  const blocoComentarioResposta = temComentario
+    ? ''
+    : `
+COMENTÁRIO:
+[explique a questão com base no enunciado, alternativas, resposta correta e resposta marcada, sem inventar fundamento externo]`
+
   return `Você é uma IA assistente de estudos para concursos. Vou te enviar uma questão e/ou o comentário do professor, banca ou alunos.
 
 Sua tarefa é usar esse material apenas como fonte e preencher os campos de diagnóstico do meu caderno de erros, incluindo as pegadinhas da questão.
 
-Não substitua nem reescreva o comentário original. Use o comentário do professor/alunos apenas para entender a questão. Se o comentário tiver informações conflitantes, priorize a explicação mais técnica/provável. Se faltar informação, diga isso de forma objetiva. Não invente regra, artigo ou fundamento que não apareça no material.
+${orientacaoComentario}
 
 Analise também armadilhas comuns de concursos presentes no enunciado e nas alternativas, como:
 - palavras absolutas ou restritivas: sempre, nunca, somente, apenas, todos, nenhum;
@@ -1323,7 +1337,7 @@ Analise também armadilhas comuns de concursos presentes no enunciado e nas alte
 - interpretação induzida ao erro;
 - cobrança literal de lei versus interpretação doutrinária.
 
-Responda exatamente no formato abaixo, mantendo os rótulos em letras maiúsculas:
+Responda exatamente no formato abaixo, mantendo os rótulos em letras maiúsculas:${blocoComentarioResposta}
 
 PEGADINHAS:
 [aponte objetivamente as armadilhas da questão. Quando possível, use uma ou mais destas categorias: Palavra absoluta; Exceção escondida; Alternativa parcialmente correta; Inversão de conceito; Troca de termos parecidos; Interpretação induzida; Cobrança literal; Detalhe sutil no enunciado; Confusão entre conceitos; Outro. Se não houver pegadinha clara, diga "Não identifiquei pegadinha relevante".]
@@ -1350,6 +1364,9 @@ ${valorOuNaoInformado(dados.banca)}
 
 Tipo de registro:
 ${valorOuNaoInformado(dados.tipoQuestao)}
+
+Motivo do erro:
+${valorOuNaoInformado(dados.motivoErro)}
 
 Enunciado:
 ${valorOuNaoInformado(dados.enunciado)}
@@ -1475,7 +1492,11 @@ function aplicarRespostaChatGPT(modal, destino = 'cadastro') {
   const campos = extrairCamposRespostaChatGPT(texto)
   const alvos = obterCamposRespostaChatGPT(destino)
   const preenchidos = []
-  const comentarioPreservado = Boolean(campos.comentario)
+
+  if (campos.comentario && alvos.comentario) {
+    alvos.comentario.value = campos.comentario
+    preenchidos.push('Comentário')
+  }
 
   if (campos.pegadinhas && alvos.pegadinhas) {
     alvos.pegadinhas.value = campos.pegadinhas
@@ -1499,12 +1520,12 @@ function aplicarRespostaChatGPT(modal, destino = 'cadastro') {
   }
 
   if (preenchidos.length === 0) {
-    feedback.textContent = 'Não encontrei os rótulos PEGADINHAS, CONCEITO, RECONHECER e ACAO. O comentário original foi preservado.'
+    feedback.textContent = 'Não encontrei os rótulos COMENTÁRIO, PEGADINHAS, CONCEITO, RECONHECER e ACAO. O comentário original foi preservado.'
     feedback.className = 'prompt-chatgpt-feedback prompt-chatgpt-feedback--erro'
     return
   }
 
-  feedback.textContent = `${preenchidos.join(', ')} preenchido${preenchidos.length > 1 ? 's' : ''}.${comentarioPreservado ? ' Comentário original preservado.' : ''}`
+  feedback.textContent = `${preenchidos.join(', ')} preenchido${preenchidos.length > 1 ? 's' : ''}.`
   feedback.className = 'prompt-chatgpt-feedback'
 
   setTimeout(() => modal.remove(), 700)
@@ -1566,6 +1587,8 @@ function identificarCampoRespostaChatGPT(rotulo) {
   if (!normalizado) return null
   return {
     COMENTARIO: 'comentario',
+    'COMENTARIO DO PROFESSOR': 'comentario',
+    EXPLICACAO: 'comentario',
     OBSERVACAO: 'comentario',
     PEGADINHA: 'pegadinhas',
     PEGADINHAS: 'pegadinhas',
@@ -2898,6 +2921,8 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     alterarQuantidadeAlternativas,
     ordenarQuestoes,
     carregarQuestoesEmMemoria,
+    montarPromptDiagnosticoChatGPT,
+    aplicarRespostaChatGPT,
     extrairCamposRespostaChatGPT,
     identificarCampoRespostaChatGPT,
     obterOuCriarSessaoDeHoje,
@@ -2919,6 +2944,8 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.alterarQuantidadeAlternativas = alterarQuantidadeAlternativas
   globalThis.ordenarQuestoes = ordenarQuestoes
   globalThis.carregarQuestoesEmMemoria = carregarQuestoesEmMemoria
+  globalThis.montarPromptDiagnosticoChatGPT = montarPromptDiagnosticoChatGPT
+  globalThis.aplicarRespostaChatGPT = aplicarRespostaChatGPT
   globalThis.extrairCamposRespostaChatGPT = extrairCamposRespostaChatGPT
   globalThis.identificarCampoRespostaChatGPT = identificarCampoRespostaChatGPT
   globalThis.obterOuCriarSessaoDeHoje = obterOuCriarSessaoDeHoje
