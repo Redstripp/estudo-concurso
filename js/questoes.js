@@ -1551,12 +1551,19 @@ function identificarCampoRespostaChatGPT(rotulo) {
     .trim()
 
   if (!normalizado) return null
-  if (normalizado.includes('COMENTARIO') || normalizado.includes('OBSERVACAO')) return 'comentario'
-  if (normalizado.includes('PEGADINHA') || normalizado.includes('ARMADILHA')) return 'pegadinhas'
-  if (normalizado.includes('CONCEITO') || normalizado.includes('REGRA')) return 'conceito'
-  if (normalizado.includes('RECONHECER')) return 'reconhecer'
-  if (/(^| )ACAO( |$)/.test(normalizado)) return 'acao'
-  return null
+  return {
+    COMENTARIO: 'comentario',
+    OBSERVACAO: 'comentario',
+    PEGADINHA: 'pegadinhas',
+    PEGADINHAS: 'pegadinhas',
+    CONCEITO: 'conceito',
+    'CONCEITO CHAVE': 'conceito',
+    RECONHECER: 'reconhecer',
+    'COMO RECONHECER': 'reconhecer',
+    'COMO RECONHECER NA PROXIMA VEZ': 'reconhecer',
+    ACAO: 'acao',
+    'ACAO CORRETIVA': 'acao'
+  }[normalizado] || null
 }
 
 // ============================================
@@ -2877,6 +2884,8 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     normalizarTextoDuplicidade,
     ordenarQuestoes,
     carregarQuestoesEmMemoria,
+    extrairCamposRespostaChatGPT,
+    identificarCampoRespostaChatGPT,
     obterOuCriarSessaoDeHoje,
     recalcularTotalQuestoesSessao
   }
@@ -2895,6 +2904,8 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.normalizarTextoDuplicidade = normalizarTextoDuplicidade
   globalThis.ordenarQuestoes = ordenarQuestoes
   globalThis.carregarQuestoesEmMemoria = carregarQuestoesEmMemoria
+  globalThis.extrairCamposRespostaChatGPT = extrairCamposRespostaChatGPT
+  globalThis.identificarCampoRespostaChatGPT = identificarCampoRespostaChatGPT
   globalThis.obterOuCriarSessaoDeHoje = obterOuCriarSessaoDeHoje
   globalThis.recalcularTotalQuestoesSessao = recalcularTotalQuestoesSessao
 }

@@ -10,6 +10,8 @@ const {
   questaoChutadaAcertada,
   normalizarTextoDuplicidade,
   ordenarQuestoes,
+  extrairCamposRespostaChatGPT,
+  identificarCampoRespostaChatGPT,
   obterOuCriarSessaoDeHoje,
   recalcularTotalQuestoesSessao
 } = globalThis
@@ -143,6 +145,73 @@ describe('normalizarTextoDuplicidade', () => {
 
   it('Deve retornar string vazia para null', () => {
     expect(normalizarTextoDuplicidade(null)).toBe('')
+  })
+})
+
+describe('parser da resposta manual da IA', () => {
+  it('nao transforma linhas de pegadinhas com conceito em rotulo CONCEITO', () => {
+    const resposta = `PEGADINHAS:
+Troca de termos parecidos: a questão troca características da Sociedade de Empréstimo entre Pessoas e da Sociedade de Crédito Direto.
+Inversão de conceito: a afirmativa II atribui à Sociedade de Empréstimo entre Pessoas a oferta de crédito com recursos próprios, mas o comentário informa que são recursos de terceiros.
+Inversão de conceito: a afirmativa III diz que a Sociedade de Crédito Direto pode captar recursos diretamente do público, mas ela não está autorizada a fazer isso.
+Confusão entre conceitos: a afirmativa IV atribui à Sociedade de Crédito Direto a infraestrutura eletrônica para conectar credores e tomadores, mas essa característica é da Sociedade de Empréstimo entre Pessoas.
+
+CONCEITO:
+Diferença entre os dois tipos de fintechs de crédito: Sociedade de Empréstimo entre Pessoas realiza intermediação financeira entre credores e devedores, usando recursos de terceiros e oferecendo infraestrutura eletrônica para conectar credores e tomadores. Sociedade de Crédito Direto não está autorizada a captar recursos diretamente do público para concessão de crédito.
+
+RECONHECER:
+Observar os nomes das instituições: “Sociedade de Empréstimo entre Pessoas” e “Sociedade de Crédito Direto”. Quando a questão mencionar “intermediação”, “recursos de terceiros” ou “conectar credores e tomadores”, associar à Sociedade de Empréstimo entre Pessoas. Quando aparecer “captar recursos diretamente do público”, identificar como afirmação incorreta para Sociedade de Crédito Direto.
+
+ACAO:
+Criar um quadro comparativo entre Sociedade de Empréstimo entre Pessoas e Sociedade de Crédito Direto, destacando: quem usa recursos próprios ou de terceiros, quem conecta credores e tomadores, quem faz intermediação e quem não pode captar recursos diretamente do público. Fazer questões semelhantes focando nas trocas de características entre essas duas fintechs.`
+
+    const campos = extrairCamposRespostaChatGPT(resposta)
+
+    expect(campos.pegadinhas.split('\n')).toEqual([
+      'Troca de termos parecidos: a questão troca características da Sociedade de Empréstimo entre Pessoas e da Sociedade de Crédito Direto.',
+      'Inversão de conceito: a afirmativa II atribui à Sociedade de Empréstimo entre Pessoas a oferta de crédito com recursos próprios, mas o comentário informa que são recursos de terceiros.',
+      'Inversão de conceito: a afirmativa III diz que a Sociedade de Crédito Direto pode captar recursos diretamente do público, mas ela não está autorizada a fazer isso.',
+      'Confusão entre conceitos: a afirmativa IV atribui à Sociedade de Crédito Direto a infraestrutura eletrônica para conectar credores e tomadores, mas essa característica é da Sociedade de Empréstimo entre Pessoas.'
+    ])
+    expect(campos.conceito).toBe('Diferença entre os dois tipos de fintechs de crédito: Sociedade de Empréstimo entre Pessoas realiza intermediação financeira entre credores e devedores, usando recursos de terceiros e oferecendo infraestrutura eletrônica para conectar credores e tomadores. Sociedade de Crédito Direto não está autorizada a captar recursos diretamente do público para concessão de crédito.')
+    expect(campos.reconhecer).toBe('Observar os nomes das instituições: “Sociedade de Empréstimo entre Pessoas” e “Sociedade de Crédito Direto”. Quando a questão mencionar “intermediação”, “recursos de terceiros” ou “conectar credores e tomadores”, associar à Sociedade de Empréstimo entre Pessoas. Quando aparecer “captar recursos diretamente do público”, identificar como afirmação incorreta para Sociedade de Crédito Direto.')
+    expect(campos.acao).toBe('Criar um quadro comparativo entre Sociedade de Empréstimo entre Pessoas e Sociedade de Crédito Direto, destacando: quem usa recursos próprios ou de terceiros, quem conecta credores e tomadores, quem faz intermediação e quem não pode captar recursos diretamente do público. Fazer questões semelhantes focando nas trocas de características entre essas duas fintechs.')
+    expect(campos.conceito).not.toContain('Inversão de conceito:')
+    expect(campos.conceito).not.toContain('Confusão entre conceitos:')
+  })
+
+  it('reconhece apenas rotulos oficiais isolados', () => {
+    expect(identificarCampoRespostaChatGPT('PEGADINHAS')).toBe('pegadinhas')
+    expect(identificarCampoRespostaChatGPT('PEGADINHA')).toBe('pegadinhas')
+    expect(identificarCampoRespostaChatGPT('CONCEITO')).toBe('conceito')
+    expect(identificarCampoRespostaChatGPT('CONCEITO-CHAVE')).toBe('conceito')
+    expect(identificarCampoRespostaChatGPT('RECONHECER')).toBe('reconhecer')
+    expect(identificarCampoRespostaChatGPT('COMO RECONHECER')).toBe('reconhecer')
+    expect(identificarCampoRespostaChatGPT('COMO RECONHECER NA PRÓXIMA VEZ')).toBe('reconhecer')
+    expect(identificarCampoRespostaChatGPT('ACAO')).toBe('acao')
+    expect(identificarCampoRespostaChatGPT('AÇÃO')).toBe('acao')
+    expect(identificarCampoRespostaChatGPT('ACAO CORRETIVA')).toBe('acao')
+    expect(identificarCampoRespostaChatGPT('AÇÃO CORRETIVA')).toBe('acao')
+    expect(identificarCampoRespostaChatGPT('Inversão de conceito')).toBeNull()
+    expect(identificarCampoRespostaChatGPT('Confusão entre conceitos')).toBeNull()
+    expect(identificarCampoRespostaChatGPT('Troca de conceitos')).toBeNull()
+    expect(identificarCampoRespostaChatGPT('Troca de termos parecidos')).toBeNull()
+    expect(identificarCampoRespostaChatGPT('Explicação')).toBeNull()
+    expect(identificarCampoRespostaChatGPT('Interpretação')).toBeNull()
+  })
+
+  it('nao confunde EXPLICACAO com ACAO', () => {
+    const campos = extrairCamposRespostaChatGPT(`PEGADINHAS:
+Primeira linha.
+
+EXPLICAÇÃO:
+Esta linha não deve virar ação.
+
+ACAO:
+Fazer revisão direcionada.`)
+
+    expect(campos.pegadinhas).toBe('Primeira linha.\n\nEXPLICAÇÃO:\nEsta linha não deve virar ação.')
+    expect(campos.acao).toBe('Fazer revisão direcionada.')
   })
 })
 
