@@ -4397,6 +4397,40 @@ body.modo-foco .conteudo-principal {
   font-style: italic;
 }
 
+.preview-resposta-ia-aviso,
+.preview-resposta-ia-info {
+  background: var(--cor-fundo-card);
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  color: var(--cor-texto-suave);
+  font-size: 0.84rem;
+  line-height: 1.4;
+  margin: 0.75rem 0 0;
+  padding: 0.7rem;
+}
+
+.preview-resposta-ia-aviso strong {
+  color: var(--cor-texto);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.preview-resposta-ia-escolhas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.preview-resposta-ia-escolhas label {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.preview-resposta-ia-escolhas input {
+  accent-color: var(--cor-primaria);
+}
+
 .preview-resposta-ia-acoes {
   margin-top: 0.25rem;
 }
