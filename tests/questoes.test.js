@@ -11,6 +11,8 @@ const {
   normalizarTextoDuplicidade,
   alterarQuantidadeAlternativas,
   ordenarQuestoes,
+  montarPromptDiagnosticoChatGPT,
+  aplicarRespostaChatGPT,
   extrairCamposRespostaChatGPT,
   identificarCampoRespostaChatGPT,
   obterOuCriarSessaoDeHoje,
@@ -256,6 +258,52 @@ describe('alterarQuantidadeAlternativas', () => {
   })
 })
 
+describe('prompt manual da IA', () => {
+  it('mantem orientacao atual quando existe comentario', () => {
+    const prompt = montarPromptDiagnosticoChatGPT({
+      materia: 'Direito Constitucional',
+      topico: 'Controle de constitucionalidade',
+      banca: 'Cespe',
+      tipoQuestao: 'Errada',
+      motivoErro: 'Interpretação incorreta',
+      enunciado: 'Enunciado da questão',
+      textoAlternativas: 'A) Alternativa correta\nB) Alternativa marcada',
+      textoMarcada: 'B) Alternativa marcada',
+      textoCorreta: 'A) Alternativa correta',
+      comentario: 'Comentário do professor já existente',
+      pegadinha: ''
+    })
+
+    expect(prompt).toContain('Use o comentário do professor/alunos como fonte principal')
+    expect(prompt).toContain('Comentário do professor já existente')
+    expect(prompt).toContain('Motivo do erro:\nInterpretação incorreta')
+    expect(prompt).not.toContain('\nCOMENTÁRIO:\n')
+  })
+
+  it('pede comentario explicativo quando nao existe comentario original', () => {
+    const prompt = montarPromptDiagnosticoChatGPT({
+      materia: 'Direito Administrativo',
+      topico: 'Atos administrativos',
+      banca: 'FCC',
+      tipoQuestao: 'Errada',
+      motivoErro: 'Falta de conteúdo',
+      enunciado: 'Enunciado da questão',
+      textoAlternativas: 'A) Alternativa marcada\nB) Alternativa correta',
+      textoMarcada: 'A) Alternativa marcada',
+      textoCorreta: 'B) Alternativa correta',
+      comentario: '',
+      pegadinha: ''
+    })
+
+    expect(prompt).toContain('Como não há comentário original')
+    expect(prompt).toContain('analise o enunciado, as alternativas, a alternativa correta, a alternativa marcada')
+    expect(prompt).toContain('COMENTÁRIO:')
+    expect(prompt).toContain('Alternativa que marquei:\nA) Alternativa marcada')
+    expect(prompt).toContain('Alternativa correta:\nB) Alternativa correta')
+    expect(prompt).toContain('Motivo do erro:\nFalta de conteúdo')
+  })
+})
+
 describe('parser da resposta manual da IA', () => {
   it('nao transforma linhas de pegadinhas com conceito em rotulo CONCEITO', () => {
     const resposta = `PEGADINHAS:
@@ -300,26 +348,65 @@ Criar um quadro comparativo entre Sociedade de Empréstimo entre Pessoas e Socie
     expect(identificarCampoRespostaChatGPT('AÇÃO')).toBe('acao')
     expect(identificarCampoRespostaChatGPT('ACAO CORRETIVA')).toBe('acao')
     expect(identificarCampoRespostaChatGPT('AÇÃO CORRETIVA')).toBe('acao')
+    expect(identificarCampoRespostaChatGPT('COMENTÁRIO')).toBe('comentario')
+    expect(identificarCampoRespostaChatGPT('COMENTÁRIO DO PROFESSOR')).toBe('comentario')
+    expect(identificarCampoRespostaChatGPT('EXPLICAÇÃO')).toBe('comentario')
     expect(identificarCampoRespostaChatGPT('Inversão de conceito')).toBeNull()
     expect(identificarCampoRespostaChatGPT('Confusão entre conceitos')).toBeNull()
     expect(identificarCampoRespostaChatGPT('Troca de conceitos')).toBeNull()
     expect(identificarCampoRespostaChatGPT('Troca de termos parecidos')).toBeNull()
-    expect(identificarCampoRespostaChatGPT('Explicação')).toBeNull()
     expect(identificarCampoRespostaChatGPT('Interpretação')).toBeNull()
   })
 
-  it('nao confunde EXPLICACAO com ACAO', () => {
-    const campos = extrairCamposRespostaChatGPT(`PEGADINHAS:
-Primeira linha.
+  it('extrai comentario e pegadinhas multilinha ate o proximo rotulo oficial', () => {
+    const campos = extrairCamposRespostaChatGPT(`COMENTÁRIO:
+Primeira linha do comentario.
+Segunda linha do comentario.
 
-EXPLICAÇÃO:
-Esta linha não deve virar ação.
+PEGADINHAS:
+Primeira pegadinha.
+Segunda pegadinha.
+
+AÇÃO CORRETIVA:
+Fazer revisão direcionada.`)
+
+    expect(campos.comentario).toBe('Primeira linha do comentario.\nSegunda linha do comentario.')
+    expect(campos.pegadinhas).toBe('Primeira pegadinha.\nSegunda pegadinha.')
+    expect(campos.acao).toBe('Fazer revisão direcionada.')
+  })
+
+  it('trata EXPLICACAO como comentario sem confundir com ACAO', () => {
+    const campos = extrairCamposRespostaChatGPT(`EXPLICAÇÃO:
+Esta linha deve virar comentario.
 
 ACAO:
 Fazer revisão direcionada.`)
 
-    expect(campos.pegadinhas).toBe('Primeira linha.\n\nEXPLICAÇÃO:\nEsta linha não deve virar ação.')
+    expect(campos.comentario).toBe('Esta linha deve virar comentario.')
     expect(campos.acao).toBe('Fazer revisão direcionada.')
+  })
+
+  it('preenche o campo de comentario ao colar resposta da IA', () => {
+    document.body.innerHTML = `
+      <textarea id="texto-resposta-chatgpt">COMENTÁRIO:
+Explicação gerada pela IA.
+
+AÇÃO CORRETIVA:
+Revisar o tema e refazer questões.</textarea>
+      <p id="msg-resposta-chatgpt"></p>
+      <textarea id="q-comentario">Comentário manual anterior</textarea>
+      <textarea id="q-pegadinha-banca"></textarea>
+      <textarea id="q-conceito-chave"></textarea>
+      <textarea id="q-como-reconhecer"></textarea>
+      <textarea id="q-acao-corretiva"></textarea>
+    `
+    const modal = { remove: vi.fn() }
+
+    aplicarRespostaChatGPT(modal, 'cadastro')
+
+    expect(document.getElementById('q-comentario').value).toBe('Explicação gerada pela IA.')
+    expect(document.getElementById('q-acao-corretiva').value).toBe('Revisar o tema e refazer questões.')
+    expect(document.getElementById('msg-resposta-chatgpt').textContent).toContain('Comentário')
   })
 })
 
