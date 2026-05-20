@@ -271,14 +271,21 @@ function inicializarSeletorNumAlternativas() {
       botoes.forEach(b => b.classList.remove('ativo-num'))
       btn.classList.add('ativo-num')
 
-      numAlternativas    = parseInt(btn.dataset.num)
-      alternativaMarcada = null
-      alternativaCorreta = null
-
-      gerarCamposAlternativas(numAlternativas)
-      gerarBotoesAlternativas(numAlternativas)
+      alterarQuantidadeAlternativas(parseInt(btn.dataset.num))
     })
   })
+}
+
+function alterarQuantidadeAlternativas(quantidade) {
+  const alternativasAtuais = coletarTextosAlternativas()
+  const letrasValidas = LETRAS.slice(0, quantidade)
+
+  alternativaMarcada = letrasValidas.includes(alternativaMarcada) ? alternativaMarcada : null
+  alternativaCorreta = letrasValidas.includes(alternativaCorreta) ? alternativaCorreta : null
+  numAlternativas = quantidade
+
+  gerarCamposAlternativas(numAlternativas, alternativasAtuais)
+  gerarBotoesAlternativas(numAlternativas)
 }
 
 function inicializarSeletorTipoQuestao() {
@@ -588,7 +595,7 @@ function obterAcaoCorretivaSugerida(motivo) {
 // ============================================
 // GERAR CAMPOS DE TEXTO DAS ALTERNATIVAS
 // ============================================
-function gerarCamposAlternativas(num) {
+function gerarCamposAlternativas(num, valores = {}) {
   const container = document.getElementById('campos-alternativas')
   container.innerHTML = ''
 
@@ -609,7 +616,11 @@ function gerarCamposAlternativas(num) {
     `
 
     container.appendChild(linha)
-    linha.querySelector('input')?.addEventListener('input', atualizarAssistenteDiagnosticoMinimo)
+    const input = linha.querySelector('input')
+    if (input) {
+      input.value = valores[letra] || ''
+      input.addEventListener('input', atualizarAssistenteDiagnosticoMinimo)
+    }
   }
 }
 
@@ -631,6 +642,7 @@ function gerarBotoesAlternativas(num) {
     btnM.className   = 'btn-letra'
     btnM.textContent = letra
     btnM.type        = 'button'
+    if (alternativaMarcada === letra) btnM.classList.add('selecionado-errado')
     btnM.addEventListener('click', (e) => {
       e.preventDefault()
       grupoMarcada.querySelectorAll('.btn-letra')
@@ -646,6 +658,7 @@ function gerarBotoesAlternativas(num) {
     btnC.className   = 'btn-letra'
     btnC.textContent = letra
     btnC.type        = 'button'
+    if (alternativaCorreta === letra) btnC.classList.add('selecionado-certo')
     btnC.addEventListener('click', (e) => {
       e.preventDefault()
       grupoCorreta.querySelectorAll('.btn-letra')
@@ -2882,6 +2895,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     obterTipoQuestaoPorCampos,
     questaoChutadaAcertada,
     normalizarTextoDuplicidade,
+    alterarQuantidadeAlternativas,
     ordenarQuestoes,
     carregarQuestoesEmMemoria,
     extrairCamposRespostaChatGPT,
@@ -2902,6 +2916,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.obterTipoQuestaoPorCampos = obterTipoQuestaoPorCampos
   globalThis.questaoChutadaAcertada = questaoChutadaAcertada
   globalThis.normalizarTextoDuplicidade = normalizarTextoDuplicidade
+  globalThis.alterarQuantidadeAlternativas = alterarQuantidadeAlternativas
   globalThis.ordenarQuestoes = ordenarQuestoes
   globalThis.carregarQuestoesEmMemoria = carregarQuestoesEmMemoria
   globalThis.extrairCamposRespostaChatGPT = extrairCamposRespostaChatGPT
