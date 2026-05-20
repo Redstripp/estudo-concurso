@@ -9,12 +9,50 @@ const {
   obterTipoQuestaoPorCampos,
   questaoChutadaAcertada,
   normalizarTextoDuplicidade,
+  alterarQuantidadeAlternativas,
   ordenarQuestoes,
   extrairCamposRespostaChatGPT,
   identificarCampoRespostaChatGPT,
   obterOuCriarSessaoDeHoje,
   recalcularTotalQuestoesSessao
 } = globalThis
+
+function montarFormularioAlternativas() {
+  document.body.innerHTML = `
+    <select id="q-materia">
+      <option value="">Selecione...</option>
+      <option value="mat-1">Direito Constitucional</option>
+    </select>
+    <select id="q-edital-topico">
+      <option value="">Sem assunto específico</option>
+      <option value="topico-1">Fintechs</option>
+    </select>
+    <input id="q-banca" />
+    <textarea id="q-enunciado"></textarea>
+    <textarea id="q-comentario"></textarea>
+    <textarea id="q-pegadinha-banca"></textarea>
+    <textarea id="q-conceito-chave"></textarea>
+    <textarea id="q-como-reconhecer"></textarea>
+    <textarea id="q-acao-corretiva"></textarea>
+    <select id="q-motivo-erro">
+      <option value="">Selecione...</option>
+      <option value="Interpretação incorreta">Interpretação incorreta</option>
+    </select>
+    <select id="q-nivel-confianca">
+      <option value="">Selecione...</option>
+      <option value="Baixa confiança">Baixa confiança</option>
+    </select>
+    <div id="campos-alternativas"></div>
+    <div id="grupo-marcada"></div>
+    <div id="grupo-correta"></div>
+  `
+}
+
+function clicarBotaoAlternativa(seletor, letra) {
+  const botao = Array.from(document.querySelectorAll(seletor))
+    .find(btn => btn.textContent === letra)
+  botao?.click()
+}
 
 describe('escaparHtmlSeguro', () => {
   it('escapa < para &lt;', () => {
@@ -145,6 +183,76 @@ describe('normalizarTextoDuplicidade', () => {
 
   it('Deve retornar string vazia para null', () => {
     expect(normalizarTextoDuplicidade(null)).toBe('')
+  })
+})
+
+describe('alterarQuantidadeAlternativas', () => {
+  it('preserva campos preenchidos e alternativas compativeis ao reduzir a quantidade', () => {
+    montarFormularioAlternativas()
+    alterarQuantidadeAlternativas(5)
+
+    document.getElementById('q-materia').value = 'mat-1'
+    document.getElementById('q-edital-topico').value = 'topico-1'
+    document.getElementById('q-banca').value = 'FGV'
+    document.getElementById('q-enunciado').value = 'Enunciado preenchido'
+    document.getElementById('q-comentario').value = 'Comentário preenchido'
+    document.getElementById('q-pegadinha-banca').value = 'Pegadinha preenchida'
+    document.getElementById('q-conceito-chave').value = 'Conceito preenchido'
+    document.getElementById('q-como-reconhecer').value = 'Reconhecer preenchido'
+    document.getElementById('q-acao-corretiva').value = 'Ação preenchida'
+    document.getElementById('q-motivo-erro').value = 'Interpretação incorreta'
+    document.getElementById('q-nivel-confianca').value = 'Baixa confiança'
+    document.getElementById('alt-A').value = 'Alternativa A'
+    document.getElementById('alt-B').value = 'Alternativa B'
+    document.getElementById('alt-C').value = 'Alternativa C'
+    document.getElementById('alt-D').value = 'Alternativa D'
+    document.getElementById('alt-E').value = 'Alternativa E'
+    clicarBotaoAlternativa('#grupo-marcada .btn-letra', 'B')
+    clicarBotaoAlternativa('#grupo-correta .btn-letra', 'D')
+
+    alterarQuantidadeAlternativas(4)
+
+    expect(document.getElementById('q-materia').value).toBe('mat-1')
+    expect(document.getElementById('q-edital-topico').value).toBe('topico-1')
+    expect(document.getElementById('q-banca').value).toBe('FGV')
+    expect(document.getElementById('q-enunciado').value).toBe('Enunciado preenchido')
+    expect(document.getElementById('q-comentario').value).toBe('Comentário preenchido')
+    expect(document.getElementById('q-pegadinha-banca').value).toBe('Pegadinha preenchida')
+    expect(document.getElementById('q-conceito-chave').value).toBe('Conceito preenchido')
+    expect(document.getElementById('q-como-reconhecer').value).toBe('Reconhecer preenchido')
+    expect(document.getElementById('q-acao-corretiva').value).toBe('Ação preenchida')
+    expect(document.getElementById('q-motivo-erro').value).toBe('Interpretação incorreta')
+    expect(document.getElementById('q-nivel-confianca').value).toBe('Baixa confiança')
+    expect(document.getElementById('alt-A').value).toBe('Alternativa A')
+    expect(document.getElementById('alt-B').value).toBe('Alternativa B')
+    expect(document.getElementById('alt-C').value).toBe('Alternativa C')
+    expect(document.getElementById('alt-D').value).toBe('Alternativa D')
+    expect(document.getElementById('alt-E')).toBeNull()
+    expect(document.querySelector('#grupo-marcada .selecionado-errado')?.textContent).toBe('B')
+    expect(document.querySelector('#grupo-correta .selecionado-certo')?.textContent).toBe('D')
+  })
+
+  it('descarta somente selecoes fora da nova quantidade', () => {
+    montarFormularioAlternativas()
+    alterarQuantidadeAlternativas(5)
+
+    document.getElementById('alt-A').value = 'Alternativa A'
+    document.getElementById('alt-B').value = 'Alternativa B'
+    document.getElementById('alt-C').value = 'Alternativa C'
+    document.getElementById('alt-D').value = 'Alternativa D'
+    document.getElementById('alt-E').value = 'Alternativa E'
+    clicarBotaoAlternativa('#grupo-marcada .btn-letra', 'E')
+    clicarBotaoAlternativa('#grupo-correta .btn-letra', 'E')
+
+    alterarQuantidadeAlternativas(4)
+
+    expect(document.getElementById('alt-A').value).toBe('Alternativa A')
+    expect(document.getElementById('alt-B').value).toBe('Alternativa B')
+    expect(document.getElementById('alt-C').value).toBe('Alternativa C')
+    expect(document.getElementById('alt-D').value).toBe('Alternativa D')
+    expect(document.getElementById('alt-E')).toBeNull()
+    expect(document.querySelector('#grupo-marcada .selecionado-errado')).toBeNull()
+    expect(document.querySelector('#grupo-correta .selecionado-certo')).toBeNull()
   })
 })
 
