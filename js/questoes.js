@@ -55,6 +55,20 @@ const NIVEIS_CONFIANCA = [...new Set([
   ...CONFIG_TIPO_QUESTAO.Errada.niveis,
   ...CONFIG_TIPO_QUESTAO.Chutada.niveis
 ])]
+const MODELO_RESPOSTA_CHATGPT = `COMENTÁRIO:
+[Explique a questão com base no material fornecido.]
+
+PEGADINHAS:
+[Liste as pegadinhas.]
+
+CONCEITO:
+[Explique o conceito central.]
+
+RECONHECER:
+[Explique como reconhecer na próxima vez.]
+
+AÇÃO CORRETIVA:
+[Explique o que devo fazer para não errar novamente.]`
 const PEGADINHAS_PREDEFINIDAS = [
   'Palavra absoluta',
   'Exceção escondida',
@@ -136,6 +150,9 @@ function inicializarQuestoes() {
 
   document.getElementById('btn-gerar-prompt-chatgpt')
     ?.addEventListener('click', abrirPromptChatGPT)
+
+  document.getElementById('btn-copiar-modelo-resposta-chatgpt')
+    ?.addEventListener('click', copiarModeloRespostaChatGPT)
 
   document.getElementById('btn-colar-resposta-chatgpt')
     ?.addEventListener('click', abrirColarRespostaChatGPT)
@@ -1434,6 +1451,34 @@ async function copiarPromptChatGPT() {
   }
 }
 
+async function copiarModeloRespostaChatGPT(event) {
+  const botao = event?.currentTarget
+  const textoOriginal = botao?.textContent
+
+  try {
+    await navigator.clipboard.writeText(MODELO_RESPOSTA_CHATGPT)
+    if (botao) botao.textContent = 'Modelo copiado.'
+  } catch {
+    const textarea = document.createElement('textarea')
+    textarea.value = MODELO_RESPOSTA_CHATGPT
+    textarea.setAttribute('readonly', '')
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.focus()
+    textarea.select()
+    document.execCommand('copy')
+    textarea.remove()
+    if (botao) botao.textContent = 'Modelo selecionado para copiar.'
+  }
+
+  if (botao && textoOriginal) {
+    setTimeout(() => {
+      botao.textContent = textoOriginal
+    }, 1400)
+  }
+}
+
 function abrirColarRespostaChatGPT() {
   abrirModalColarRespostaChatGPT('cadastro')
 }
@@ -2707,6 +2752,9 @@ function abrirModalEdicao(q) {
         <button class="btn-secundario btn-prompt-chatgpt" id="btn-gerar-prompt-chatgpt-edicao" type="button">
           Prompt para a IA preencher campos e pegadinhas
         </button>
+        <button class="btn-secundario btn-prompt-chatgpt" id="btn-copiar-modelo-resposta-chatgpt-edicao" type="button">
+          Copiar modelo de resposta
+        </button>
         <button class="btn-secundario btn-prompt-chatgpt" id="btn-colar-resposta-chatgpt-edicao" type="button">
           Colar resposta da IA e preencher os campos
         </button>
@@ -2747,6 +2795,9 @@ function abrirModalEdicao(q) {
 
   document.getElementById('btn-gerar-prompt-chatgpt-edicao')
     ?.addEventListener('click', abrirPromptChatGPTEdicao)
+
+  document.getElementById('btn-copiar-modelo-resposta-chatgpt-edicao')
+    ?.addEventListener('click', copiarModeloRespostaChatGPT)
 
   document.getElementById('btn-colar-resposta-chatgpt-edicao')
     ?.addEventListener('click', abrirColarRespostaChatGPTEdicao)
@@ -3051,6 +3102,7 @@ function formularioQuestaoTemConteudo() {
 if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
   // Ambiente Node/Vitest
   const exportsObj = {
+    MODELO_RESPOSTA_CHATGPT,
     CONFIG_TIPO_QUESTAO,
     normalizarTipoQuestao,
     normalizarStatusRevisao,
@@ -3061,6 +3113,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     ordenarQuestoes,
     carregarQuestoesEmMemoria,
     montarPromptDiagnosticoChatGPT,
+    copiarModeloRespostaChatGPT,
     previsualizarRespostaChatGPT,
     aplicarRespostaChatGPT,
     extrairCamposRespostaChatGPT,
@@ -3075,6 +3128,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   }
   
   // Para Vitest com type: module
+  globalThis.MODELO_RESPOSTA_CHATGPT = MODELO_RESPOSTA_CHATGPT
   globalThis.CONFIG_TIPO_QUESTAO = CONFIG_TIPO_QUESTAO
   globalThis.normalizarTipoQuestao = normalizarTipoQuestao
   globalThis.normalizarStatusRevisao = normalizarStatusRevisao
@@ -3085,6 +3139,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.ordenarQuestoes = ordenarQuestoes
   globalThis.carregarQuestoesEmMemoria = carregarQuestoesEmMemoria
   globalThis.montarPromptDiagnosticoChatGPT = montarPromptDiagnosticoChatGPT
+  globalThis.copiarModeloRespostaChatGPT = copiarModeloRespostaChatGPT
   globalThis.previsualizarRespostaChatGPT = previsualizarRespostaChatGPT
   globalThis.aplicarRespostaChatGPT = aplicarRespostaChatGPT
   globalThis.extrairCamposRespostaChatGPT = extrairCamposRespostaChatGPT
