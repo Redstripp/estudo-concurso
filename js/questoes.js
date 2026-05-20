@@ -1312,19 +1312,16 @@ function gerarPromptChatGPTEdicao() {
 function montarPromptDiagnosticoChatGPT(dados) {
   const temComentario = Boolean(String(dados.comentario || '').trim())
   const orientacaoComentario = temComentario
-    ? 'Use o comentário do professor/alunos como fonte principal para entender a questão. Não substitua nem reescreva o comentário original. Se o comentário tiver informações conflitantes, priorize a explicação mais técnica/provável. Se faltar informação, diga isso de forma objetiva. Não invente regra, artigo ou fundamento que não apareça no material.'
-    : 'Como não há comentário original, analise o enunciado, as alternativas, a alternativa correta, a alternativa marcada e o motivo do erro, se houver. Gere também o campo COMENTÁRIO explicando por que a alternativa correta está correta e, se possível, por que a resposta marcada está errada. Não invente lei, artigo, súmula ou fundamento que não apareça no enunciado, nas alternativas ou nos dados fornecidos. Se faltarem dados suficientes, diga objetivamente que faltam informações.'
-  const blocoComentarioResposta = temComentario
-    ? ''
-    : `
-COMENTÁRIO:
-[explique a questão com base no enunciado, alternativas, resposta correta e resposta marcada, sem inventar fundamento externo]`
+    ? 'Use o comentário do professor/alunos como fonte principal para entender a questão. Se o comentário tiver informações conflitantes, priorize a explicação mais técnica/provável.'
+    : 'Como não há comentário original, analise o enunciado, as alternativas, a alternativa correta, a alternativa marcada e o motivo do erro, se houver. Gere também o campo COMENTÁRIO explicando por que a alternativa correta está correta e, se possível, por que a resposta marcada está errada.'
 
   return `Você é uma IA assistente de estudos para concursos. Vou te enviar uma questão e/ou o comentário do professor, banca ou alunos.
 
 Sua tarefa é usar esse material apenas como fonte e preencher os campos de diagnóstico do meu caderno de erros, incluindo as pegadinhas da questão.
 
 ${orientacaoComentario}
+
+Não invente lei, artigo, súmula, jurisprudência, doutrina ou fundamento que não apareça no material fornecido. Se faltar informação, diga objetivamente que falta informação.
 
 Analise também armadilhas comuns de concursos presentes no enunciado e nas alternativas, como:
 - palavras absolutas ou restritivas: sempre, nunca, somente, apenas, todos, nenhum;
@@ -1337,10 +1334,13 @@ Analise também armadilhas comuns de concursos presentes no enunciado e nas alte
 - interpretação induzida ao erro;
 - cobrança literal de lei versus interpretação doutrinária.
 
-Responda exatamente no formato abaixo, mantendo os rótulos em letras maiúsculas:${blocoComentarioResposta}
+Responda exatamente no formato abaixo, sem mudar os rótulos, sem adicionar rótulos extras e sem usar subtítulos dentro dos campos. Dentro de PEGADINHAS, não inicie linhas com termos que pareçam rótulos oficiais, como CONCEITO:, RECONHECER: ou AÇÃO CORRETIVA:.
+
+COMENTÁRIO:
+[explique a questão com base no material fornecido. Se não houver informação suficiente, diga objetivamente o que falta.]
 
 PEGADINHAS:
-[aponte objetivamente as armadilhas da questão. Quando possível, use uma ou mais destas categorias: Palavra absoluta; Exceção escondida; Alternativa parcialmente correta; Inversão de conceito; Troca de termos parecidos; Interpretação induzida; Cobrança literal; Detalhe sutil no enunciado; Confusão entre conceitos; Outro. Se não houver pegadinha clara, diga "Não identifiquei pegadinha relevante".]
+[aponte objetivamente as armadilhas da questão em texto corrido ou lista simples. Se não houver pegadinha clara, diga "Não identifiquei pegadinha relevante".]
 
 CONCEITO:
 [diga qual regra, conceito, artigo, fórmula, entendimento ou ideia central resolve a questão]
@@ -1348,7 +1348,7 @@ CONCEITO:
 RECONHECER:
 [mostre quais palavras-chave, sinais no enunciado ou padrão de cobrança indicam que devo aplicar esse conceito]
 
-ACAO:
+AÇÃO CORRETIVA:
 [dê uma ação prática para evitar repetir o erro, como revisar um tópico, fazer questões semelhantes, criar flashcard ou memorizar uma distinção]
 
 Dados da questão:

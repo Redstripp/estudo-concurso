@@ -278,7 +278,9 @@ describe('prompt manual da IA', () => {
     expect(prompt).toContain('Use o comentário do professor/alunos como fonte principal')
     expect(prompt).toContain('Comentário do professor já existente')
     expect(prompt).toContain('Motivo do erro:\nInterpretação incorreta')
-    expect(prompt).not.toContain('\nCOMENTÁRIO:\n')
+    expect(prompt).toContain('\nCOMENTÁRIO:\n')
+    expect(prompt).toContain('\nAÇÃO CORRETIVA:\n')
+    expect(prompt).not.toContain('\nACAO:\n')
   })
 
   it('pede comentario explicativo quando nao existe comentario original', () => {
@@ -299,9 +301,33 @@ describe('prompt manual da IA', () => {
     expect(prompt).toContain('Como não há comentário original')
     expect(prompt).toContain('analise o enunciado, as alternativas, a alternativa correta, a alternativa marcada')
     expect(prompt).toContain('COMENTÁRIO:')
+    expect(prompt).toContain('sem mudar os rótulos')
+    expect(prompt).toContain('não inicie linhas com termos que pareçam rótulos oficiais')
     expect(prompt).toContain('Alternativa que marquei:\nA) Alternativa marcada')
     expect(prompt).toContain('Alternativa correta:\nB) Alternativa correta')
     expect(prompt).toContain('Motivo do erro:\nFalta de conteúdo')
+  })
+
+  it('mantem o formato rigido dos rotulos na ordem esperada', () => {
+    const prompt = montarPromptDiagnosticoChatGPT({
+      materia: '',
+      topico: '',
+      banca: '',
+      tipoQuestao: 'Errada',
+      motivoErro: '',
+      enunciado: 'Enunciado',
+      textoAlternativas: 'A) Errada\nB) Correta',
+      textoMarcada: 'A) Errada',
+      textoCorreta: 'B) Correta',
+      comentario: '',
+      pegadinha: ''
+    })
+    const rotulos = ['COMENTÁRIO:', 'PEGADINHAS:', 'CONCEITO:', 'RECONHECER:', 'AÇÃO CORRETIVA:']
+    const posicoes = rotulos.map(rotulo => prompt.indexOf(`\n${rotulo}\n`))
+
+    expect(posicoes.every(posicao => posicao > -1)).toBe(true)
+    expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b))
+    expect(prompt).not.toContain('\nACAO:\n')
   })
 })
 
