@@ -1509,12 +1509,35 @@ function previsualizarRespostaChatGPT(modal, destino = 'cadastro') {
 }
 
 function mostrarPreviaRespostaChatGPT(modal, destino, campos) {
-  const blocos = CAMPOS_PREVIA_RESPOSTA_CHATGPT.map(({ chave, rotulo }) => {
-    const valor = campos[chave]
+  const decisoes = obterDecisoesPreviaRespostaChatGPT(campos, destino)
+  const blocos = decisoes.map(({ chave, rotulo, valor, conflitoManual, sugestaoAutomatica }) => {
+    const avisoConflito = conflitoManual
+      ? `
+        <div class="preview-resposta-ia-aviso">
+          <strong>Este campo já possui conteúdo.</strong>
+          <div class="preview-resposta-ia-escolhas" role="radiogroup" aria-label="Escolha para ${escaparHtmlSeguro(rotulo)}">
+            <label>
+              <input type="radio" name="preview-resposta-${chave}" data-preview-campo="${chave}" value="manter" checked>
+              Manter texto atual
+            </label>
+            <label>
+              <input type="radio" name="preview-resposta-${chave}" data-preview-campo="${chave}" value="substituir">
+              Substituir pela IA
+            </label>
+          </div>
+        </div>
+      `
+      : ''
+    const avisoAutomatico = sugestaoAutomatica
+      ? '<p class="preview-resposta-ia-info">Este campo tem apenas uma sugestão automática e será substituído pela IA.</p>'
+      : ''
+
     return `
       <section class="preview-resposta-ia-bloco">
         <h4>${escaparHtmlSeguro(rotulo)}</h4>
         <p class="preview-resposta-ia-texto ${valor ? '' : 'preview-resposta-ia-vazio'}">${escaparHtmlSeguro(valor || 'Não identificado na resposta da IA.')}</p>
+        ${avisoConflito}
+        ${avisoAutomatico}
       </section>
     `
   }).join('')
@@ -1545,8 +1568,9 @@ function mostrarPreviaRespostaChatGPT(modal, destino, campos) {
 
   document.getElementById('btn-confirmar-preview-resposta-chatgpt')
     .addEventListener('click', () => {
-      const preenchidos = preencherCamposRespostaChatGPT(campos, destino)
-      if (preenchidos.length === 0) {
+      const escolhas = obterEscolhasPreviaRespostaChatGPT(modal)
+      const preenchidos = preencherCamposRespostaChatGPT(campos, destino, escolhas)
+      if (preenchidos.length === 0 && !respostaChatGPTTemCampoIdentificado(campos)) {
         const feedback = document.getElementById('msg-preview-resposta-chatgpt')
         feedback.textContent = 'Não foi possível preencher campos nesta tela.'
         feedback.className = 'prompt-chatgpt-feedback prompt-chatgpt-feedback--erro'
@@ -1554,6 +1578,25 @@ function mostrarPreviaRespostaChatGPT(modal, destino, campos) {
       }
       modal.remove()
     })
+}
+
+function obterDecisoesPreviaRespostaChatGPT(campos, destino) {
+  const alvos = obterCamposRespostaChatGPT(destino)
+  return CAMPOS_PREVIA_RESPOSTA_CHATGPT.map(({ chave, rotulo }) => {
+    const valor = campos[chave] || ''
+    const valorAtual = alvos[chave]?.value?.trim() || ''
+    const sugestaoAutomatica = Boolean(valor && valorAtual && campoTemSugestaoAutomaticaRespostaChatGPT(chave, valorAtual, destino))
+    const conflitoManual = Boolean(valor && valorAtual && !sugestaoAutomatica)
+    return { chave, rotulo, valor, valorAtual, conflitoManual, sugestaoAutomatica }
+  })
+}
+
+function obterEscolhasPreviaRespostaChatGPT(modal) {
+  const escolhas = {}
+  modal.querySelectorAll('input[data-preview-campo]:checked').forEach(input => {
+    escolhas[input.dataset.previewCampo] = input.value
+  })
+  return escolhas
 }
 
 function respostaChatGPTTemCampoIdentificado(campos) {
@@ -1578,37 +1621,53 @@ function aplicarRespostaChatGPT(modal, destino = 'cadastro') {
   setTimeout(() => modal.remove(), 700)
 }
 
-function preencherCamposRespostaChatGPT(campos, destino = 'cadastro') {
+function preencherCamposRespostaChatGPT(campos, destino = 'cadastro', escolhas = {}) {
   const alvos = obterCamposRespostaChatGPT(destino)
   const preenchidos = []
 
-  if (campos.comentario && alvos.comentario) {
+  if (devePreencherCampoRespostaChatGPT('comentario', campos.comentario, alvos.comentario, destino, escolhas)) {
     alvos.comentario.value = campos.comentario
     preenchidos.push('Comentário')
   }
 
-  if (campos.pegadinhas && alvos.pegadinhas) {
+  if (devePreencherCampoRespostaChatGPT('pegadinhas', campos.pegadinhas, alvos.pegadinhas, destino, escolhas)) {
     alvos.pegadinhas.value = campos.pegadinhas
     sincronizarChipsPegadinha(document.getElementById(`${destino === 'edicao' ? 'edit' : 'q'}-pegadinha-chips`), campos.pegadinhas)
     preenchidos.push('Pegadinhas')
   }
 
-  if (campos.conceito && alvos.conceito) {
+  if (devePreencherCampoRespostaChatGPT('conceito', campos.conceito, alvos.conceito, destino, escolhas)) {
     alvos.conceito.value = campos.conceito
     preenchidos.push('Conceito')
   }
 
-  if (campos.reconhecer && alvos.reconhecer) {
+  if (devePreencherCampoRespostaChatGPT('reconhecer', campos.reconhecer, alvos.reconhecer, destino, escolhas)) {
     alvos.reconhecer.value = campos.reconhecer
     preenchidos.push('Reconhecer')
   }
 
-  if (campos.acao && alvos.acao) {
+  if (devePreencherCampoRespostaChatGPT('acao', campos.acao, alvos.acao, destino, escolhas)) {
     alvos.acao.value = campos.acao
     preenchidos.push('Ação')
   }
 
   return preenchidos
+}
+
+function devePreencherCampoRespostaChatGPT(chave, valor, campo, destino, escolhas = {}) {
+  if (!valor || !campo) return false
+  const valorAtual = campo.value.trim()
+  if (!valorAtual) return true
+  if (campoTemSugestaoAutomaticaRespostaChatGPT(chave, valorAtual, destino)) return true
+  return escolhas[chave] === 'substituir'
+}
+
+function campoTemSugestaoAutomaticaRespostaChatGPT(chave, valorAtual, destino) {
+  if (chave !== 'acao' || !valorAtual) return false
+  const prefixo = destino === 'edicao' ? 'edit' : 'q'
+  const motivo = document.getElementById(`${prefixo}-motivo-erro`)?.value || ''
+  const sugestao = obterAcaoCorretivaSugerida(motivo)
+  return Boolean(sugestao && normalizarTextoIA(valorAtual) === normalizarTextoIA(sugestao))
 }
 
 function obterCamposRespostaChatGPT(destino) {

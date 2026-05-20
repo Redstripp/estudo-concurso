@@ -405,9 +405,9 @@ Revisar o tema e refazer questões.</textarea>
 
     aplicarRespostaChatGPT(modal, 'cadastro')
 
-    expect(document.getElementById('q-comentario').value).toBe('Explicação gerada pela IA.')
+    expect(document.getElementById('q-comentario').value).toBe('Comentário manual anterior')
     expect(document.getElementById('q-acao-corretiva').value).toBe('Revisar o tema e refazer questões.')
-    expect(document.getElementById('msg-resposta-chatgpt').textContent).toContain('Comentário')
+    expect(document.getElementById('msg-resposta-chatgpt').textContent).not.toContain('Comentário')
   })
 
   it('mostra previa antes de preencher os campos da resposta da IA', () => {
@@ -428,7 +428,7 @@ Revisar o tema.</textarea>
           <p id="msg-resposta-chatgpt"></p>
         </div>
       </div>
-      <textarea id="q-comentario">Comentário manual anterior</textarea>
+      <textarea id="q-comentario"></textarea>
       <textarea id="q-pegadinha-banca"></textarea>
       <div id="q-pegadinha-chips"></div>
       <textarea id="q-conceito-chave"></textarea>
@@ -444,7 +444,7 @@ Revisar o tema.</textarea>
     expect(document.body.textContent).toContain('Prévia da resposta da IA')
     expect(document.body.textContent).toContain('Confira os campos identificados antes de preencher o caderno de erros.')
     expect(document.body.textContent).toContain('Não identificado na resposta da IA.')
-    expect(document.getElementById('q-comentario').value).toBe('Comentário manual anterior')
+    expect(document.getElementById('q-comentario').value).toBe('')
 
     document.getElementById('btn-confirmar-preview-resposta-chatgpt').click()
 
@@ -454,6 +454,82 @@ Revisar o tema.</textarea>
     expect(document.getElementById('q-como-reconhecer').value).toBe('')
     expect(document.getElementById('q-acao-corretiva').value).toBe('Revisar o tema.')
     expect(document.getElementById('modal-resposta-chatgpt')).toBeNull()
+  })
+
+  it('preserva texto manual por padrao na previa da resposta da IA', () => {
+    document.body.innerHTML = `
+      <div id="modal-resposta-chatgpt">
+        <textarea id="texto-resposta-chatgpt">COMENTÁRIO:
+Explicação gerada pela IA.</textarea>
+        <p id="msg-resposta-chatgpt"></p>
+      </div>
+      <textarea id="q-comentario">Comentário manual anterior</textarea>
+      <textarea id="q-pegadinha-banca"></textarea>
+      <textarea id="q-conceito-chave"></textarea>
+      <textarea id="q-como-reconhecer"></textarea>
+      <textarea id="q-acao-corretiva"></textarea>
+    `
+    const modal = document.getElementById('modal-resposta-chatgpt')
+
+    previsualizarRespostaChatGPT(modal, 'cadastro')
+
+    expect(document.body.textContent).toContain('Este campo já possui conteúdo.')
+    expect(document.body.textContent).toContain('Manter texto atual')
+    expect(document.body.textContent).toContain('Substituir pela IA')
+
+    document.getElementById('btn-confirmar-preview-resposta-chatgpt').click()
+
+    expect(document.getElementById('q-comentario').value).toBe('Comentário manual anterior')
+  })
+
+  it('permite substituir texto manual pela resposta da IA quando o usuario escolhe', () => {
+    document.body.innerHTML = `
+      <div id="modal-resposta-chatgpt">
+        <textarea id="texto-resposta-chatgpt">CONCEITO:
+Conceito gerado pela IA.</textarea>
+        <p id="msg-resposta-chatgpt"></p>
+      </div>
+      <textarea id="q-comentario"></textarea>
+      <textarea id="q-pegadinha-banca"></textarea>
+      <textarea id="q-conceito-chave">Conceito manual anterior</textarea>
+      <textarea id="q-como-reconhecer"></textarea>
+      <textarea id="q-acao-corretiva"></textarea>
+    `
+    const modal = document.getElementById('modal-resposta-chatgpt')
+
+    previsualizarRespostaChatGPT(modal, 'cadastro')
+    document.querySelector('input[data-preview-campo="conceito"][value="substituir"]').checked = true
+    document.getElementById('btn-confirmar-preview-resposta-chatgpt').click()
+
+    expect(document.getElementById('q-conceito-chave').value).toBe('Conceito gerado pela IA.')
+  })
+
+  it('substitui sugestao automatica generica de acao corretiva', () => {
+    document.body.innerHTML = `
+      <div id="modal-resposta-chatgpt">
+        <textarea id="texto-resposta-chatgpt">AÇÃO CORRETIVA:
+Criar quadro comparativo e refazer questões semelhantes.</textarea>
+        <p id="msg-resposta-chatgpt"></p>
+      </div>
+      <select id="q-motivo-erro">
+        <option value="Interpretação incorreta" selected>Interpretação incorreta</option>
+      </select>
+      <textarea id="q-comentario"></textarea>
+      <textarea id="q-pegadinha-banca"></textarea>
+      <textarea id="q-conceito-chave"></textarea>
+      <textarea id="q-como-reconhecer"></textarea>
+      <textarea id="q-acao-corretiva">Antes de responder, reescrever o comando da questão com minhas palavras.</textarea>
+    `
+    const modal = document.getElementById('modal-resposta-chatgpt')
+
+    previsualizarRespostaChatGPT(modal, 'cadastro')
+
+    expect(document.body.textContent).toContain('sugestão automática')
+    expect(document.querySelector('input[data-preview-campo="acao"]')).toBeNull()
+
+    document.getElementById('btn-confirmar-preview-resposta-chatgpt').click()
+
+    expect(document.getElementById('q-acao-corretiva').value).toBe('Criar quadro comparativo e refazer questões semelhantes.')
   })
 })
 
