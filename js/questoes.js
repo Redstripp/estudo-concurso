@@ -1063,6 +1063,12 @@ async function aplicarSugestoesAssistenteIA(destino, campos) {
   if (campos.pegadinhas) sincronizarChipsPegadinha(document.getElementById(`${prefixo}-pegadinha-chips`), alvos.pegadinhas?.value || '')
   if (preencherCampoTextoIA(alvos.conceito, campos.conceito)) preenchidos.push('conceito')
   if (preencherCampoTextoIA(alvos.reconhecer, reconhecer)) preenchidos.push('como reconhecer')
+  if (acao && alvos.acao) {
+    const sugestaoAutomatica = obterAcaoCorretivaSugerida(document.getElementById(`${prefixo}-motivo-erro`)?.value || '')
+    if (sugestaoAutomatica && normalizarTextoIA(alvos.acao.value) === normalizarTextoIA(sugestaoAutomatica)) {
+      alvos.acao.value = ''
+    }
+  }
   if (preencherCampoTextoIA(alvos.acao, acao)) preenchidos.push('ação corretiva')
 
   return preenchidos
@@ -1549,7 +1555,7 @@ function identificarCampoRespostaChatGPT(rotulo) {
   if (normalizado.includes('PEGADINHA') || normalizado.includes('ARMADILHA')) return 'pegadinhas'
   if (normalizado.includes('CONCEITO') || normalizado.includes('REGRA')) return 'conceito'
   if (normalizado.includes('RECONHECER')) return 'reconhecer'
-  if (normalizado === 'ACAO' || normalizado.includes('ACAO CORRETIVA')) return 'acao'
+  if (/(^| )ACAO( |$)/.test(normalizado)) return 'acao'
   return null
 }
 
