@@ -1442,6 +1442,14 @@ function abrirColarRespostaChatGPTEdicao() {
   abrirModalColarRespostaChatGPT('edicao')
 }
 
+const CAMPOS_PREVIA_RESPOSTA_CHATGPT = [
+  { chave: 'comentario', rotulo: 'Comentário' },
+  { chave: 'pegadinhas', rotulo: 'Pegadinhas' },
+  { chave: 'conceito', rotulo: 'Conceito' },
+  { chave: 'reconhecer', rotulo: 'Como reconhecer na próxima vez' },
+  { chave: 'acao', rotulo: 'Ação corretiva' }
+]
+
 function abrirModalColarRespostaChatGPT(destino = 'cadastro') {
   document.getElementById('modal-resposta-chatgpt')?.remove()
 
@@ -1481,15 +1489,96 @@ function abrirModalColarRespostaChatGPT(destino = 'cadastro') {
     .addEventListener('click', () => modal.remove())
 
   document.getElementById('btn-aplicar-resposta-chatgpt')
-    .addEventListener('click', () => aplicarRespostaChatGPT(modal, destino))
+    .addEventListener('click', () => previsualizarRespostaChatGPT(modal, destino))
 
   document.getElementById('texto-resposta-chatgpt').focus()
+}
+
+function previsualizarRespostaChatGPT(modal, destino = 'cadastro') {
+  const texto = document.getElementById('texto-resposta-chatgpt')?.value || ''
+  const feedback = document.getElementById('msg-resposta-chatgpt')
+  const campos = extrairCamposRespostaChatGPT(texto)
+
+  if (!respostaChatGPTTemCampoIdentificado(campos)) {
+    feedback.textContent = 'Não encontrei os rótulos COMENTÁRIO, PEGADINHAS, CONCEITO, RECONHECER e ACAO. O comentário original foi preservado.'
+    feedback.className = 'prompt-chatgpt-feedback prompt-chatgpt-feedback--erro'
+    return
+  }
+
+  mostrarPreviaRespostaChatGPT(modal, destino, campos)
+}
+
+function mostrarPreviaRespostaChatGPT(modal, destino, campos) {
+  const blocos = CAMPOS_PREVIA_RESPOSTA_CHATGPT.map(({ chave, rotulo }) => {
+    const valor = campos[chave]
+    return `
+      <section class="preview-resposta-ia-bloco">
+        <h4>${escaparHtmlSeguro(rotulo)}</h4>
+        <p class="preview-resposta-ia-texto ${valor ? '' : 'preview-resposta-ia-vazio'}">${escaparHtmlSeguro(valor || 'Não identificado na resposta da IA.')}</p>
+      </section>
+    `
+  }).join('')
+
+  modal.innerHTML = `
+    <div class="modal-caixa modal-caixa--preview-ia">
+      <div class="modal-topo">
+        <h3>Prévia da resposta da IA</h3>
+        <button class="modal-fechar" id="btn-fechar-preview-resposta-chatgpt" type="button">✕</button>
+      </div>
+      <p class="preview-resposta-ia-subtitulo">Confira os campos identificados antes de preencher o caderno de erros.</p>
+      <div class="preview-resposta-ia-grid">
+        ${blocos}
+      </div>
+      <div class="prompt-chatgpt-acoes preview-resposta-ia-acoes">
+        <button class="btn-primario" id="btn-confirmar-preview-resposta-chatgpt" type="button">Preencher campos</button>
+        <button class="btn-secundario" id="btn-cancelar-preview-resposta-chatgpt" type="button">Cancelar</button>
+      </div>
+      <p class="prompt-chatgpt-feedback" id="msg-preview-resposta-chatgpt"></p>
+    </div>
+  `
+
+  document.getElementById('btn-fechar-preview-resposta-chatgpt')
+    .addEventListener('click', () => modal.remove())
+
+  document.getElementById('btn-cancelar-preview-resposta-chatgpt')
+    .addEventListener('click', () => modal.remove())
+
+  document.getElementById('btn-confirmar-preview-resposta-chatgpt')
+    .addEventListener('click', () => {
+      const preenchidos = preencherCamposRespostaChatGPT(campos, destino)
+      if (preenchidos.length === 0) {
+        const feedback = document.getElementById('msg-preview-resposta-chatgpt')
+        feedback.textContent = 'Não foi possível preencher campos nesta tela.'
+        feedback.className = 'prompt-chatgpt-feedback prompt-chatgpt-feedback--erro'
+        return
+      }
+      modal.remove()
+    })
+}
+
+function respostaChatGPTTemCampoIdentificado(campos) {
+  return CAMPOS_PREVIA_RESPOSTA_CHATGPT.some(({ chave }) => Boolean(campos[chave]))
 }
 
 function aplicarRespostaChatGPT(modal, destino = 'cadastro') {
   const texto = document.getElementById('texto-resposta-chatgpt').value
   const feedback = document.getElementById('msg-resposta-chatgpt')
   const campos = extrairCamposRespostaChatGPT(texto)
+  const preenchidos = preencherCamposRespostaChatGPT(campos, destino)
+
+  if (preenchidos.length === 0) {
+    feedback.textContent = 'Não encontrei os rótulos COMENTÁRIO, PEGADINHAS, CONCEITO, RECONHECER e ACAO. O comentário original foi preservado.'
+    feedback.className = 'prompt-chatgpt-feedback prompt-chatgpt-feedback--erro'
+    return
+  }
+
+  feedback.textContent = `${preenchidos.join(', ')} preenchido${preenchidos.length > 1 ? 's' : ''}.`
+  feedback.className = 'prompt-chatgpt-feedback'
+
+  setTimeout(() => modal.remove(), 700)
+}
+
+function preencherCamposRespostaChatGPT(campos, destino = 'cadastro') {
   const alvos = obterCamposRespostaChatGPT(destino)
   const preenchidos = []
 
@@ -1519,16 +1608,7 @@ function aplicarRespostaChatGPT(modal, destino = 'cadastro') {
     preenchidos.push('Ação')
   }
 
-  if (preenchidos.length === 0) {
-    feedback.textContent = 'Não encontrei os rótulos COMENTÁRIO, PEGADINHAS, CONCEITO, RECONHECER e ACAO. O comentário original foi preservado.'
-    feedback.className = 'prompt-chatgpt-feedback prompt-chatgpt-feedback--erro'
-    return
-  }
-
-  feedback.textContent = `${preenchidos.join(', ')} preenchido${preenchidos.length > 1 ? 's' : ''}.`
-  feedback.className = 'prompt-chatgpt-feedback'
-
-  setTimeout(() => modal.remove(), 700)
+  return preenchidos
 }
 
 function obterCamposRespostaChatGPT(destino) {
@@ -2922,6 +3002,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     ordenarQuestoes,
     carregarQuestoesEmMemoria,
     montarPromptDiagnosticoChatGPT,
+    previsualizarRespostaChatGPT,
     aplicarRespostaChatGPT,
     extrairCamposRespostaChatGPT,
     identificarCampoRespostaChatGPT,
@@ -2945,6 +3026,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.ordenarQuestoes = ordenarQuestoes
   globalThis.carregarQuestoesEmMemoria = carregarQuestoesEmMemoria
   globalThis.montarPromptDiagnosticoChatGPT = montarPromptDiagnosticoChatGPT
+  globalThis.previsualizarRespostaChatGPT = previsualizarRespostaChatGPT
   globalThis.aplicarRespostaChatGPT = aplicarRespostaChatGPT
   globalThis.extrairCamposRespostaChatGPT = extrairCamposRespostaChatGPT
   globalThis.identificarCampoRespostaChatGPT = identificarCampoRespostaChatGPT
