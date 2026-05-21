@@ -243,7 +243,7 @@ function atualizarIndicadoresFlashcardsVazios(raiz = document) {
   const totalErros = raiz.getElementById?.('flashcards-total-erros')
   const sequencia = raiz.getElementById?.('flashcards-sequencia-estudos')
 
-  if (pendentesHoje) pendentesHoje.textContent = 'Cards pendentes hoje: 0'
+  if (pendentesHoje) pendentesHoje.textContent = '0 cards vencidos/devidos'
   if (totalCards) totalCards.textContent = '0'
   if (cardsHoje) cardsHoje.textContent = '0'
   if (cardsNovos) cardsNovos.textContent = '0'
@@ -755,8 +755,19 @@ function atualizarIndicadoresRevisaoFlashcards() {
   const restantes = flashcardsSessaoHoje.length
   const concluidos = Math.max(0, flashcardsTotalSessaoHoje - restantes)
 
-  if (pendentesHoje) pendentesHoje.textContent = `Cards pendentes hoje: ${restantes}`
+  if (pendentesHoje) pendentesHoje.textContent = `${restantes} cards vencidos/devidos`
   if (progresso) progresso.textContent = `Progresso: ${concluidos}/${flashcardsTotalSessaoHoje}`
+}
+
+function renderizarEstudoDiaFlashcards() {
+  const status = document.getElementById('flashcards-estudo-dia-status')
+  const mensagem = document.getElementById('flashcards-estudo-dia-vazio')
+
+  if (status) status.textContent = 'Preparação'
+  if (mensagem) {
+    mensagem.hidden = false
+    mensagem.textContent = 'Estudo do Dia será ativado após configurar a grade de estudos dos flashcards.'
+  }
 }
 
 function obterDataRevisaoFlashcard(revisao) {
@@ -960,8 +971,8 @@ function renderizarRevisaoFlashcardsHoje() {
   if (!vazio) return
   vazio.hidden = false
   vazio.textContent = flashcardsSessaoHoje.length > 0
-    ? `${flashcardsSessaoHoje.length} card(s) pendente(s) para hoje.`
-    : 'Nenhum card pendente para hoje.'
+    ? `${flashcardsSessaoHoje.length} card(s) vencido(s)/devido(s) para revisar.`
+    : 'Nenhuma revisão pendente. Ótimo trabalho!'
 }
 
 function mostrarMensagemRevisaoFlashcards(texto) {
@@ -976,9 +987,11 @@ async function carregarFlashcardsRevisarHoje() {
   const areaCard = document.getElementById('flashcards-revisao-card')
   const botaoIniciar = document.getElementById('btn-iniciar-revisao-flashcards')
 
+  renderizarEstudoDiaFlashcards()
+
   if (vazio) {
     vazio.hidden = false
-    vazio.textContent = 'Carregando flashcards de hoje...'
+    vazio.textContent = 'Carregando revisão urgente...'
   }
   if (areaCard) areaCard.replaceChildren()
   if (botaoIniciar) botaoIniciar.disabled = true
@@ -1188,6 +1201,7 @@ function inicializarFlashcards() {
   }
 
   atualizarIndicadoresFlashcardsVazios(document)
+  renderizarEstudoDiaFlashcards()
   selecionarAbaFlashcards(ABA_FLASHCARDS_PADRAO, secao)
   carregarMateriasFlashcards()
   carregarFlashcardsRevisarHoje()
@@ -1498,6 +1512,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.mostrarRespostaFlashcardAtual = mostrarRespostaFlashcardAtual
   globalThis.avaliarFlashcardAtual = avaliarFlashcardAtual
   globalThis.renderizarRevisaoFlashcardsHoje = renderizarRevisaoFlashcardsHoje
+  globalThis.renderizarEstudoDiaFlashcards = renderizarEstudoDiaFlashcards
   globalThis.calcularProximaRevisaoSM2Flashcards = calcularProximaRevisaoSM2Flashcards
   globalThis.calcularEstatisticasFlashcards = calcularEstatisticasFlashcards
   globalThis.renderizarEstatisticasFlashcards = renderizarEstatisticasFlashcards

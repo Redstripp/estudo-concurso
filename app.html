@@ -1001,14 +1001,34 @@
         <div class="revisao-configuracao-topo">
           <div>
             <h3 class="card-form-titulo">Revisar Hoje</h3>
-            <p class="texto-apoio">Revise os cards devidos para hoje com o algoritmo SM-2.</p>
+            <p class="texto-apoio">Organize as revisões urgentes e prepare o estudo do dia sem bloquear o SM-2.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-form" id="flashcards-revisao-urgente">
+        <div class="revisao-configuracao-topo">
+          <div>
+            <h3 class="card-form-titulo">Revisão Urgente</h3>
+            <p class="texto-apoio">Cards vencidos ou devidos aparecem aqui sempre, independentemente da matéria.</p>
             <p class="texto-apoio" id="flashcards-progresso-sessao">Progresso: 0/0</p>
           </div>
-          <span class="tag-estudo" id="flashcards-pendentes-hoje">Cards pendentes hoje: 0</span>
+          <span class="tag-estudo" id="flashcards-pendentes-hoje">0 cards vencidos/devidos</span>
         </div>
-        <p class="texto-placeholder" id="flashcards-revisar-vazio">Nenhum card pendente para hoje.</p>
+        <p class="texto-placeholder" id="flashcards-revisar-vazio">Nenhuma revisão pendente. Ótimo trabalho!</p>
         <div id="flashcards-revisao-card"></div>
         <button class="btn-secundario" id="btn-iniciar-revisao-flashcards" type="button" disabled>Iniciar revisão</button>
+      </div>
+
+      <div class="card-form" id="flashcards-estudo-dia">
+        <div class="revisao-configuracao-topo">
+          <div>
+            <h3 class="card-form-titulo">Estudo do Dia</h3>
+            <p class="texto-apoio">Espaço reservado para cards novos por matéria quando a grade dos flashcards for configurada.</p>
+          </div>
+          <span class="tag-estudo" id="flashcards-estudo-dia-status">Preparação</span>
+        </div>
+        <p class="texto-placeholder" id="flashcards-estudo-dia-vazio">Estudo do Dia será ativado após configurar a grade de estudos dos flashcards.</p>
       </div>
     </div>
 
