@@ -11,6 +11,9 @@ const {
   salvarEdicaoFlashcardLista,
   mostrarConfirmacaoDesativarFlashcardLista,
   confirmarDesativacaoFlashcardLista,
+  aplicarFiltrosFlashcards,
+  renderizarListaFlashcardsFiltrada,
+  limparFiltrosFlashcards,
   carregarListaFlashcards,
   renderizarListaFlashcards,
   carregarFlashcardsRevisarHoje,
@@ -64,6 +67,28 @@ function montarFormularioFlashcards() {
   `
 }
 
+function montarListaFlashcardsComFiltros() {
+  document.body.innerHTML = `
+    <section id="secao-flashcards">
+      <input id="flashcards-busca" />
+      <select id="flashcards-filtro-estado">
+        <option value="todos">Todos</option>
+        <option value="novo">Novo</option>
+        <option value="aprendendo">Aprendendo</option>
+        <option value="revisando">Revisando</option>
+      </select>
+      <select id="flashcards-filtro-vencimento">
+        <option value="todos">Todos</option>
+        <option value="hoje">Para hoje</option>
+        <option value="futuros">Futuros</option>
+      </select>
+      <input id="flashcards-filtro-tag" />
+      <button id="btn-limpar-filtros-flashcards" type="button">Limpar filtros</button>
+      <div id="flashcards-lista"></div>
+    </section>
+  `
+}
+
 function montarSecaoRevisaoFlashcards() {
   document.body.innerHTML = `
     <section id="secao-flashcards">
@@ -108,6 +133,35 @@ function criarCardRevisao(sobrescritas = {}) {
   }
 }
 
+function criarCardsFiltroFlashcards() {
+  return [
+    criarCardRevisao({
+      id: 'card-novo',
+      frente: 'Controle difuso',
+      verso: 'Pode ser exercido por qualquer juiz.',
+      estado: 'novo',
+      due_date: '2026-05-20',
+      tags: ['constitucional', 'controle']
+    }),
+    criarCardRevisao({
+      id: 'card-aprendendo',
+      frente: 'Prazo administrativo',
+      verso: 'Conta em dias uteis quando a lei indicar.',
+      estado: 'aprendendo',
+      due_date: '2026-05-22',
+      tags: ['administrativo', 'prazos']
+    }),
+    criarCardRevisao({
+      id: 'card-revisando',
+      frente: 'Recurso ordinario',
+      verso: 'Cabimento em hipoteses constitucionais.',
+      estado: 'revisando',
+      due_date: '2026-05-19',
+      tags: ['processo', 'recursos']
+    })
+  ]
+}
+
 afterEach(() => {
   globalThis.db = dbOriginal
   globalThis.window = windowOriginal
@@ -131,6 +185,14 @@ describe('esqueleto visual dos flashcards', () => {
     expect(appHtml).toContain('Revisar Hoje')
     expect(appHtml).toContain('Todos os Cards')
     expect(appHtml).toContain('Adicionar Card')
+  })
+
+  it('adiciona filtros e busca em Todos os Cards', () => {
+    expect(appHtml).toContain('id="flashcards-busca"')
+    expect(appHtml).toContain('id="flashcards-filtro-estado"')
+    expect(appHtml).toContain('id="flashcards-filtro-vencimento"')
+    expect(appHtml).toContain('id="flashcards-filtro-tag"')
+    expect(appHtml).toContain('id="btn-limpar-filtros-flashcards"')
   })
 
   it('mantem placeholders da primeira versao visual', () => {
@@ -459,6 +521,150 @@ describe('esqueleto visual dos flashcards', () => {
 
     expect(document.getElementById('flashcards-lista').textContent).toContain('Card ativo')
     expect(document.getElementById('flashcards-lista').textContent).not.toContain('Card inativo')
+  })
+
+  it('busca encontra card pela frente', () => {
+    const resultado = aplicarFiltrosFlashcards(criarCardsFiltroFlashcards(), {
+      busca: 'controle',
+      estado: 'todos',
+      vencimento: 'todos',
+      tag: ''
+    })
+
+    expect(resultado.map(card => card.id)).toEqual(['card-novo'])
+  })
+
+  it('busca encontra card pelo verso', () => {
+    const resultado = aplicarFiltrosFlashcards(criarCardsFiltroFlashcards(), {
+      busca: 'dias uteis',
+      estado: 'todos',
+      vencimento: 'todos',
+      tag: ''
+    })
+
+    expect(resultado.map(card => card.id)).toEqual(['card-aprendendo'])
+  })
+
+  it('busca encontra card pela tag', () => {
+    const resultado = aplicarFiltrosFlashcards(criarCardsFiltroFlashcards(), {
+      busca: 'recursos',
+      estado: 'todos',
+      vencimento: 'todos',
+      tag: ''
+    })
+
+    expect(resultado.map(card => card.id)).toEqual(['card-revisando'])
+  })
+
+  it('filtro por estado novo funciona', () => {
+    const resultado = aplicarFiltrosFlashcards(criarCardsFiltroFlashcards(), {
+      busca: '',
+      estado: 'novo',
+      vencimento: 'todos',
+      tag: ''
+    })
+
+    expect(resultado.map(card => card.id)).toEqual(['card-novo'])
+  })
+
+  it('filtro por estado aprendendo funciona', () => {
+    const resultado = aplicarFiltrosFlashcards(criarCardsFiltroFlashcards(), {
+      busca: '',
+      estado: 'aprendendo',
+      vencimento: 'todos',
+      tag: ''
+    })
+
+    expect(resultado.map(card => card.id)).toEqual(['card-aprendendo'])
+  })
+
+  it('filtro por estado revisando funciona', () => {
+    const resultado = aplicarFiltrosFlashcards(criarCardsFiltroFlashcards(), {
+      busca: '',
+      estado: 'revisando',
+      vencimento: 'todos',
+      tag: ''
+    })
+
+    expect(resultado.map(card => card.id)).toEqual(['card-revisando'])
+  })
+
+  it('filtro para hoje considera due_date menor ou igual a hoje', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+
+    const resultado = aplicarFiltrosFlashcards(criarCardsFiltroFlashcards(), {
+      busca: '',
+      estado: 'todos',
+      vencimento: 'hoje',
+      tag: ''
+    })
+
+    expect(resultado.map(card => card.id)).toEqual(['card-novo', 'card-revisando'])
+  })
+
+  it('filtro futuros considera due_date maior que hoje', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+
+    const resultado = aplicarFiltrosFlashcards(criarCardsFiltroFlashcards(), {
+      busca: '',
+      estado: 'todos',
+      vencimento: 'futuros',
+      tag: ''
+    })
+
+    expect(resultado.map(card => card.id)).toEqual(['card-aprendendo'])
+  })
+
+  it('filtro por tag funciona pelo campo especifico', () => {
+    const resultado = aplicarFiltrosFlashcards(criarCardsFiltroFlashcards(), {
+      busca: '',
+      estado: 'todos',
+      vencimento: 'todos',
+      tag: 'prazos'
+    })
+
+    expect(resultado.map(card => card.id)).toEqual(['card-aprendendo'])
+  })
+
+  it('mensagem aparece quando nenhum card corresponde aos filtros', async () => {
+    montarListaFlashcardsComFiltros()
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: criarCardsFiltroFlashcards(),
+      error: null
+    })
+
+    await carregarListaFlashcards()
+    document.getElementById('flashcards-busca').value = 'inexistente'
+    renderizarListaFlashcardsFiltrada()
+
+    expect(document.getElementById('flashcards-lista').textContent).toBe('Nenhum flashcard encontrado com os filtros atuais.')
+  })
+
+  it('limpar filtros restaura a lista completa de cards ativos', async () => {
+    montarListaFlashcardsComFiltros()
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: criarCardsFiltroFlashcards(),
+      error: null
+    })
+
+    await carregarListaFlashcards()
+    document.getElementById('flashcards-busca').value = 'controle'
+    renderizarListaFlashcardsFiltrada()
+
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Controle difuso')
+    expect(document.getElementById('flashcards-lista').textContent).not.toContain('Prazo administrativo')
+
+    limparFiltrosFlashcards()
+
+    expect(document.getElementById('flashcards-busca').value).toBe('')
+    expect(document.getElementById('flashcards-filtro-estado').value).toBe('todos')
+    expect(document.getElementById('flashcards-filtro-vencimento').value).toBe('todos')
+    expect(document.getElementById('flashcards-filtro-tag').value).toBe('')
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Controle difuso')
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Prazo administrativo')
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Recurso ordinario')
   })
 
   it('lista vazia mostra mensagem correta', () => {
