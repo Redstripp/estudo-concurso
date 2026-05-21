@@ -872,6 +872,108 @@ Pergunta sem verso.`)
     }
   })
 
+  it('cards interpretados aparecem em campos editaveis', () => {
+    document.body.innerHTML = `
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">${respostaCards}</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+
+    previsualizarFlashcardsIA(modal)
+
+    expect(document.querySelectorAll('[data-preview-flashcard-card]')).toHaveLength(2)
+    expect(document.querySelector('[data-preview-flashcard-campo="tipo"]').tagName).toBe('SELECT')
+    expect(document.querySelector('[data-preview-flashcard-campo="frente"]').tagName).toBe('TEXTAREA')
+    expect(document.querySelector('[data-preview-flashcard-campo="verso"]').tagName).toBe('TEXTAREA')
+    expect(document.querySelector('[data-preview-flashcard-campo="contexto"]').tagName).toBe('TEXTAREA')
+    expect(document.querySelector('[data-preview-flashcard-campo="reconhecer"]').tagName).toBe('TEXTAREA')
+    expect(document.querySelector('[data-preview-flashcard-campo="alertaBanca"]').tagName).toBe('TEXTAREA')
+  })
+
+  it('permite editar tipo, frente, verso, contexto, reconhecer e alerta de banca', () => {
+    document.body.innerHTML = `
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">${respostaCards}</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+    previsualizarFlashcardsIA(modal)
+    const primeiroCard = document.querySelector('[data-preview-flashcard-card]')
+
+    primeiroCard.querySelector('[data-preview-flashcard-campo="tipo"]').value = 'PEGADINHA'
+    primeiroCard.querySelector('[data-preview-flashcard-campo="tipo"]').dispatchEvent(new window.Event('change', { bubbles: true }))
+    primeiroCard.querySelector('[data-preview-flashcard-campo="frente"]').value = 'Frente editada'
+    primeiroCard.querySelector('[data-preview-flashcard-campo="verso"]').value = 'Verso editado'
+    primeiroCard.querySelector('[data-preview-flashcard-campo="contexto"]').value = 'Contexto editado'
+    primeiroCard.querySelector('[data-preview-flashcard-campo="reconhecer"]').value = 'Reconhecer editado'
+    primeiroCard.querySelector('[data-preview-flashcard-campo="alertaBanca"]').value = 'Alerta editado'
+
+    expect(primeiroCard.querySelector('[data-preview-flashcard-titulo]').textContent).toContain('PEGADINHA')
+    expect(primeiroCard.querySelector('[data-preview-flashcard-campo="frente"]').value).toBe('Frente editada')
+    expect(primeiroCard.querySelector('[data-preview-flashcard-campo="verso"]').value).toBe('Verso editado')
+    expect(primeiroCard.querySelector('[data-preview-flashcard-campo="contexto"]').value).toBe('Contexto editado')
+    expect(primeiroCard.querySelector('[data-preview-flashcard-campo="reconhecer"]').value).toBe('Reconhecer editado')
+    expect(primeiroCard.querySelector('[data-preview-flashcard-campo="alertaBanca"]').value).toBe('Alerta editado')
+  })
+
+  it('permite remover um card da previa', () => {
+    document.body.innerHTML = `
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">${respostaCards}</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+    previsualizarFlashcardsIA(modal)
+
+    document.querySelector('[data-remover-preview-flashcard]').click()
+
+    expect(document.querySelectorAll('[data-preview-flashcard-card]')).toHaveLength(1)
+    expect(document.querySelector('[data-preview-flashcard-titulo]').textContent).toContain('Card 1')
+    expect(document.body.textContent).not.toContain('O que caracteriza controle concentrado?')
+  })
+
+  it('marca card editavel sem frente como incompleto', () => {
+    document.body.innerHTML = `
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">${respostaCards}</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+    previsualizarFlashcardsIA(modal)
+    const primeiroCard = document.querySelector('[data-preview-flashcard-card]')
+    const frente = primeiroCard.querySelector('[data-preview-flashcard-campo="frente"]')
+
+    frente.value = ''
+    frente.dispatchEvent(new window.Event('input', { bubbles: true }))
+
+    expect(primeiroCard.classList.contains('preview-flashcard-ia-incompleto')).toBe(true)
+    expect(primeiroCard.querySelector('[data-preview-flashcard-aviso]').hidden).toBe(false)
+  })
+
+  it('marca card editavel sem verso como incompleto', () => {
+    document.body.innerHTML = `
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">${respostaCards}</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+    previsualizarFlashcardsIA(modal)
+    const primeiroCard = document.querySelector('[data-preview-flashcard-card]')
+    const verso = primeiroCard.querySelector('[data-preview-flashcard-campo="verso"]')
+
+    verso.value = ''
+    verso.dispatchEvent(new window.Event('input', { bubbles: true }))
+
+    expect(primeiroCard.classList.contains('preview-flashcard-ia-incompleto')).toBe(true)
+    expect(primeiroCard.querySelector('[data-preview-flashcard-aviso]').hidden).toBe(false)
+  })
+
   it('mostra mensagem amigavel no fluxo quando a resposta esta fora do formato', () => {
     document.body.innerHTML = `
       <div id="modal-flashcards-ia">

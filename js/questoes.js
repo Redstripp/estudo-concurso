@@ -1827,18 +1827,32 @@ function previsualizarFlashcardsIA(modal) {
 }
 
 function mostrarPreviaFlashcardsIA(modal, cards, mensagens = []) {
-  const blocos = cards.map(card => {
+  const blocos = cards.map((card, index) => {
     const campos = CAMPOS_FLASHCARD_IA.map(({ chave, rotulo }) => `
-      <div class="preview-resposta-ia-campo">
-        <strong>${escaparHtmlSeguro(rotulo)}</strong>
-        <p class="preview-resposta-ia-texto ${card[chave] ? '' : 'preview-resposta-ia-vazio'}">${escaparHtmlSeguro(card[chave] || 'Não identificado na resposta da IA.')}</p>
+      <div class="campo-form preview-resposta-ia-campo">
+        <label class="campo-label" for="preview-flashcard-${index}-${chave}">${escaparHtmlSeguro(rotulo)}${['frente', 'verso'].includes(chave) ? ' *' : ''}</label>
+        <textarea
+          id="preview-flashcard-${index}-${chave}"
+          class="input-texto input-textarea"
+          rows="${['frente', 'verso'].includes(chave) ? '3' : '2'}"
+          data-preview-flashcard-campo="${chave}"
+        >${escaparHtmlSeguro(card[chave] || '')}</textarea>
       </div>
     `).join('')
 
     return `
-      <section class="preview-resposta-ia-bloco">
-        <h4>Card ${escaparHtmlSeguro(card.numero)} — ${escaparHtmlSeguro(card.tipo || 'Tipo não identificado')}</h4>
-        ${card.incompleto ? '<p class="preview-resposta-ia-info">Card incompleto: frente ou verso não identificado.</p>' : ''}
+      <section class="preview-resposta-ia-bloco preview-flashcard-ia-card ${card.incompleto ? 'preview-flashcard-ia-incompleto' : ''}" data-preview-flashcard-card>
+        <div class="modal-topo">
+          <h4 data-preview-flashcard-titulo>Card ${escaparHtmlSeguro(card.numero)} — ${escaparHtmlSeguro(card.tipo || 'Tipo não identificado')}</h4>
+          <button class="btn-secundario" type="button" data-remover-preview-flashcard>Remover card</button>
+        </div>
+        <div class="campo-form preview-resposta-ia-campo">
+          <label class="campo-label" for="preview-flashcard-${index}-tipo">Tipo</label>
+          <select id="preview-flashcard-${index}-tipo" class="input-texto" data-preview-flashcard-campo="tipo">
+            ${montarOpcoesTipoFlashcardIA(card.tipo)}
+          </select>
+        </div>
+        <p class="preview-resposta-ia-info" data-preview-flashcard-aviso ${card.incompleto ? '' : 'hidden'}>Card incompleto: frente ou verso não identificado.</p>
         ${campos}
       </section>
     `
@@ -1855,7 +1869,7 @@ function mostrarPreviaFlashcardsIA(modal, cards, mensagens = []) {
         <button class="modal-fechar" id="btn-fechar-preview-flashcards-ia" type="button">✕</button>
       </div>
       <p class="preview-resposta-ia-subtitulo">Confira os cards identificados antes de qualquer etapa futura de salvamento.</p>
-      <div class="preview-resposta-ia-grid">
+      <div class="preview-resposta-ia-grid" data-preview-flashcards-grid>
         ${blocos}
       </div>
       <div class="prompt-chatgpt-acoes preview-resposta-ia-acoes">
@@ -1870,6 +1884,67 @@ function mostrarPreviaFlashcardsIA(modal, cards, mensagens = []) {
 
   document.getElementById('btn-cancelar-preview-flashcards-ia')
     .addEventListener('click', () => modal.remove())
+
+  inicializarEdicaoPreviewFlashcardsIA(modal)
+}
+
+function montarOpcoesTipoFlashcardIA(tipoAtual) {
+  const tipos = [...TIPOS_FLASHCARD_IA]
+  const tipo = String(tipoAtual || '').trim()
+  if (tipo && !tipos.some(item => normalizarRotuloFlashcardIA(item) === normalizarRotuloFlashcardIA(tipo))) {
+    tipos.push(tipo)
+  }
+
+  return tipos.map(tipoOpcao => {
+    const selecionado = normalizarRotuloFlashcardIA(tipoOpcao) === normalizarRotuloFlashcardIA(tipo)
+    return `<option value="${escaparHtmlSeguro(tipoOpcao)}" ${selecionado ? 'selected' : ''}>${escaparHtmlSeguro(tipoOpcao)}</option>`
+  }).join('')
+}
+
+function inicializarEdicaoPreviewFlashcardsIA(modal) {
+  atualizarEstadoPreviewFlashcardsIA(modal)
+
+  modal.addEventListener('input', (event) => {
+    const card = event.target?.closest?.('[data-preview-flashcard-card]')
+    if (card) atualizarEstadoCardPreviewFlashcardsIA(card)
+  })
+
+  modal.addEventListener('change', (event) => {
+    const card = event.target?.closest?.('[data-preview-flashcard-card]')
+    if (card) atualizarTituloCardPreviewFlashcardsIA(card)
+  })
+
+  modal.addEventListener('click', (event) => {
+    const botaoRemover = event.target?.closest?.('[data-remover-preview-flashcard]')
+    if (!botaoRemover) return
+    botaoRemover.closest('[data-preview-flashcard-card]')?.remove()
+    atualizarEstadoPreviewFlashcardsIA(modal)
+  })
+}
+
+function atualizarEstadoPreviewFlashcardsIA(modal) {
+  modal.querySelectorAll('[data-preview-flashcard-card]').forEach((card, index) => {
+    card.dataset.previewFlashcardIndex = String(index)
+    atualizarTituloCardPreviewFlashcardsIA(card, index + 1)
+    atualizarEstadoCardPreviewFlashcardsIA(card)
+  })
+}
+
+function atualizarTituloCardPreviewFlashcardsIA(card, numero = null) {
+  const titulo = card.querySelector('[data-preview-flashcard-titulo]')
+  const tipo = card.querySelector('[data-preview-flashcard-campo="tipo"]')?.value || 'Tipo não identificado'
+  const numeroCard = numero || Number(card.dataset.previewFlashcardIndex || 0) + 1
+  if (titulo) titulo.textContent = `Card ${numeroCard} — ${tipo}`
+}
+
+function atualizarEstadoCardPreviewFlashcardsIA(card) {
+  const frente = card.querySelector('[data-preview-flashcard-campo="frente"]')?.value.trim() || ''
+  const verso = card.querySelector('[data-preview-flashcard-campo="verso"]')?.value.trim() || ''
+  const incompleto = !frente || !verso
+  const aviso = card.querySelector('[data-preview-flashcard-aviso]')
+
+  card.classList.toggle('preview-flashcard-ia-incompleto', incompleto)
+  if (aviso) aviso.hidden = !incompleto
 }
 
 async function copiarModeloRespostaChatGPT(event) {
