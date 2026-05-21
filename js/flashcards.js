@@ -6,6 +6,8 @@
 
 const CAMPOS_FLASHCARD =
   'id, user_id, materia_id, frente, verso, tags, ativo, estado, ease_factor, repetitions, interval_days, due_date, last_reviewed_at, total_reviews, correct_reviews, lapses, created_at, updated_at'
+const CAMPOS_REVISAO_FLASHCARD =
+  'id, user_id, flashcard_id, quality, reviewed_at, was_correct'
 
 const MENSAGEM_LOGIN_FLASHCARDS = 'E necessario estar logado para usar flashcards.'
 const MENSAGEM_SUPABASE_FLASHCARDS = 'Configuracao do Supabase nao encontrada. Verifique o arquivo js/config.js.'
@@ -220,13 +222,25 @@ function atualizarIndicadoresFlashcardsVazios(raiz = document) {
   const pendentesHoje = raiz.getElementById?.('flashcards-pendentes-hoje')
   const totalCards = raiz.getElementById?.('flashcards-total-cards')
   const cardsHoje = raiz.getElementById?.('flashcards-cards-hoje')
+  const cardsNovos = raiz.getElementById?.('flashcards-cards-novos')
+  const cardsAprendendo = raiz.getElementById?.('flashcards-cards-aprendendo')
+  const cardsRevisando = raiz.getElementById?.('flashcards-cards-revisando')
+  const totalRevisoes = raiz.getElementById?.('flashcards-total-revisoes')
+  const totalAcertos = raiz.getElementById?.('flashcards-total-acertos')
   const taxaAcerto = raiz.getElementById?.('flashcards-taxa-acerto')
+  const totalErros = raiz.getElementById?.('flashcards-total-erros')
   const sequencia = raiz.getElementById?.('flashcards-sequencia-estudos')
 
   if (pendentesHoje) pendentesHoje.textContent = 'Cards pendentes hoje: 0'
   if (totalCards) totalCards.textContent = '0'
   if (cardsHoje) cardsHoje.textContent = '0'
+  if (cardsNovos) cardsNovos.textContent = '0'
+  if (cardsAprendendo) cardsAprendendo.textContent = '0'
+  if (cardsRevisando) cardsRevisando.textContent = '0'
+  if (totalRevisoes) totalRevisoes.textContent = '0'
+  if (totalAcertos) totalAcertos.textContent = '0'
   if (taxaAcerto) taxaAcerto.textContent = '0%'
+  if (totalErros) totalErros.textContent = '0'
   if (sequencia) sequencia.textContent = '0'
 }
 
@@ -339,6 +353,108 @@ function atualizarIndicadoresRevisaoFlashcards() {
 
   if (pendentesHoje) pendentesHoje.textContent = `Cards pendentes hoje: ${restantes}`
   if (progresso) progresso.textContent = `Progresso: ${concluidos}/${flashcardsTotalSessaoHoje}`
+}
+
+function obterDataRevisaoFlashcard(revisao) {
+  return String(revisao?.reviewed_at || '').slice(0, 10)
+}
+
+function revisarFoiAcertoFlashcard(revisao) {
+  if (typeof revisao?.was_correct === 'boolean') return revisao.was_correct
+  return Number(revisao?.quality) >= 3
+}
+
+function calcularSequenciaEstudosFlashcards(revisoes = []) {
+  const diasRevisados = new Set(
+    revisoes
+      .map(obterDataRevisaoFlashcard)
+      .filter(Boolean)
+  )
+
+  let dataAtual = dataHojeFlashcards()
+  let sequencia = 0
+
+  while (diasRevisados.has(dataAtual)) {
+    sequencia += 1
+    dataAtual = adicionarDiasFlashcards(dataAtual, -1)
+  }
+
+  return sequencia
+}
+
+function calcularEstatisticasFlashcards(cards = [], revisoes = []) {
+  const cardsAtivos = Array.isArray(cards)
+    ? cards.filter(card => card?.ativo !== false)
+    : []
+  const revisoesLista = Array.isArray(revisoes) ? revisoes : []
+  const totalRevisoes = revisoesLista.length
+  const totalAcertos = revisoesLista.filter(revisarFoiAcertoFlashcard).length
+  const totalErros = totalRevisoes - totalAcertos
+
+  return {
+    totalCards: cardsAtivos.length,
+    cardsHoje: cardsAtivos.filter(flashcardDevidoHoje).length,
+    cardsNovos: cardsAtivos.filter(card => (card.estado || 'novo') === 'novo').length,
+    cardsAprendendo: cardsAtivos.filter(card => card.estado === 'aprendendo').length,
+    cardsRevisando: cardsAtivos.filter(card => card.estado === 'revisando').length,
+    totalRevisoes,
+    totalAcertos,
+    taxaAcerto: totalRevisoes > 0 ? Math.round((totalAcertos / totalRevisoes) * 100) : 0,
+    totalErros,
+    sequenciaEstudos: calcularSequenciaEstudosFlashcards(revisoesLista)
+  }
+}
+
+function definirTextoElementoFlashcards(id, texto) {
+  const elemento = document.getElementById(id)
+  if (elemento) elemento.textContent = String(texto)
+}
+
+function renderizarEstatisticasFlashcards(estatisticas = calcularEstatisticasFlashcards()) {
+  definirTextoElementoFlashcards('flashcards-total-cards', estatisticas.totalCards || 0)
+  definirTextoElementoFlashcards('flashcards-cards-hoje', estatisticas.cardsHoje || 0)
+  definirTextoElementoFlashcards('flashcards-cards-novos', estatisticas.cardsNovos || 0)
+  definirTextoElementoFlashcards('flashcards-cards-aprendendo', estatisticas.cardsAprendendo || 0)
+  definirTextoElementoFlashcards('flashcards-cards-revisando', estatisticas.cardsRevisando || 0)
+  definirTextoElementoFlashcards('flashcards-total-revisoes', estatisticas.totalRevisoes || 0)
+  definirTextoElementoFlashcards('flashcards-total-acertos', estatisticas.totalAcertos || 0)
+  definirTextoElementoFlashcards('flashcards-taxa-acerto', `${estatisticas.taxaAcerto || 0}%`)
+  definirTextoElementoFlashcards('flashcards-total-erros', estatisticas.totalErros || 0)
+  definirTextoElementoFlashcards('flashcards-sequencia-estudos', estatisticas.sequenciaEstudos || 0)
+
+  const msg = document.getElementById('msg-flashcards-estatisticas')
+  if (msg) {
+    msg.textContent = ''
+    msg.className = 'msg-materia'
+  }
+}
+
+function mostrarErroEstatisticasFlashcards(mensagem) {
+  renderizarEstatisticasFlashcards()
+  const msg = document.getElementById('msg-flashcards-estatisticas')
+  if (!msg) return
+  msg.textContent = mensagem
+  msg.className = 'msg-materia erro'
+}
+
+async function carregarEstatisticasFlashcards() {
+  const listarCards = globalThis.listarFlashcards || listarFlashcards
+  const listarRevisoes = globalThis.listarRevisoesFlashcards || listarRevisoesFlashcards
+  const [resultadoCards, resultadoRevisoes] = await Promise.all([
+    listarCards(),
+    listarRevisoes()
+  ])
+
+  const erro = resultadoCards.error || resultadoRevisoes.error
+  if (erro) {
+    const mensagem = erro.message || 'Nao foi possivel carregar as estatisticas dos flashcards. Verifique sua conexao e tente novamente.'
+    mostrarErroEstatisticasFlashcards(mensagem)
+    return { data: null, error: erro }
+  }
+
+  const estatisticas = calcularEstatisticasFlashcards(resultadoCards.data || [], resultadoRevisoes.data || [])
+  renderizarEstatisticasFlashcards(estatisticas)
+  return { data: estatisticas, error: null }
 }
 
 function criarElementoRevisaoFlashcard(card) {
@@ -638,6 +754,7 @@ function inicializarFlashcards() {
         selecionarAbaFlashcards(botao.dataset.flashcardsAba, secao)
         if (botao.dataset.flashcardsAba === 'todos') carregarListaFlashcards()
         if (botao.dataset.flashcardsAba === 'revisar-hoje') carregarFlashcardsRevisarHoje()
+        if (botao.dataset.flashcardsAba === 'estatisticas') carregarEstatisticasFlashcards()
       })
     })
     secao.addEventListener('click', manipularCliqueFlashcards)
@@ -736,6 +853,26 @@ async function listarFlashcardsDevidosHoje() {
   return tratarRespostaSupabaseFlashcards(
     resposta,
     'Nao foi possivel listar os flashcards de hoje. Verifique sua conexao e tente novamente.'
+  )
+}
+
+async function listarRevisoesFlashcards() {
+  let usuario
+  try {
+    usuario = await obterUsuarioAutenticadoFlashcards()
+  } catch (erro) {
+    return respostaErroFlashcards(erro.message, erro.detalhes)
+  }
+
+  const resposta = await obterClienteSupabaseFlashcards()
+    .from('flashcard_reviews')
+    .select(CAMPOS_REVISAO_FLASHCARD)
+    .eq('user_id', usuario.id)
+    .order('reviewed_at', { ascending: false })
+
+  return tratarRespostaSupabaseFlashcards(
+    resposta,
+    'Nao foi possivel listar as revisoes dos flashcards. Verifique sua conexao e tente novamente.'
   )
 }
 
@@ -908,9 +1045,13 @@ if (typeof globalThis !== 'undefined') {
   globalThis.avaliarFlashcardAtual = avaliarFlashcardAtual
   globalThis.renderizarRevisaoFlashcardsHoje = renderizarRevisaoFlashcardsHoje
   globalThis.calcularProximaRevisaoSM2Flashcards = calcularProximaRevisaoSM2Flashcards
+  globalThis.calcularEstatisticasFlashcards = calcularEstatisticasFlashcards
+  globalThis.renderizarEstatisticasFlashcards = renderizarEstatisticasFlashcards
+  globalThis.carregarEstatisticasFlashcards = carregarEstatisticasFlashcards
   globalThis.criarFlashcard = criarFlashcard
   globalThis.listarFlashcards = listarFlashcards
   globalThis.listarFlashcardsDevidosHoje = listarFlashcardsDevidosHoje
+  globalThis.listarRevisoesFlashcards = listarRevisoesFlashcards
   globalThis.atualizarFlashcard = atualizarFlashcard
   globalThis.desativarFlashcard = desativarFlashcard
   globalThis.registrarRevisaoFlashcard = registrarRevisaoFlashcard
