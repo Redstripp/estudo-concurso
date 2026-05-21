@@ -1859,7 +1859,7 @@ function mostrarPreviaFlashcardsIA(modal, cards, mensagens = []) {
   }).join('')
 
   const avisos = mensagens.length > 0
-    ? `<p class="prompt-chatgpt-feedback prompt-chatgpt-feedback--erro">${escaparHtmlSeguro([...new Set(mensagens)].join(' '))}</p>`
+    ? `<p class="prompt-chatgpt-feedback prompt-chatgpt-feedback--erro" id="msg-preview-flashcards-ia">${escaparHtmlSeguro([...new Set(mensagens)].join(' '))}</p>`
     : '<p class="prompt-chatgpt-feedback" id="msg-preview-flashcards-ia"></p>'
 
   modal.innerHTML = `
@@ -1873,6 +1873,7 @@ function mostrarPreviaFlashcardsIA(modal, cards, mensagens = []) {
         ${blocos}
       </div>
       <div class="prompt-chatgpt-acoes preview-resposta-ia-acoes">
+        <button class="btn-primario" id="btn-adicionar-preview-flashcards-ia" type="button">Adicionar cards válidos ao deck</button>
         <button class="btn-secundario" id="btn-cancelar-preview-flashcards-ia" type="button">Fechar</button>
       </div>
       ${avisos}
@@ -1884,6 +1885,9 @@ function mostrarPreviaFlashcardsIA(modal, cards, mensagens = []) {
 
   document.getElementById('btn-cancelar-preview-flashcards-ia')
     .addEventListener('click', () => modal.remove())
+
+  document.getElementById('btn-adicionar-preview-flashcards-ia')
+    .addEventListener('click', () => adicionarFlashcardsPreviewIAAoDeck(modal))
 
   inicializarEdicaoPreviewFlashcardsIA(modal)
 }
@@ -1945,6 +1949,111 @@ function atualizarEstadoCardPreviewFlashcardsIA(card) {
 
   card.classList.toggle('preview-flashcard-ia-incompleto', incompleto)
   if (aviso) aviso.hidden = !incompleto
+}
+
+function obterValorCampoPreviewFlashcardIA(card, campo) {
+  return card.querySelector(`[data-preview-flashcard-campo="${campo}"]`)?.value.trim() || ''
+}
+
+function coletarCardsValidosPreviewFlashcardsIA(modal) {
+  return Array.from(modal.querySelectorAll('[data-preview-flashcard-card]'))
+    .map(card => {
+      atualizarEstadoCardPreviewFlashcardsIA(card)
+      return {
+        tipo: obterValorCampoPreviewFlashcardIA(card, 'tipo'),
+        frente: obterValorCampoPreviewFlashcardIA(card, 'frente'),
+        verso: obterValorCampoPreviewFlashcardIA(card, 'verso'),
+        contexto: obterValorCampoPreviewFlashcardIA(card, 'contexto'),
+        reconhecer: obterValorCampoPreviewFlashcardIA(card, 'reconhecer'),
+        alertaBanca: obterValorCampoPreviewFlashcardIA(card, 'alertaBanca')
+      }
+    })
+    .filter(card => card.frente && card.verso)
+}
+
+function montarVersoFlashcardIAParaDeck(card) {
+  return [
+    ['VERSO', card.verso],
+    ['CONTEXTO', card.contexto],
+    ['RECONHECER', card.reconhecer],
+    ['ALERTA DE BANCA', card.alertaBanca]
+  ]
+    .filter(([, valor]) => String(valor || '').trim())
+    .map(([rotulo, valor]) => `${rotulo}:\n${valor}`)
+    .join('\n\n')
+}
+
+function montarTagsFlashcardIAParaDeck(tipo) {
+  const tags = [
+    String(tipo || '').trim().toLowerCase(),
+    'ia',
+    'caderno-de-erros'
+  ].filter(Boolean)
+
+  return [...new Set(tags)]
+}
+
+async function adicionarFlashcardsPreviewIAAoDeck(modal) {
+  const feedback = document.getElementById('msg-preview-flashcards-ia')
+  const criar = globalThis.criarFlashcard
+  const cardsValidos = coletarCardsValidosPreviewFlashcardsIA(modal)
+
+  if (cardsValidos.length === 0) {
+    if (feedback) {
+      feedback.textContent = 'Nenhum flashcard válido para adicionar. Confira se os cards têm frente e verso.'
+      feedback.className = 'prompt-chatgpt-feedback prompt-chatgpt-feedback--erro'
+    }
+    return { data: { salvos: 0, falhas: 0 }, error: null }
+  }
+
+  if (typeof criar !== 'function') {
+    const erro = new Error('Não foi possível adicionar os flashcards. A camada de dados ainda não está disponível.')
+    if (feedback) {
+      feedback.textContent = erro.message
+      feedback.className = 'prompt-chatgpt-feedback prompt-chatgpt-feedback--erro'
+    }
+    return { data: null, error: erro }
+  }
+
+  const botao = document.getElementById('btn-adicionar-preview-flashcards-ia')
+  if (botao) {
+    botao.disabled = true
+    botao.textContent = 'Adicionando...'
+  }
+
+  let salvos = 0
+  let falhas = 0
+
+  for (const card of cardsValidos) {
+    const resultado = await criar({
+      frente: card.frente,
+      verso: montarVersoFlashcardIAParaDeck(card),
+      tags: montarTagsFlashcardIAParaDeck(card.tipo)
+    })
+
+    if (resultado?.error) {
+      falhas += 1
+    } else {
+      salvos += 1
+    }
+  }
+
+  if (botao) {
+    botao.disabled = false
+    botao.textContent = 'Adicionar cards válidos ao deck'
+  }
+
+  if (feedback) {
+    if (falhas > 0) {
+      feedback.textContent = `${salvos} flashcard${salvos === 1 ? '' : 's'} adicionado${salvos === 1 ? '' : 's'} ao deck. ${falhas} falharam ao salvar.`
+      feedback.className = 'prompt-chatgpt-feedback prompt-chatgpt-feedback--erro'
+    } else {
+      feedback.textContent = `${salvos} flashcard${salvos === 1 ? '' : 's'} adicionado${salvos === 1 ? '' : 's'} ao deck.`
+      feedback.className = 'prompt-chatgpt-feedback'
+    }
+  }
+
+  return { data: { salvos, falhas }, error: falhas > 0 ? new Error('Alguns flashcards não foram salvos.') : null }
 }
 
 async function copiarModeloRespostaChatGPT(event) {
@@ -3616,6 +3725,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     abrirColarFlashcardsIA,
     previsualizarFlashcardsIA,
     mostrarPreviaFlashcardsIA,
+    adicionarFlashcardsPreviewIAAoDeck,
     extrairFlashcardsRespostaIA,
     identificarCampoFlashcardIA,
     identificarInicioCardFlashcardIA,
@@ -3652,6 +3762,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.abrirColarFlashcardsIA = abrirColarFlashcardsIA
   globalThis.previsualizarFlashcardsIA = previsualizarFlashcardsIA
   globalThis.mostrarPreviaFlashcardsIA = mostrarPreviaFlashcardsIA
+  globalThis.adicionarFlashcardsPreviewIAAoDeck = adicionarFlashcardsPreviewIAAoDeck
   globalThis.extrairFlashcardsRespostaIA = extrairFlashcardsRespostaIA
   globalThis.identificarCampoFlashcardIA = identificarCampoFlashcardIA
   globalThis.identificarInicioCardFlashcardIA = identificarInicioCardFlashcardIA

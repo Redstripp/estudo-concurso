@@ -19,6 +19,7 @@ const {
   copiarPromptFlashcardsQuestao,
   abrirColarFlashcardsIA,
   previsualizarFlashcardsIA,
+  adicionarFlashcardsPreviewIAAoDeck,
   extrairFlashcardsRespostaIA,
   identificarCampoFlashcardIA,
   identificarInicioCardFlashcardIA,
@@ -972,6 +973,174 @@ Pergunta sem verso.`)
 
     expect(primeiroCard.classList.contains('preview-flashcard-ia-incompleto')).toBe(true)
     expect(primeiroCard.querySelector('[data-preview-flashcard-aviso]').hidden).toBe(false)
+  })
+
+  it('mostra botao para adicionar cards validos ao deck apos a previa editavel', () => {
+    document.body.innerHTML = `
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">${respostaCards}</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+
+    previsualizarFlashcardsIA(modal)
+
+    expect(document.getElementById('btn-adicionar-preview-flashcards-ia').textContent).toBe('Adicionar cards válidos ao deck')
+  })
+
+  it('salva um card valido chamando criarFlashcard sem enviar user_id', async () => {
+    const criarFlashcardOriginal = globalThis.criarFlashcard
+    globalThis.criarFlashcard = vi.fn(async () => ({ data: { id: 'card-1' }, error: null }))
+    document.body.innerHTML = `
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">CARD 1 — PEGADINHA
+FRENTE:
+Frente válida
+VERSO:
+Verso base
+CONTEXTO:
+Contexto útil
+RECONHECER:
+Pista de prova
+ALERTA DE BANCA:
+Alerta importante</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+    previsualizarFlashcardsIA(modal)
+
+    const resultado = await adicionarFlashcardsPreviewIAAoDeck(modal)
+    const payload = globalThis.criarFlashcard.mock.calls[0][0]
+
+    expect(resultado.data).toEqual({ salvos: 1, falhas: 0 })
+    expect(globalThis.criarFlashcard).toHaveBeenCalledTimes(1)
+    expect(payload).toMatchObject({
+      frente: 'Frente válida',
+      tags: ['pegadinha', 'ia', 'caderno-de-erros']
+    })
+    expect(payload).not.toHaveProperty('user_id')
+    expect(payload.verso).toContain('VERSO:\nVerso base')
+    expect(payload.verso).toContain('CONTEXTO:\nContexto útil')
+    expect(payload.verso).toContain('RECONHECER:\nPista de prova')
+    expect(payload.verso).toContain('ALERTA DE BANCA:\nAlerta importante')
+    expect(document.getElementById('msg-preview-flashcards-ia').textContent).toBe('1 flashcard adicionado ao deck.')
+
+    if (criarFlashcardOriginal) {
+      globalThis.criarFlashcard = criarFlashcardOriginal
+    } else {
+      delete globalThis.criarFlashcard
+    }
+  })
+
+  it('nao salva card sem frente ou sem verso', async () => {
+    const criarFlashcardOriginal = globalThis.criarFlashcard
+    globalThis.criarFlashcard = vi.fn(async () => ({ data: { id: 'card-1' }, error: null }))
+    document.body.innerHTML = `
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">CARD 1 — CONCEITO
+VERSO:
+Resposta sem frente.
+
+CARD 2 — CONCEITO
+FRENTE:
+Pergunta sem verso.</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+    previsualizarFlashcardsIA(modal)
+
+    await adicionarFlashcardsPreviewIAAoDeck(modal)
+
+    expect(globalThis.criarFlashcard).not.toHaveBeenCalled()
+    expect(document.getElementById('msg-preview-flashcards-ia').textContent).toBe('Nenhum flashcard válido para adicionar. Confira se os cards têm frente e verso.')
+
+    if (criarFlashcardOriginal) {
+      globalThis.criarFlashcard = criarFlashcardOriginal
+    } else {
+      delete globalThis.criarFlashcard
+    }
+  })
+
+  it('nao salva card removido da previa', async () => {
+    const criarFlashcardOriginal = globalThis.criarFlashcard
+    globalThis.criarFlashcard = vi.fn(async () => ({ data: { id: 'card-1' }, error: null }))
+    document.body.innerHTML = `
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">${respostaCards}</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+    previsualizarFlashcardsIA(modal)
+
+    document.querySelector('[data-remover-preview-flashcard]').click()
+    await adicionarFlashcardsPreviewIAAoDeck(modal)
+
+    expect(globalThis.criarFlashcard).toHaveBeenCalledTimes(1)
+    expect(globalThis.criarFlashcard.mock.calls[0][0].frente).toBe('Controle difuso se diferencia como?')
+
+    if (criarFlashcardOriginal) {
+      globalThis.criarFlashcard = criarFlashcardOriginal
+    } else {
+      delete globalThis.criarFlashcard
+    }
+  })
+
+  it('informa salvamento parcial quando algum card falha', async () => {
+    const criarFlashcardOriginal = globalThis.criarFlashcard
+    globalThis.criarFlashcard = vi.fn()
+      .mockResolvedValueOnce({ data: { id: 'card-1' }, error: null })
+      .mockResolvedValueOnce({ data: null, error: new Error('falha') })
+    document.body.innerHTML = `
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">${respostaCards}</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+    previsualizarFlashcardsIA(modal)
+
+    const resultado = await adicionarFlashcardsPreviewIAAoDeck(modal)
+
+    expect(resultado.data).toEqual({ salvos: 1, falhas: 1 })
+    expect(resultado.error.message).toBe('Alguns flashcards não foram salvos.')
+    expect(document.getElementById('msg-preview-flashcards-ia').textContent).toBe('1 flashcard adicionado ao deck. 1 falharam ao salvar.')
+
+    if (criarFlashcardOriginal) {
+      globalThis.criarFlashcard = criarFlashcardOriginal
+    } else {
+      delete globalThis.criarFlashcard
+    }
+  })
+
+  it('nao acessa banco diretamente ao adicionar cards da previa', async () => {
+    const criarFlashcardOriginal = globalThis.criarFlashcard
+    const dbOriginal = globalThis.db
+    const from = vi.fn()
+    globalThis.db = { from }
+    globalThis.criarFlashcard = vi.fn(async () => ({ data: { id: 'card-1' }, error: null }))
+    document.body.innerHTML = `
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">${respostaCards}</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+    previsualizarFlashcardsIA(modal)
+
+    await adicionarFlashcardsPreviewIAAoDeck(modal)
+
+    expect(from).not.toHaveBeenCalled()
+
+    if (criarFlashcardOriginal) {
+      globalThis.criarFlashcard = criarFlashcardOriginal
+    } else {
+      delete globalThis.criarFlashcard
+    }
+    globalThis.db = dbOriginal
   })
 
   it('mostra mensagem amigavel no fluxo quando a resposta esta fora do formato', () => {
