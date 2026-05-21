@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import '../js/flashcards.js'
 
 const {
+  inicializarFlashcards,
+  selecionarAbaFlashcards,
   criarFlashcard,
   listarFlashcards,
   listarFlashcardsDevidosHoje,
@@ -13,6 +16,8 @@ const {
 
 const dbOriginal = globalThis.db
 const windowOriginal = globalThis.window
+const appHtml = readFileSync(new URL('../app.html', import.meta.url), 'utf8')
+const appJs = readFileSync(new URL('../js/app.js', import.meta.url), 'utf8')
 
 function criarAuthMock(userId = 'user-1') {
   return {
@@ -33,8 +38,92 @@ function criarQueryLista(resposta = { data: [], error: null }) {
 afterEach(() => {
   globalThis.db = dbOriginal
   globalThis.window = windowOriginal
+  document.body.innerHTML = ''
   vi.useRealTimers()
   vi.restoreAllMocks()
+})
+
+describe('esqueleto visual dos flashcards', () => {
+  it('adiciona a secao Flashcards e o item de menu principal', () => {
+    expect(appHtml).toContain('data-secao="flashcards"')
+    expect(appHtml).toContain('id="secao-flashcards"')
+    expect(appHtml).toContain('Flashcards')
+  })
+
+  it('mantem as quatro abas internas esperadas', () => {
+    expect(appHtml).toContain('data-flashcards-aba="revisar-hoje"')
+    expect(appHtml).toContain('data-flashcards-aba="todos"')
+    expect(appHtml).toContain('data-flashcards-aba="adicionar"')
+    expect(appHtml).toContain('data-flashcards-aba="estatisticas"')
+    expect(appHtml).toContain('Revisar Hoje')
+    expect(appHtml).toContain('Todos os Cards')
+    expect(appHtml).toContain('Adicionar Card')
+  })
+
+  it('mantem placeholders da primeira versao visual', () => {
+    expect(appHtml).toContain('Nenhum card pendente para hoje.')
+    expect(appHtml).toContain('Nenhum flashcard cadastrado ainda.')
+    expect(appHtml).toContain('id="flashcard-frente"')
+    expect(appHtml).toContain('id="flashcard-verso"')
+    expect(appHtml).toContain('id="flashcard-tags"')
+    expect(appHtml).toContain('Total de cards')
+    expect(appHtml).toContain('Cards para hoje')
+    expect(appHtml).toContain('Taxa de acerto')
+    expect(appHtml).toContain('Sequ')
+  })
+
+  it('carrega js/flashcards.js antes de js/app.js', () => {
+    const posicaoFlashcards = appHtml.indexOf('src="js/flashcards.js"')
+    const posicaoApp = appHtml.indexOf('src="js/app.js"')
+
+    expect(posicaoFlashcards).toBeGreaterThan(-1)
+    expect(posicaoApp).toBeGreaterThan(-1)
+    expect(posicaoFlashcards).toBeLessThan(posicaoApp)
+  })
+
+  it('registra inicializador sem remover navegacao existente', () => {
+    expect(appJs).toContain('flashcards: () => inicializarFlashcards()')
+    expect(appJs).toContain('dashboard: () => inicializarDashboard()')
+    expect(appJs).toContain('revisao: () => inicializarRevisao()')
+    expect(appHtml).toContain('data-secao="dashboard"')
+    expect(appHtml).toContain('data-secao="revisao"')
+  })
+
+  it('inicializador nao quebra e alterna abas internas', () => {
+    document.body.innerHTML = `
+      <section id="secao-flashcards">
+        <button class="flashcards-aba" data-flashcards-aba="revisar-hoje" aria-selected="false"></button>
+        <button class="flashcards-aba" data-flashcards-aba="todos" aria-selected="false"></button>
+        <div class="flashcards-painel" id="flashcards-painel-revisar-hoje" hidden></div>
+        <div class="flashcards-painel" id="flashcards-painel-todos" hidden></div>
+        <span id="flashcards-pendentes-hoje"></span>
+        <strong id="flashcards-total-cards"></strong>
+        <strong id="flashcards-cards-hoje"></strong>
+        <strong id="flashcards-taxa-acerto"></strong>
+        <strong id="flashcards-sequencia-estudos"></strong>
+      </section>
+    `
+
+    expect(() => inicializarFlashcards()).not.toThrow()
+    expect(document.getElementById('flashcards-painel-revisar-hoje').hidden).toBe(false)
+    expect(document.querySelector('[data-flashcards-aba="revisar-hoje"]').getAttribute('aria-selected')).toBe('true')
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('Cards pendentes hoje: 0')
+
+    selecionarAbaFlashcards('todos', document.getElementById('secao-flashcards'))
+
+    expect(document.getElementById('flashcards-painel-revisar-hoje').hidden).toBe(true)
+    expect(document.getElementById('flashcards-painel-todos').hidden).toBe(false)
+    expect(document.querySelector('[data-flashcards-aba="todos"]').getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('continua expondo as funcoes de dados existentes', () => {
+    expect(globalThis.criarFlashcard).toBe(criarFlashcard)
+    expect(globalThis.listarFlashcards).toBe(listarFlashcards)
+    expect(globalThis.listarFlashcardsDevidosHoje).toBe(listarFlashcardsDevidosHoje)
+    expect(globalThis.atualizarFlashcard).toBe(atualizarFlashcard)
+    expect(globalThis.desativarFlashcard).toBe(desativarFlashcard)
+    expect(globalThis.registrarRevisaoFlashcard).toBe(registrarRevisaoFlashcard)
+  })
 })
 
 describe('camada de dados dos flashcards', () => {

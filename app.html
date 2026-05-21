@@ -61,6 +61,10 @@
         <span class="nav-icone">📖</span>
         <span class="nav-texto">Revisão Inteligente</span>
       </button>
+      <button class="nav-item" data-secao="flashcards" data-tooltip="Flashcards" title="Flashcards">
+        <span class="nav-icone">FC</span>
+        <span class="nav-texto">Flashcards</span>
+      </button>
       <button class="nav-item" data-secao="estatisticas" data-interface-avancada data-tooltip="Estatísticas" title="Estatísticas">
         <span class="nav-icone">📈</span>
         <span class="nav-texto">Estatísticas</span>
@@ -932,6 +936,129 @@
   </div>
 </section>
 
+<!-- SEÇÃO: Flashcards -->
+<section class="secao escondido" id="secao-flashcards">
+  <div class="secao-header">
+    <h2 class="secao-titulo">Flashcards</h2>
+    <p class="secao-subtitulo">Organize revisões espaçadas com cards simples. Esta primeira tela ainda está em preparação.</p>
+  </div>
+  <div class="secao-corpo">
+    <div class="estatisticas-controles flashcards-abas" role="tablist" aria-label="Abas dos flashcards">
+      <button
+        class="estatisticas-aba flashcards-aba ativa"
+        type="button"
+        id="flashcards-aba-revisar-hoje"
+        data-flashcards-aba="revisar-hoje"
+        role="tab"
+        aria-controls="flashcards-painel-revisar-hoje"
+        aria-selected="true"
+      >
+        Revisar Hoje
+      </button>
+      <button
+        class="estatisticas-aba flashcards-aba"
+        type="button"
+        id="flashcards-aba-todos"
+        data-flashcards-aba="todos"
+        role="tab"
+        aria-controls="flashcards-painel-todos"
+        aria-selected="false"
+      >
+        Todos os Cards
+      </button>
+      <button
+        class="estatisticas-aba flashcards-aba"
+        type="button"
+        id="flashcards-aba-adicionar"
+        data-flashcards-aba="adicionar"
+        role="tab"
+        aria-controls="flashcards-painel-adicionar"
+        aria-selected="false"
+      >
+        Adicionar Card
+      </button>
+      <button
+        class="estatisticas-aba flashcards-aba"
+        type="button"
+        id="flashcards-aba-estatisticas"
+        data-flashcards-aba="estatisticas"
+        role="tab"
+        aria-controls="flashcards-painel-estatisticas"
+        aria-selected="false"
+      >
+        Estatísticas
+      </button>
+    </div>
+
+    <div class="flashcards-painel" id="flashcards-painel-revisar-hoje" role="tabpanel" aria-labelledby="flashcards-aba-revisar-hoje">
+      <div class="card-form">
+        <div class="revisao-configuracao-topo">
+          <div>
+            <h3 class="card-form-titulo">Revisar Hoje</h3>
+            <p class="texto-apoio">A fila de revisão SM-2 será conectada em uma etapa futura.</p>
+          </div>
+          <span class="tag-estudo" id="flashcards-pendentes-hoje">Cards pendentes hoje: 0</span>
+        </div>
+        <p class="texto-placeholder" id="flashcards-revisar-vazio">Nenhum card pendente para hoje.</p>
+        <button class="btn-secundario" id="btn-iniciar-revisao-flashcards" type="button" disabled>Iniciar revisão</button>
+      </div>
+    </div>
+
+    <div class="flashcards-painel" id="flashcards-painel-todos" role="tabpanel" aria-labelledby="flashcards-aba-todos" hidden>
+      <div class="card-form">
+        <h3 class="card-form-titulo">Todos os Cards</h3>
+        <div id="flashcards-lista">
+          <p class="texto-placeholder">Nenhum flashcard cadastrado ainda.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flashcards-painel" id="flashcards-painel-adicionar" role="tabpanel" aria-labelledby="flashcards-aba-adicionar" hidden>
+      <div class="card-form" style="max-width: 720px;">
+        <h3 class="card-form-titulo">Adicionar Card</h3>
+        <div class="campo-form">
+          <label class="campo-label" for="flashcard-frente">Frente</label>
+          <textarea id="flashcard-frente" class="input-texto input-textarea" rows="3" placeholder="Pergunta, comando ou conceito"></textarea>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="flashcard-verso">Verso</label>
+          <textarea id="flashcard-verso" class="input-texto input-textarea" rows="3" placeholder="Resposta, explicação ou lembrete"></textarea>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="flashcard-tags">Tags, opcional</label>
+          <input id="flashcard-tags" class="input-texto" type="text" placeholder="Ex.: constitucional, prazos, conceitos">
+        </div>
+        <button class="btn-primario" id="btn-salvar-flashcard" type="button" disabled>Salvar Card</button>
+        <p class="texto-placeholder">O salvamento real será conectado em uma etapa futura.</p>
+      </div>
+    </div>
+
+    <div class="flashcards-painel" id="flashcards-painel-estatisticas" role="tabpanel" aria-labelledby="flashcards-aba-estatisticas" hidden>
+      <div class="card-form">
+        <h3 class="card-form-titulo">Estatísticas</h3>
+        <div class="dash-cards-grid">
+          <div class="dash-card">
+            <span class="dash-label">Total de cards</span>
+            <strong id="flashcards-total-cards">0</strong>
+          </div>
+          <div class="dash-card">
+            <span class="dash-label">Cards para hoje</span>
+            <strong id="flashcards-cards-hoje">0</strong>
+          </div>
+          <div class="dash-card">
+            <span class="dash-label">Taxa de acerto</span>
+            <strong id="flashcards-taxa-acerto">0%</strong>
+          </div>
+          <div class="dash-card">
+            <span class="dash-label">Sequência de estudos</span>
+            <strong id="flashcards-sequencia-estudos">0</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- SEÇÃO: Estatísticas por Matéria -->
 <section class="secao escondido" id="secao-estatisticas">
   <div class="secao-header">
@@ -1100,6 +1227,7 @@
   <script src="js/gamificacao.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/revisao.js"></script>
+  <script src="js/flashcards.js"></script>
   <script src="js/estatisticas.js"></script>
   <script src="js/plano.js"></script>
   <script src="js/simulados.js"></script>

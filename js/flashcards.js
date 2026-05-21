@@ -9,6 +9,8 @@ const CAMPOS_FLASHCARD =
 
 const MENSAGEM_LOGIN_FLASHCARDS = 'E necessario estar logado para usar flashcards.'
 const MENSAGEM_SUPABASE_FLASHCARDS = 'Configuracao do Supabase nao encontrada. Verifique o arquivo js/config.js.'
+const ABA_FLASHCARDS_PADRAO = 'revisar-hoje'
+let flashcardsInicializado = false
 
 function obterClienteSupabaseFlashcards() {
   if (typeof globalThis !== 'undefined' && globalThis.db) return globalThis.db
@@ -130,6 +132,50 @@ function tratarRespostaSupabaseFlashcards(resposta, mensagemErro) {
     return respostaErroFlashcards(mensagemErro, resposta.error)
   }
   return resposta
+}
+
+function selecionarAbaFlashcards(aba, raiz = document) {
+  const abaSelecionada = aba || ABA_FLASHCARDS_PADRAO
+
+  raiz.querySelectorAll('[data-flashcards-aba]').forEach(botao => {
+    const ativa = botao.dataset.flashcardsAba === abaSelecionada
+    botao.classList.toggle('ativa', ativa)
+    botao.setAttribute('aria-selected', ativa ? 'true' : 'false')
+  })
+
+  raiz.querySelectorAll('.flashcards-painel').forEach(painel => {
+    const ativo = painel.id === `flashcards-painel-${abaSelecionada}`
+    painel.hidden = !ativo
+  })
+}
+
+function atualizarIndicadoresFlashcardsVazios(raiz = document) {
+  const pendentesHoje = raiz.getElementById?.('flashcards-pendentes-hoje')
+  const totalCards = raiz.getElementById?.('flashcards-total-cards')
+  const cardsHoje = raiz.getElementById?.('flashcards-cards-hoje')
+  const taxaAcerto = raiz.getElementById?.('flashcards-taxa-acerto')
+  const sequencia = raiz.getElementById?.('flashcards-sequencia-estudos')
+
+  if (pendentesHoje) pendentesHoje.textContent = 'Cards pendentes hoje: 0'
+  if (totalCards) totalCards.textContent = '0'
+  if (cardsHoje) cardsHoje.textContent = '0'
+  if (taxaAcerto) taxaAcerto.textContent = '0%'
+  if (sequencia) sequencia.textContent = '0'
+}
+
+function inicializarFlashcards() {
+  const secao = document.getElementById('secao-flashcards')
+  if (!secao) return
+
+  if (!flashcardsInicializado) {
+    secao.querySelectorAll('[data-flashcards-aba]').forEach(botao => {
+      botao.addEventListener('click', () => selecionarAbaFlashcards(botao.dataset.flashcardsAba, secao))
+    })
+    flashcardsInicializado = true
+  }
+
+  atualizarIndicadoresFlashcardsVazios(document)
+  selecionarAbaFlashcards(ABA_FLASHCARDS_PADRAO, secao)
 }
 
 async function criarFlashcard(dados = {}) {
@@ -378,6 +424,8 @@ async function registrarRevisaoFlashcard(id, resultado = {}) {
 }
 
 if (typeof globalThis !== 'undefined') {
+  globalThis.inicializarFlashcards = inicializarFlashcards
+  globalThis.selecionarAbaFlashcards = selecionarAbaFlashcards
   globalThis.criarFlashcard = criarFlashcard
   globalThis.listarFlashcards = listarFlashcards
   globalThis.listarFlashcardsDevidosHoje = listarFlashcardsDevidosHoje
