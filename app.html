@@ -1041,6 +1041,13 @@
             <label class="campo-label" for="flashcards-filtro-tag">Tag</label>
             <input id="flashcards-filtro-tag" class="input-texto" type="text" placeholder="Filtrar por tag">
           </div>
+          <div class="campo-form">
+            <label class="campo-label" for="flashcards-filtro-materia">Matéria</label>
+            <select id="flashcards-filtro-materia" class="input-texto">
+              <option value="todos">Todas as matérias</option>
+              <option value="sem-materia">Sem matéria</option>
+            </select>
+          </div>
         </div>
         <button class="btn-secundario" id="btn-limpar-filtros-flashcards" type="button">Limpar filtros</button>
         <div id="flashcards-lista">
@@ -1063,6 +1070,12 @@
         <div class="campo-form">
           <label class="campo-label" for="flashcard-tags">Tags, opcional</label>
           <input id="flashcard-tags" class="input-texto" type="text" placeholder="Ex.: constitucional, prazos, conceitos">
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="flashcard-materia">Matéria, opcional</label>
+          <select id="flashcard-materia" class="input-texto">
+            <option value="">Sem matéria</option>
+          </select>
         </div>
         <button class="btn-primario" id="btn-salvar-flashcard" type="button">Salvar Card</button>
         <p class="msg-materia" id="msg-flashcards"></p>

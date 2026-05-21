@@ -24,10 +24,12 @@ const {
   calcularEstatisticasFlashcards,
   renderizarEstatisticasFlashcards,
   carregarEstatisticasFlashcards,
+  carregarMateriasFlashcards,
   criarFlashcard,
   listarFlashcards,
   listarFlashcardsDevidosHoje,
   listarRevisoesFlashcards,
+  listarMateriasFlashcards,
   atualizarFlashcard,
   desativarFlashcard,
   registrarRevisaoFlashcard
@@ -61,6 +63,10 @@ function montarFormularioFlashcards() {
       <textarea id="flashcard-frente"></textarea>
       <textarea id="flashcard-verso"></textarea>
       <input id="flashcard-tags" />
+      <select id="flashcard-materia">
+        <option value="">Sem matéria</option>
+        <option value="mat-1">Direito Constitucional</option>
+      </select>
       <button id="btn-salvar-flashcard" type="button">Salvar Card</button>
       <p id="msg-flashcards"></p>
     </section>
@@ -83,6 +89,12 @@ function montarListaFlashcardsComFiltros() {
         <option value="futuros">Futuros</option>
       </select>
       <input id="flashcards-filtro-tag" />
+      <select id="flashcards-filtro-materia">
+        <option value="todos">Todas as matérias</option>
+        <option value="sem-materia">Sem matéria</option>
+        <option value="mat-1">Direito Constitucional</option>
+        <option value="mat-2">Direito Administrativo</option>
+      </select>
       <button id="btn-limpar-filtros-flashcards" type="button">Limpar filtros</button>
       <div id="flashcards-lista"></div>
     </section>
@@ -141,6 +153,8 @@ function criarCardsFiltroFlashcards() {
       verso: 'Pode ser exercido por qualquer juiz.',
       estado: 'novo',
       due_date: '2026-05-20',
+      materia_id: 'mat-1',
+      materias: { nome: 'Direito Constitucional' },
       tags: ['constitucional', 'controle']
     }),
     criarCardRevisao({
@@ -149,6 +163,8 @@ function criarCardsFiltroFlashcards() {
       verso: 'Conta em dias uteis quando a lei indicar.',
       estado: 'aprendendo',
       due_date: '2026-05-22',
+      materia_id: 'mat-2',
+      materias: { nome: 'Direito Administrativo' },
       tags: ['administrativo', 'prazos']
     }),
     criarCardRevisao({
@@ -157,6 +173,7 @@ function criarCardsFiltroFlashcards() {
       verso: 'Cabimento em hipoteses constitucionais.',
       estado: 'revisando',
       due_date: '2026-05-19',
+      materia_id: null,
       tags: ['processo', 'recursos']
     })
   ]
@@ -192,6 +209,7 @@ describe('esqueleto visual dos flashcards', () => {
     expect(appHtml).toContain('id="flashcards-filtro-estado"')
     expect(appHtml).toContain('id="flashcards-filtro-vencimento"')
     expect(appHtml).toContain('id="flashcards-filtro-tag"')
+    expect(appHtml).toContain('id="flashcards-filtro-materia"')
     expect(appHtml).toContain('id="btn-limpar-filtros-flashcards"')
   })
 
@@ -201,6 +219,7 @@ describe('esqueleto visual dos flashcards', () => {
     expect(appHtml).toContain('id="flashcard-frente"')
     expect(appHtml).toContain('id="flashcard-verso"')
     expect(appHtml).toContain('id="flashcard-tags"')
+    expect(appHtml).toContain('id="flashcard-materia"')
     expect(appHtml).toContain('Total de cards')
     expect(appHtml).toContain('Cards para hoje')
     expect(appHtml).toContain('Taxa de acerto')
@@ -273,6 +292,8 @@ describe('esqueleto visual dos flashcards', () => {
     expect(globalThis.listarFlashcards).toBe(listarFlashcards)
     expect(globalThis.listarFlashcardsDevidosHoje).toBe(listarFlashcardsDevidosHoje)
     expect(globalThis.listarRevisoesFlashcards).toBe(listarRevisoesFlashcards)
+    expect(globalThis.listarMateriasFlashcards).toBe(listarMateriasFlashcards)
+    expect(globalThis.carregarMateriasFlashcards).toBe(carregarMateriasFlashcards)
     expect(globalThis.atualizarFlashcard).toBe(atualizarFlashcard)
     expect(globalThis.desativarFlashcard).toBe(desativarFlashcard)
     expect(globalThis.registrarRevisaoFlashcard).toBe(registrarRevisaoFlashcard)
@@ -328,8 +349,31 @@ describe('esqueleto visual dos flashcards', () => {
     expect(document.getElementById('flashcard-frente').value).toBe('')
     expect(document.getElementById('flashcard-verso').value).toBe('')
     expect(document.getElementById('flashcard-tags').value).toBe('')
+    expect(document.getElementById('flashcard-materia').value).toBe('')
     expect(document.getElementById('msg-flashcards').textContent).toBe('Flashcard salvo com sucesso!')
     expect(document.getElementById('flashcards-lista').textContent).toContain('Frente')
+  })
+
+  it('salva card com materia enviando materia_id', async () => {
+    montarFormularioFlashcards()
+    document.getElementById('flashcard-frente').value = 'Frente'
+    document.getElementById('flashcard-verso').value = 'Verso'
+    document.getElementById('flashcard-materia').value = 'mat-1'
+    const criar = vi.spyOn(globalThis, 'criarFlashcard').mockResolvedValue({
+      data: { id: 'card-1' },
+      error: null
+    })
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({ data: [], error: null })
+
+    await salvarFlashcardTela()
+
+    expect(criar).toHaveBeenCalledWith({
+      frente: 'Frente',
+      verso: 'Verso',
+      tags: [],
+      materia_id: 'mat-1'
+    })
+    expect(criar.mock.calls[0][0]).not.toHaveProperty('user_id')
   })
 
   it('lista Todos os Cards renderiza cards retornados', () => {
@@ -342,6 +386,8 @@ describe('esqueleto visual dos flashcards', () => {
         verso: 'Verso do card',
         estado: 'novo',
         due_date: '2026-05-21',
+        materia_id: 'mat-1',
+        materias: { nome: 'Direito Constitucional' },
         tags: ['constitucional', 'prazos']
       }
     ])
@@ -352,6 +398,21 @@ describe('esqueleto visual dos flashcards', () => {
     expect(texto).toContain('Estado: novo')
     expect(texto).toContain('Proxima revisao: 2026-05-21')
     expect(texto).toContain('Tags: constitucional, prazos')
+    expect(texto).toContain('Matéria: Direito Constitucional')
+  })
+
+  it('Todos os Cards mostra Sem matéria quando o card nao tem materia', () => {
+    document.body.innerHTML = '<div id="flashcards-lista"></div>'
+
+    renderizarListaFlashcards([
+      criarCardRevisao({
+        id: 'card-sem-materia',
+        frente: 'Card sem materia',
+        materia_id: null
+      })
+    ])
+
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Matéria: Sem matéria')
   })
 
   it('Todos os Cards mostra botoes Editar e Desativar', () => {
@@ -622,10 +683,35 @@ describe('esqueleto visual dos flashcards', () => {
       busca: '',
       estado: 'todos',
       vencimento: 'todos',
-      tag: 'prazos'
+      tag: 'prazos',
+      materia: 'todos'
     })
 
     expect(resultado.map(card => card.id)).toEqual(['card-aprendendo'])
+  })
+
+  it('filtro por materia funciona', () => {
+    const resultado = aplicarFiltrosFlashcards(criarCardsFiltroFlashcards(), {
+      busca: '',
+      estado: 'todos',
+      vencimento: 'todos',
+      tag: '',
+      materia: 'mat-1'
+    })
+
+    expect(resultado.map(card => card.id)).toEqual(['card-novo'])
+  })
+
+  it('filtro por Sem matéria funciona', () => {
+    const resultado = aplicarFiltrosFlashcards(criarCardsFiltroFlashcards(), {
+      busca: '',
+      estado: 'todos',
+      vencimento: 'todos',
+      tag: '',
+      materia: 'sem-materia'
+    })
+
+    expect(resultado.map(card => card.id)).toEqual(['card-revisando'])
   })
 
   it('mensagem aparece quando nenhum card corresponde aos filtros', async () => {
@@ -662,9 +748,54 @@ describe('esqueleto visual dos flashcards', () => {
     expect(document.getElementById('flashcards-filtro-estado').value).toBe('todos')
     expect(document.getElementById('flashcards-filtro-vencimento').value).toBe('todos')
     expect(document.getElementById('flashcards-filtro-tag').value).toBe('')
+    expect(document.getElementById('flashcards-filtro-materia').value).toBe('todos')
     expect(document.getElementById('flashcards-lista').textContent).toContain('Controle difuso')
     expect(document.getElementById('flashcards-lista').textContent).toContain('Prazo administrativo')
     expect(document.getElementById('flashcards-lista').textContent).toContain('Recurso ordinario')
+  })
+
+  it('carrega lista de materias nos selects de flashcards', async () => {
+    montarFormularioFlashcards()
+    document.getElementById('secao-flashcards').insertAdjacentHTML('beforeend', `
+      <select id="flashcards-filtro-materia">
+        <option value="todos">Todas as matérias</option>
+      </select>
+    `)
+    vi.spyOn(globalThis, 'listarMateriasFlashcards').mockResolvedValue({
+      data: [
+        { id: 'mat-1', nome: 'Direito Constitucional' },
+        { id: 'mat-2', nome: 'Direito Administrativo' }
+      ],
+      error: null
+    })
+
+    const resultado = await carregarMateriasFlashcards()
+
+    expect(resultado.error).toBeNull()
+    expect([...document.getElementById('flashcard-materia').options].map(option => option.textContent)).toEqual([
+      'Sem matéria',
+      'Direito Constitucional',
+      'Direito Administrativo'
+    ])
+    expect([...document.getElementById('flashcards-filtro-materia').options].map(option => option.textContent)).toEqual([
+      'Todas as matérias',
+      'Sem matéria',
+      'Direito Constitucional',
+      'Direito Administrativo'
+    ])
+  })
+
+  it('falha ao carregar materias usa fallback seguro', async () => {
+    montarFormularioFlashcards()
+    vi.spyOn(globalThis, 'listarMateriasFlashcards').mockResolvedValue({
+      data: null,
+      error: new Error('falha')
+    })
+
+    const resultado = await carregarMateriasFlashcards()
+
+    expect(resultado.error.message).toBe('falha')
+    expect([...document.getElementById('flashcard-materia').options].map(option => option.textContent)).toEqual(['Sem matéria'])
   })
 
   it('lista vazia mostra mensagem correta', () => {
@@ -1027,6 +1158,19 @@ describe('camada de dados dos flashcards', () => {
     expect(from).toHaveBeenCalledWith('flashcard_reviews')
     expect(query.eq).toHaveBeenCalledWith('user_id', 'user-1')
     expect(query.order).toHaveBeenCalledWith('reviewed_at', { ascending: false })
+  })
+
+  it('listarMateriasFlashcards usa materias do usuario logado', async () => {
+    const query = criarQueryLista({ data: [{ id: 'mat-1', nome: 'Direito Constitucional' }], error: null })
+    const from = vi.fn(() => query)
+    globalThis.db = { auth: criarAuthMock('user-1'), from }
+
+    const resultado = await listarMateriasFlashcards()
+
+    expect(resultado.data).toEqual([{ id: 'mat-1', nome: 'Direito Constitucional' }])
+    expect(from).toHaveBeenCalledWith('materias')
+    expect(query.eq).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(query.order).toHaveBeenCalledWith('nome', { ascending: true })
   })
 
   it('atualizarFlashcard nao permite trocar user_id manualmente', async () => {

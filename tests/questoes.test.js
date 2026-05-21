@@ -1021,11 +1021,42 @@ Alerta importante</textarea>
       tags: ['pegadinha', 'ia', 'caderno-de-erros']
     })
     expect(payload).not.toHaveProperty('user_id')
+    expect(payload).not.toHaveProperty('materia_id')
     expect(payload.verso).toContain('VERSO:\nVerso base')
     expect(payload.verso).toContain('CONTEXTO:\nContexto útil')
     expect(payload.verso).toContain('RECONHECER:\nPista de prova')
     expect(payload.verso).toContain('ALERTA DE BANCA:\nAlerta importante')
     expect(document.getElementById('msg-preview-flashcards-ia').textContent).toBe('1 flashcard adicionado ao deck.')
+
+    if (criarFlashcardOriginal) {
+      globalThis.criarFlashcard = criarFlashcardOriginal
+    } else {
+      delete globalThis.criarFlashcard
+    }
+  })
+
+  it('cards da IA herdam materia_id da questao quando disponivel', async () => {
+    const criarFlashcardOriginal = globalThis.criarFlashcard
+    globalThis.criarFlashcard = vi.fn(async () => ({ data: { id: 'card-1' }, error: null }))
+    document.body.innerHTML = `
+      <select id="q-materia">
+        <option value="">Selecione...</option>
+        <option value="mat-1" selected>Direito Constitucional</option>
+      </select>
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">${respostaCards}</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+    previsualizarFlashcardsIA(modal)
+
+    await adicionarFlashcardsPreviewIAAoDeck(modal)
+
+    expect(globalThis.criarFlashcard).toHaveBeenCalledWith(expect.objectContaining({
+      materia_id: 'mat-1'
+    }))
+    expect(globalThis.criarFlashcard.mock.calls[0][0]).not.toHaveProperty('user_id')
 
     if (criarFlashcardOriginal) {
       globalThis.criarFlashcard = criarFlashcardOriginal

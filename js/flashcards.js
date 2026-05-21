@@ -5,7 +5,7 @@
 // ============================================
 
 const CAMPOS_FLASHCARD =
-  'id, user_id, materia_id, frente, verso, tags, ativo, estado, ease_factor, repetitions, interval_days, due_date, last_reviewed_at, total_reviews, correct_reviews, lapses, created_at, updated_at'
+  'id, user_id, materia_id, frente, verso, tags, ativo, estado, ease_factor, repetitions, interval_days, due_date, last_reviewed_at, total_reviews, correct_reviews, lapses, created_at, updated_at, materias(nome)'
 const CAMPOS_REVISAO_FLASHCARD =
   'id, user_id, flashcard_id, quality, reviewed_at, was_correct'
 
@@ -20,6 +20,7 @@ let flashcardsSessaoHoje = []
 let flashcardAtualSessao = null
 let flashcardsTotalSessaoHoje = 0
 let flashcardsListaTodos = []
+let flashcardsMaterias = []
 
 function obterClienteSupabaseFlashcards() {
   if (typeof globalThis !== 'undefined' && globalThis.db) return globalThis.db
@@ -93,6 +94,12 @@ function normalizarMateriaIdFlashcards(materiaId) {
   if (materiaId === null) return null
   const normalizado = String(materiaId).trim()
   return normalizado || null
+}
+
+function obterNomeMateriaFlashcard(card) {
+  if (card?.materias?.nome) return card.materias.nome
+  const materia = flashcardsMaterias.find(item => item.id === card?.materia_id)
+  return materia?.nome || 'Sem matéria'
 }
 
 function obterEstadoFlashcardPorResultado(resultado) {
@@ -282,7 +289,8 @@ function obterFiltrosFlashcards(raiz = document) {
     busca: normalizarTextoBuscaFlashcards(raiz.getElementById?.('flashcards-busca')?.value),
     estado: raiz.getElementById?.('flashcards-filtro-estado')?.value || 'todos',
     vencimento: raiz.getElementById?.('flashcards-filtro-vencimento')?.value || 'todos',
-    tag: normalizarTextoBuscaFlashcards(raiz.getElementById?.('flashcards-filtro-tag')?.value)
+    tag: normalizarTextoBuscaFlashcards(raiz.getElementById?.('flashcards-filtro-tag')?.value),
+    materia: raiz.getElementById?.('flashcards-filtro-materia')?.value || 'todos'
   }
 }
 
@@ -291,7 +299,8 @@ function filtrosFlashcardsAtivos(filtros = obterFiltrosFlashcards()) {
     filtros.busca ||
     filtros.tag ||
     (filtros.estado && filtros.estado !== 'todos') ||
-    (filtros.vencimento && filtros.vencimento !== 'todos')
+    (filtros.vencimento && filtros.vencimento !== 'todos') ||
+    (filtros.materia && filtros.materia !== 'todos')
   )
 }
 
@@ -330,6 +339,12 @@ function flashcardPassaFiltroVencimento(card, vencimento) {
   return true
 }
 
+function flashcardPassaFiltroMateria(card, materia) {
+  if (!materia || materia === 'todos') return true
+  if (materia === 'sem-materia') return !card?.materia_id
+  return card?.materia_id === materia
+}
+
 function aplicarFiltrosFlashcards(cards = [], filtros = obterFiltrosFlashcards()) {
   const lista = Array.isArray(cards) ? cards : []
   return lista.filter(card =>
@@ -337,20 +352,80 @@ function aplicarFiltrosFlashcards(cards = [], filtros = obterFiltrosFlashcards()
     flashcardPassaFiltroBusca(card, filtros.busca) &&
     flashcardPassaFiltroTag(card, filtros.tag) &&
     flashcardPassaFiltroEstado(card, filtros.estado) &&
-    flashcardPassaFiltroVencimento(card, filtros.vencimento)
+    flashcardPassaFiltroVencimento(card, filtros.vencimento) &&
+    flashcardPassaFiltroMateria(card, filtros.materia)
   )
+}
+
+function popularSelectMateriaFlashcards(select, materias = [], valorVazio, textoVazio) {
+  if (!select) return
+  const valorAtual = select.value
+  select.replaceChildren()
+
+  const optionVazio = document.createElement('option')
+  optionVazio.value = valorVazio
+  optionVazio.textContent = textoVazio
+  select.appendChild(optionVazio)
+
+  materias.forEach(materia => {
+    const option = document.createElement('option')
+    option.value = materia.id
+    option.textContent = materia.nome
+    select.appendChild(option)
+  })
+
+  if ([...select.options].some(option => option.value === valorAtual)) {
+    select.value = valorAtual
+  }
+}
+
+function atualizarSelectsMateriaFlashcards(materias = flashcardsMaterias) {
+  popularSelectMateriaFlashcards(
+    document.getElementById('flashcard-materia'),
+    materias,
+    '',
+    'Sem matéria'
+  )
+
+  const filtroMateria = document.getElementById('flashcards-filtro-materia')
+  if (filtroMateria) {
+    const valorAtual = filtroMateria.value
+    filtroMateria.replaceChildren()
+
+    const todas = document.createElement('option')
+    todas.value = 'todos'
+    todas.textContent = 'Todas as matérias'
+    filtroMateria.appendChild(todas)
+
+    const semMateria = document.createElement('option')
+    semMateria.value = 'sem-materia'
+    semMateria.textContent = 'Sem matéria'
+    filtroMateria.appendChild(semMateria)
+
+    materias.forEach(materia => {
+      const option = document.createElement('option')
+      option.value = materia.id
+      option.textContent = materia.nome
+      filtroMateria.appendChild(option)
+    })
+
+    if ([...filtroMateria.options].some(option => option.value === valorAtual)) {
+      filtroMateria.value = valorAtual
+    }
+  }
 }
 
 function obterDadosFormularioFlashcards() {
   const frente = normalizarTextoObrigatorioFlashcards(document.getElementById('flashcard-frente')?.value)
   const verso = normalizarTextoObrigatorioFlashcards(document.getElementById('flashcard-verso')?.value)
   const tagsTexto = document.getElementById('flashcard-tags')?.value || ''
+  const materiaId = normalizarMateriaIdFlashcards(document.getElementById('flashcard-materia')?.value)
   const tags = tagsTexto
     .split(',')
     .map(tag => tag.trim())
     .filter(Boolean)
 
-  return { frente, verso, tags }
+  return { frente, verso, tags, materia_id: materiaId || undefined }
 }
 
 function limparFormularioFlashcards() {
@@ -361,6 +436,8 @@ function limparFormularioFlashcards() {
   if (frente) frente.value = ''
   if (verso) verso.value = ''
   if (tags) tags.value = ''
+  const materia = document.getElementById('flashcard-materia')
+  if (materia) materia.value = ''
 }
 
 function obterTagsTextoFlashcard(card) {
@@ -563,6 +640,11 @@ function criarElementoFlashcardLista(card) {
     meta.appendChild(tags)
   }
 
+  const materia = document.createElement('span')
+  materia.className = 'tag-estudo'
+  materia.textContent = `Matéria: ${obterNomeMateriaFlashcard(card)}`
+  meta.appendChild(materia)
+
   const acoes = document.createElement('div')
   acoes.className = 'flashcard-lista-acoes'
 
@@ -621,11 +703,13 @@ function limparFiltrosFlashcards() {
   const estado = document.getElementById('flashcards-filtro-estado')
   const vencimento = document.getElementById('flashcards-filtro-vencimento')
   const tag = document.getElementById('flashcards-filtro-tag')
+  const materia = document.getElementById('flashcards-filtro-materia')
 
   if (busca) busca.value = ''
   if (estado) estado.value = 'todos'
   if (vencimento) vencimento.value = 'todos'
   if (tag) tag.value = ''
+  if (materia) materia.value = 'todos'
 
   renderizarListaFlashcardsFiltrada()
 }
@@ -635,12 +719,14 @@ function inicializarFiltrosFlashcards(secao = document) {
   const estado = secao.querySelector?.('#flashcards-filtro-estado')
   const vencimento = secao.querySelector?.('#flashcards-filtro-vencimento')
   const tag = secao.querySelector?.('#flashcards-filtro-tag')
+  const materia = secao.querySelector?.('#flashcards-filtro-materia')
   const limpar = secao.querySelector?.('#btn-limpar-filtros-flashcards')
 
   busca?.addEventListener('input', renderizarListaFlashcardsFiltrada)
   estado?.addEventListener('change', renderizarListaFlashcardsFiltrada)
   vencimento?.addEventListener('change', renderizarListaFlashcardsFiltrada)
   tag?.addEventListener('input', renderizarListaFlashcardsFiltrada)
+  materia?.addEventListener('change', renderizarListaFlashcardsFiltrada)
   limpar?.addEventListener('click', limparFiltrosFlashcards)
 }
 
@@ -773,6 +859,22 @@ async function carregarEstatisticasFlashcards() {
   const estatisticas = calcularEstatisticasFlashcards(resultadoCards.data || [], resultadoRevisoes.data || [])
   renderizarEstatisticasFlashcards(estatisticas)
   return { data: estatisticas, error: null }
+}
+
+async function carregarMateriasFlashcards() {
+  const listar = globalThis.listarMateriasFlashcards || listarMateriasFlashcards
+  const resultado = await listar()
+
+  if (resultado.error) {
+    flashcardsMaterias = []
+    atualizarSelectsMateriaFlashcards([])
+    return resultado
+  }
+
+  flashcardsMaterias = resultado.data || []
+  atualizarSelectsMateriaFlashcards(flashcardsMaterias)
+  renderizarListaFlashcardsFiltrada()
+  return resultado
 }
 
 function criarElementoRevisaoFlashcard(card) {
@@ -1021,11 +1123,14 @@ async function salvarFlashcardTela() {
   mostrarMensagemFlashcards('')
 
   const criar = globalThis.criarFlashcard || criarFlashcard
-  const resultado = await criar({
+  const payload = {
     frente: dados.frente,
     verso: dados.verso,
     tags: dados.tags
-  })
+  }
+  if (dados.materia_id) payload.materia_id = dados.materia_id
+
+  const resultado = await criar(payload)
 
   if (btn) {
     btn.disabled = false
@@ -1084,6 +1189,7 @@ function inicializarFlashcards() {
 
   atualizarIndicadoresFlashcardsVazios(document)
   selecionarAbaFlashcards(ABA_FLASHCARDS_PADRAO, secao)
+  carregarMateriasFlashcards()
   carregarFlashcardsRevisarHoje()
   carregarListaFlashcards()
 }
@@ -1193,6 +1299,26 @@ async function listarRevisoesFlashcards() {
   return tratarRespostaSupabaseFlashcards(
     resposta,
     'Nao foi possivel listar as revisoes dos flashcards. Verifique sua conexao e tente novamente.'
+  )
+}
+
+async function listarMateriasFlashcards() {
+  let usuario
+  try {
+    usuario = await obterUsuarioAutenticadoFlashcards()
+  } catch (erro) {
+    return respostaErroFlashcards(erro.message, erro.detalhes)
+  }
+
+  const resposta = await obterClienteSupabaseFlashcards()
+    .from('materias')
+    .select('id, nome')
+    .eq('user_id', usuario.id)
+    .order('nome', { ascending: true })
+
+  return tratarRespostaSupabaseFlashcards(
+    resposta,
+    'Nao foi possivel carregar as materias dos flashcards. Verifique sua conexao e tente novamente.'
   )
 }
 
@@ -1380,6 +1506,8 @@ if (typeof globalThis !== 'undefined') {
   globalThis.listarFlashcards = listarFlashcards
   globalThis.listarFlashcardsDevidosHoje = listarFlashcardsDevidosHoje
   globalThis.listarRevisoesFlashcards = listarRevisoesFlashcards
+  globalThis.listarMateriasFlashcards = listarMateriasFlashcards
+  globalThis.carregarMateriasFlashcards = carregarMateriasFlashcards
   globalThis.atualizarFlashcard = atualizarFlashcard
   globalThis.desativarFlashcard = desativarFlashcard
   globalThis.registrarRevisaoFlashcard = registrarRevisaoFlashcard
