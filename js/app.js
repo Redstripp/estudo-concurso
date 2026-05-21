@@ -29,6 +29,7 @@ const INICIALIZADORES_SECAO = {
   desempenho: () => inicializarDesempenho(),
   dashboard: () => inicializarDashboard(),
   revisao: () => inicializarRevisao(),
+  flashcards: () => inicializarFlashcards(),
   estatisticas: () => inicializarEstatisticas(),
   perfil: () => inicializarPerfil()
 }
@@ -128,6 +129,16 @@ const AJUDA_SECOES = {
       ['Resumo inteligente', 'Mostra padrões do lote antes de você revisar.'],
       ['Flashcards', 'Você escolhe a alternativa, confirma e só depois vê o gabarito.'],
       ['Ciclo 24h/7d/30d', 'Quando registra a revisão, o sistema agenda o próximo contato.']
+    ]
+  },
+  flashcards: {
+    titulo: 'Flashcards',
+    descricao: 'Organiza cards de revisão espaçada. Nesta etapa, a tela mostra apenas a estrutura inicial.',
+    itens: [
+      ['Revisar Hoje', 'Mostra a futura fila de cards pendentes para o dia.'],
+      ['Todos os Cards', 'Reservado para listar os flashcards cadastrados.'],
+      ['Adicionar Card', 'Prepara o formulário visual para uma etapa futura de cadastro.'],
+      ['Estatísticas', 'Reserva indicadores como total de cards, pendências e taxa de acerto.']
     ]
   },
   estatisticas: {
