@@ -157,6 +157,12 @@ function inicializarQuestoes() {
   document.getElementById('btn-colar-resposta-chatgpt')
     ?.addEventListener('click', abrirColarRespostaChatGPT)
 
+  document.getElementById('btn-gerar-prompt-flashcards-questao')
+    ?.addEventListener('click', abrirPromptFlashcardsQuestao)
+
+  document.getElementById('btn-colar-flashcards-ia')
+    ?.addEventListener('click', abrirColarFlashcardsIA)
+
   document.getElementById('q-materia')
     ?.addEventListener('change', async () => {
       await carregarTopicosQuestao()
@@ -1453,6 +1459,417 @@ async function copiarPromptChatGPT() {
     document.execCommand('copy')
     feedback.textContent = 'Prompt selecionado para copiar.'
   }
+}
+
+function abrirPromptFlashcardsQuestao() {
+  const dados = coletarDadosPromptFlashcardsQuestao()
+  if (!dados.enunciado) {
+    mostrarMsgQuestao('Preencha ao menos o enunciado da questão antes de gerar o prompt de flashcards.', 'erro')
+    return
+  }
+
+  abrirModalPromptFlashcardsQuestao(montarPromptFlashcardsQuestao(dados))
+}
+
+function coletarDadosPromptFlashcardsQuestao() {
+  const dados = montarDadosQuestaoFormulario()
+  const selectTopico = document.getElementById('q-edital-topico')
+  const assunto = selectTopico?.value ? selectTopico.selectedOptions?.[0]?.text?.trim() || '' : ''
+  const textoAlternativas = formatarAlternativasPrompt(dados.alternativas)
+  const textoMarcada = formatarAlternativaSelecionadaPrompt(dados.alternativaMarcada, dados.alternativas)
+  const textoCorreta = formatarAlternativaSelecionadaPrompt(dados.alternativaCorreta, dados.alternativas)
+
+  return {
+    materia: dados.materiaNome,
+    assunto,
+    banca: dados.banca,
+    enunciado: dados.enunciado,
+    textoAlternativas,
+    textoMarcada,
+    textoCorreta,
+    comentario: dados.comentario,
+    pegadinhas: dados.pegadinhaBanca,
+    conceito: dados.conceitoChave,
+    reconhecer: dados.comoReconhecer,
+    acaoCorretiva: dados.acaoCorretiva,
+    motivoErro: dados.motivoErro
+  }
+}
+
+function montarPromptFlashcardsQuestao(dados = {}) {
+  return `Você é uma IA assistente de estudos para concursos. Vou te enviar uma questão do meu Caderno de Erros.
+
+Sua tarefa é criar entre 2 e 5 flashcards, conforme a riqueza do conteúdo.
+
+Princípios obrigatórios:
+- Um conceito por card.
+- A FRENTE deve provocar recuperação ativa.
+- O VERSO deve ser completo e autoexplicativo.
+- Priorize conceito central, distinções, exceções e pegadinhas.
+- Crie cards de exceção e pegadinha quando o conteúdo permitir.
+- Não crie cards redundantes.
+- Não agrupe vários conceitos no mesmo card.
+- Não invente lei, artigo, súmula, jurisprudência, doutrina ou fundamento que não esteja no material fornecido.
+- Se faltar informação, escreva exatamente: "Material insuficiente para preencher este campo."
+
+Tipos possíveis de card:
+- CONCEITO
+- DISTINÇÃO
+- EXCEÇÃO
+- PEGADINHA
+- APLICAÇÃO
+- MEMORIZAÇÃO LITERAL
+
+Responda exatamente neste formato, repetindo de CARD 1 até no máximo CARD 5:
+
+CARD [N] — [TIPO DO CARD]
+
+FRENTE:
+...
+
+VERSO:
+...
+
+CONTEXTO:
+...
+
+RECONHECER:
+...
+
+ALERTA DE BANCA:
+...
+
+DADOS DA QUESTÃO
+
+Matéria:
+${valorOuNaoInformado(dados.materia)}
+
+Assunto:
+${valorOuNaoInformado(dados.assunto)}
+
+Banca:
+${valorOuNaoInformado(dados.banca)}
+
+Enunciado:
+${valorOuNaoInformado(dados.enunciado)}
+
+Alternativas:
+${valorOuNaoInformado(dados.textoAlternativas)}
+
+Alternativa marcada:
+${valorOuNaoInformado(dados.textoMarcada)}
+
+Alternativa correta:
+${valorOuNaoInformado(dados.textoCorreta)}
+
+Comentário:
+${valorOuNaoInformado(dados.comentario)}
+
+Pegadinhas:
+${valorOuNaoInformado(dados.pegadinhas)}
+
+Conceito:
+${valorOuNaoInformado(dados.conceito)}
+
+Como reconhecer:
+${valorOuNaoInformado(dados.reconhecer)}
+
+Ação corretiva:
+${valorOuNaoInformado(dados.acaoCorretiva)}
+
+Motivo do erro:
+${valorOuNaoInformado(dados.motivoErro)}`
+}
+
+function abrirModalPromptFlashcardsQuestao(prompt) {
+  document.getElementById('modal-prompt-flashcards-questao')?.remove()
+
+  const modal = document.createElement('div')
+  modal.id = 'modal-prompt-flashcards-questao'
+  modal.className = 'modal-overlay'
+  modal.innerHTML = `
+    <div class="modal-caixa">
+      <div class="modal-topo">
+        <h3>Prompt de flashcards da questão</h3>
+        <button class="modal-fechar" id="btn-fechar-prompt-flashcards-questao" type="button">✕</button>
+      </div>
+      <textarea
+        id="texto-prompt-flashcards-questao"
+        class="input-texto input-textarea prompt-chatgpt-textarea"
+        spellcheck="false"
+      ></textarea>
+      <div class="prompt-chatgpt-acoes">
+        <button class="btn-primario" id="btn-copiar-prompt-flashcards-questao" type="button">Copiar prompt de flashcards</button>
+        <button class="btn-secundario" id="btn-cancelar-prompt-flashcards-questao" type="button">Fechar</button>
+      </div>
+      <p class="prompt-chatgpt-feedback" id="msg-prompt-flashcards-questao"></p>
+    </div>
+  `
+
+  document.body.appendChild(modal)
+
+  const textarea = document.getElementById('texto-prompt-flashcards-questao')
+  textarea.value = prompt
+  textarea.focus()
+  textarea.select()
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove()
+  })
+
+  document.getElementById('btn-fechar-prompt-flashcards-questao')
+    .addEventListener('click', () => modal.remove())
+
+  document.getElementById('btn-cancelar-prompt-flashcards-questao')
+    .addEventListener('click', () => modal.remove())
+
+  document.getElementById('btn-copiar-prompt-flashcards-questao')
+    .addEventListener('click', copiarPromptFlashcardsQuestao)
+}
+
+async function copiarPromptFlashcardsQuestao() {
+  const textarea = document.getElementById('texto-prompt-flashcards-questao')
+  const feedback = document.getElementById('msg-prompt-flashcards-questao')
+
+  try {
+    await navigator.clipboard.writeText(textarea.value)
+    feedback.textContent = 'Prompt de flashcards copiado.'
+  } catch {
+    textarea.focus()
+    textarea.select()
+    document.execCommand('copy')
+    feedback.textContent = 'Prompt de flashcards copiado.'
+  }
+}
+
+function abrirColarFlashcardsIA() {
+  document.getElementById('modal-flashcards-ia')?.remove()
+
+  const modal = document.createElement('div')
+  modal.id = 'modal-flashcards-ia'
+  modal.className = 'modal-overlay'
+  modal.innerHTML = `
+    <div class="modal-caixa">
+      <div class="modal-topo">
+        <h3>Colar flashcards da IA</h3>
+        <button class="modal-fechar" id="btn-fechar-flashcards-ia" type="button">✕</button>
+      </div>
+      <textarea
+        id="texto-flashcards-ia"
+        class="input-texto input-textarea prompt-chatgpt-textarea"
+        placeholder="Cole aqui a resposta da IA com CARD, FRENTE, VERSO, CONTEXTO, RECONHECER e ALERTA DE BANCA..."
+        spellcheck="false"
+      ></textarea>
+      <div class="prompt-chatgpt-acoes">
+        <button class="btn-primario" id="btn-interpretar-flashcards-ia" type="button">Interpretar flashcards</button>
+        <button class="btn-secundario" id="btn-cancelar-flashcards-ia" type="button">Fechar</button>
+      </div>
+      <p class="prompt-chatgpt-feedback" id="msg-flashcards-ia"></p>
+    </div>
+  `
+
+  document.body.appendChild(modal)
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove()
+  })
+
+  document.getElementById('btn-fechar-flashcards-ia')
+    .addEventListener('click', () => modal.remove())
+
+  document.getElementById('btn-cancelar-flashcards-ia')
+    .addEventListener('click', () => modal.remove())
+
+  document.getElementById('btn-interpretar-flashcards-ia')
+    .addEventListener('click', () => previsualizarFlashcardsIA(modal))
+
+  document.getElementById('texto-flashcards-ia').focus()
+}
+
+const CAMPOS_FLASHCARD_IA = [
+  { chave: 'frente', rotulo: 'Frente' },
+  { chave: 'verso', rotulo: 'Verso' },
+  { chave: 'contexto', rotulo: 'Contexto' },
+  { chave: 'reconhecer', rotulo: 'Reconhecer' },
+  { chave: 'alertaBanca', rotulo: 'Alerta de banca' }
+]
+
+const TIPOS_FLASHCARD_IA = [
+  'CONCEITO',
+  'DISTINÇÃO',
+  'EXCEÇÃO',
+  'PEGADINHA',
+  'APLICAÇÃO',
+  'MEMORIZAÇÃO LITERAL'
+]
+
+function normalizarRotuloFlashcardIA(texto) {
+  return String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function identificarCampoFlashcardIA(rotulo) {
+  return {
+    FRENTE: 'frente',
+    VERSO: 'verso',
+    CONTEXTO: 'contexto',
+    RECONHECER: 'reconhecer',
+    'ALERTA DE BANCA': 'alertaBanca'
+  }[normalizarRotuloFlashcardIA(rotulo)] || null
+}
+
+function identificarInicioCardFlashcardIA(linha) {
+  const match = String(linha || '').match(/^\s*CARD\s+(\d{1,2})\s*[-\u2013\u2014]\s*(.+?)\s*$/i)
+  if (!match) return null
+
+  const tipoNormalizado = normalizarRotuloFlashcardIA(match[2])
+  const tipo = TIPOS_FLASHCARD_IA.find(tipoPermitido => normalizarRotuloFlashcardIA(tipoPermitido) === tipoNormalizado)
+    || String(match[2] || '').trim().toUpperCase()
+
+  return {
+    numero: Number(match[1]),
+    tipo
+  }
+}
+
+function criarObjetoFlashcardIA(inicio) {
+  return {
+    numero: inicio.numero,
+    tipo: inicio.tipo,
+    frente: '',
+    verso: '',
+    contexto: '',
+    reconhecer: '',
+    alertaBanca: '',
+    incompleto: false,
+    mensagens: []
+  }
+}
+
+function finalizarFlashcardIA(card) {
+  if (!card) return null
+
+  CAMPOS_FLASHCARD_IA.forEach(({ chave }) => {
+    card[chave] = String(card[chave] || '').trim()
+  })
+
+  if (!card.frente || !card.verso) {
+    card.incompleto = true
+    card.mensagens.push('Card incompleto: frente ou verso não identificado.')
+  }
+
+  return card
+}
+
+function extrairFlashcardsRespostaIA(texto) {
+  const cards = []
+  const mensagens = []
+  let cardAtual = null
+  let campoAtual = null
+
+  String(texto || '').split(/\r?\n/).forEach(linhaOriginal => {
+    const inicioCard = identificarInicioCardFlashcardIA(linhaOriginal)
+    if (inicioCard) {
+      const finalizado = finalizarFlashcardIA(cardAtual)
+      if (finalizado) cards.push(finalizado)
+      cardAtual = criarObjetoFlashcardIA(inicioCard)
+      campoAtual = null
+      return
+    }
+
+    if (!cardAtual) return
+
+    const rotulo = linhaOriginal.match(/^\s*([^:]{2,80})\s*:\s*(.*)$/)
+    if (rotulo) {
+      const campo = identificarCampoFlashcardIA(rotulo[1])
+      if (campo) {
+        campoAtual = campo
+        if (rotulo[2]) cardAtual[campoAtual] += `${rotulo[2].trim()}\n`
+        return
+      }
+    }
+
+    if (campoAtual) cardAtual[campoAtual] += `${linhaOriginal.trimEnd()}\n`
+  })
+
+  const ultimo = finalizarFlashcardIA(cardAtual)
+  if (ultimo) cards.push(ultimo)
+
+  if (cards.length === 0) {
+    mensagens.push('Nenhum flashcard foi identificado. Verifique se a resposta da IA seguiu o formato solicitado.')
+  }
+
+  cards.forEach(card => {
+    mensagens.push(...card.mensagens)
+  })
+
+  return { cards, mensagens }
+}
+
+function previsualizarFlashcardsIA(modal) {
+  const texto = document.getElementById('texto-flashcards-ia')?.value || ''
+  const feedback = document.getElementById('msg-flashcards-ia')
+  const resultado = extrairFlashcardsRespostaIA(texto)
+
+  if (resultado.cards.length === 0) {
+    feedback.textContent = 'Nenhum flashcard foi identificado. Verifique se a resposta da IA seguiu o formato solicitado.'
+    feedback.className = 'prompt-chatgpt-feedback prompt-chatgpt-feedback--erro'
+    return resultado
+  }
+
+  mostrarPreviaFlashcardsIA(modal, resultado.cards, resultado.mensagens)
+  return resultado
+}
+
+function mostrarPreviaFlashcardsIA(modal, cards, mensagens = []) {
+  const blocos = cards.map(card => {
+    const campos = CAMPOS_FLASHCARD_IA.map(({ chave, rotulo }) => `
+      <div class="preview-resposta-ia-campo">
+        <strong>${escaparHtmlSeguro(rotulo)}</strong>
+        <p class="preview-resposta-ia-texto ${card[chave] ? '' : 'preview-resposta-ia-vazio'}">${escaparHtmlSeguro(card[chave] || 'Não identificado na resposta da IA.')}</p>
+      </div>
+    `).join('')
+
+    return `
+      <section class="preview-resposta-ia-bloco">
+        <h4>Card ${escaparHtmlSeguro(card.numero)} — ${escaparHtmlSeguro(card.tipo || 'Tipo não identificado')}</h4>
+        ${card.incompleto ? '<p class="preview-resposta-ia-info">Card incompleto: frente ou verso não identificado.</p>' : ''}
+        ${campos}
+      </section>
+    `
+  }).join('')
+
+  const avisos = mensagens.length > 0
+    ? `<p class="prompt-chatgpt-feedback prompt-chatgpt-feedback--erro">${escaparHtmlSeguro([...new Set(mensagens)].join(' '))}</p>`
+    : '<p class="prompt-chatgpt-feedback" id="msg-preview-flashcards-ia"></p>'
+
+  modal.innerHTML = `
+    <div class="modal-caixa modal-caixa--preview-ia">
+      <div class="modal-topo">
+        <h3>Prévia dos flashcards da IA</h3>
+        <button class="modal-fechar" id="btn-fechar-preview-flashcards-ia" type="button">✕</button>
+      </div>
+      <p class="preview-resposta-ia-subtitulo">Confira os cards identificados antes de qualquer etapa futura de salvamento.</p>
+      <div class="preview-resposta-ia-grid">
+        ${blocos}
+      </div>
+      <div class="prompt-chatgpt-acoes preview-resposta-ia-acoes">
+        <button class="btn-secundario" id="btn-cancelar-preview-flashcards-ia" type="button">Fechar</button>
+      </div>
+      ${avisos}
+    </div>
+  `
+
+  document.getElementById('btn-fechar-preview-flashcards-ia')
+    .addEventListener('click', () => modal.remove())
+
+  document.getElementById('btn-cancelar-preview-flashcards-ia')
+    .addEventListener('click', () => modal.remove())
 }
 
 async function copiarModeloRespostaChatGPT(event) {
@@ -3117,6 +3534,16 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     ordenarQuestoes,
     carregarQuestoesEmMemoria,
     montarPromptDiagnosticoChatGPT,
+    montarPromptFlashcardsQuestao,
+    coletarDadosPromptFlashcardsQuestao,
+    abrirPromptFlashcardsQuestao,
+    copiarPromptFlashcardsQuestao,
+    abrirColarFlashcardsIA,
+    previsualizarFlashcardsIA,
+    mostrarPreviaFlashcardsIA,
+    extrairFlashcardsRespostaIA,
+    identificarCampoFlashcardIA,
+    identificarInicioCardFlashcardIA,
     copiarModeloRespostaChatGPT,
     previsualizarRespostaChatGPT,
     aplicarRespostaChatGPT,
@@ -3143,6 +3570,16 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.ordenarQuestoes = ordenarQuestoes
   globalThis.carregarQuestoesEmMemoria = carregarQuestoesEmMemoria
   globalThis.montarPromptDiagnosticoChatGPT = montarPromptDiagnosticoChatGPT
+  globalThis.montarPromptFlashcardsQuestao = montarPromptFlashcardsQuestao
+  globalThis.coletarDadosPromptFlashcardsQuestao = coletarDadosPromptFlashcardsQuestao
+  globalThis.abrirPromptFlashcardsQuestao = abrirPromptFlashcardsQuestao
+  globalThis.copiarPromptFlashcardsQuestao = copiarPromptFlashcardsQuestao
+  globalThis.abrirColarFlashcardsIA = abrirColarFlashcardsIA
+  globalThis.previsualizarFlashcardsIA = previsualizarFlashcardsIA
+  globalThis.mostrarPreviaFlashcardsIA = mostrarPreviaFlashcardsIA
+  globalThis.extrairFlashcardsRespostaIA = extrairFlashcardsRespostaIA
+  globalThis.identificarCampoFlashcardIA = identificarCampoFlashcardIA
+  globalThis.identificarInicioCardFlashcardIA = identificarInicioCardFlashcardIA
   globalThis.copiarModeloRespostaChatGPT = copiarModeloRespostaChatGPT
   globalThis.previsualizarRespostaChatGPT = previsualizarRespostaChatGPT
   globalThis.aplicarRespostaChatGPT = aplicarRespostaChatGPT
