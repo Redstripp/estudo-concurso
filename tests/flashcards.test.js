@@ -104,11 +104,17 @@ function montarListaFlashcardsComFiltros() {
 function montarSecaoRevisaoFlashcards() {
   document.body.innerHTML = `
     <section id="secao-flashcards">
-      <span id="flashcards-pendentes-hoje"></span>
-      <p id="flashcards-progresso-sessao"></p>
-      <p id="flashcards-revisar-vazio"></p>
-      <div id="flashcards-revisao-card"></div>
-      <button id="btn-iniciar-revisao-flashcards" type="button" disabled>Iniciar revisao</button>
+      <div id="flashcards-revisao-urgente">
+        <span id="flashcards-pendentes-hoje"></span>
+        <p id="flashcards-progresso-sessao"></p>
+        <p id="flashcards-revisar-vazio"></p>
+        <div id="flashcards-revisao-card"></div>
+        <button id="btn-iniciar-revisao-flashcards" type="button" disabled>Iniciar revisao</button>
+      </div>
+      <div id="flashcards-estudo-dia">
+        <span id="flashcards-estudo-dia-status"></span>
+        <p id="flashcards-estudo-dia-vazio"></p>
+      </div>
     </section>
   `
 }
@@ -204,6 +210,14 @@ describe('esqueleto visual dos flashcards', () => {
     expect(appHtml).toContain('Adicionar Card')
   })
 
+  it('separa Revisar Hoje em Revisao Urgente e Estudo do Dia', () => {
+    expect(appHtml).toContain('id="flashcards-revisao-urgente"')
+    expect(appHtml).toContain('Revisão Urgente')
+    expect(appHtml).toContain('id="flashcards-estudo-dia"')
+    expect(appHtml).toContain('Estudo do Dia')
+    expect(appHtml).toContain('id="flashcards-estudo-dia-vazio"')
+  })
+
   it('adiciona filtros e busca em Todos os Cards', () => {
     expect(appHtml).toContain('id="flashcards-busca"')
     expect(appHtml).toContain('id="flashcards-filtro-estado"')
@@ -214,7 +228,8 @@ describe('esqueleto visual dos flashcards', () => {
   })
 
   it('mantem placeholders da primeira versao visual', () => {
-    expect(appHtml).toContain('Nenhum card pendente para hoje.')
+    expect(appHtml).toContain('Nenhuma revisão pendente. Ótimo trabalho!')
+    expect(appHtml).toContain('Estudo do Dia será ativado após configurar a grade de estudos dos flashcards.')
     expect(appHtml).toContain('Nenhum flashcard cadastrado ainda.')
     expect(appHtml).toContain('id="flashcard-frente"')
     expect(appHtml).toContain('id="flashcard-verso"')
@@ -267,7 +282,7 @@ describe('esqueleto visual dos flashcards', () => {
     expect(() => inicializarFlashcards()).not.toThrow()
     expect(document.getElementById('flashcards-painel-revisar-hoje').hidden).toBe(false)
     expect(document.querySelector('[data-flashcards-aba="revisar-hoje"]').getAttribute('aria-selected')).toBe('true')
-    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('Cards pendentes hoje: 0')
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('0 cards vencidos/devidos')
 
     selecionarAbaFlashcards('todos', document.getElementById('secao-flashcards'))
 
@@ -838,7 +853,7 @@ describe('esqueleto visual dos flashcards', () => {
     const resultado = await carregarFlashcardsRevisarHoje()
 
     expect(resultado.data.map(card => card.id)).toEqual(['card-devido'])
-    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('Cards pendentes hoje: 1')
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('1 cards vencidos/devidos')
     expect(document.getElementById('btn-iniciar-revisao-flashcards').disabled).toBe(false)
 
     iniciarSessaoRevisaoFlashcards()
@@ -846,6 +861,29 @@ describe('esqueleto visual dos flashcards', () => {
     expect(document.getElementById('flashcards-revisao-card').textContent).toContain('Card devido')
     expect(document.getElementById('flashcards-revisao-card').textContent).not.toContain('Card futuro')
     expect(document.getElementById('flashcards-revisao-card').textContent).not.toContain('Card inativo')
+  })
+
+  it('Revisao Urgente inclui cards devidos de qualquer materia e estado', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+    montarSecaoRevisaoFlashcards()
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+      data: [
+        criarCardRevisao({ id: 'novo-materia-1', estado: 'novo', materia_id: 'mat-1' }),
+        criarCardRevisao({ id: 'aprendendo-materia-2', estado: 'aprendendo', materia_id: 'mat-2' }),
+        criarCardRevisao({ id: 'revisando-sem-materia', estado: 'revisando', materia_id: null })
+      ],
+      error: null
+    })
+
+    const resultado = await carregarFlashcardsRevisarHoje()
+
+    expect(resultado.data.map(card => card.id).sort()).toEqual([
+      'aprendendo-materia-2',
+      'novo-materia-1',
+      'revisando-sem-materia'
+    ])
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('3 cards vencidos/devidos')
   })
 
   it('botao Mostrar resposta revela o verso e os botoes de avaliacao', async () => {
@@ -892,7 +930,7 @@ describe('esqueleto visual dos flashcards', () => {
         repetitions: 0,
         intervalDays: 1
       }))
-      expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('Cards pendentes hoje: 1')
+      expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('1 cards vencidos/devidos')
       expect(document.getElementById('flashcards-revisao-card').textContent).toContain('Frente do card')
     }
   )
@@ -918,9 +956,9 @@ describe('esqueleto visual dos flashcards', () => {
       dueAgainToday: false,
       wasCorrect: true
     }))
-    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('Cards pendentes hoje: 0')
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('0 cards vencidos/devidos')
     expect(document.getElementById('flashcards-progresso-sessao').textContent).toBe('Progresso: 1/1')
-    expect(document.getElementById('flashcards-revisar-vazio').textContent).toBe('Nenhum card pendente para hoje.')
+    expect(document.getElementById('flashcards-revisar-vazio').textContent).toBe('Nenhuma revisão pendente. Ótimo trabalho!')
   })
 
   it('mostra mensagem de sessao vazia quando nao ha cards pendentes', async () => {
@@ -932,7 +970,8 @@ describe('esqueleto visual dos flashcards', () => {
 
     await carregarFlashcardsRevisarHoje()
 
-    expect(document.getElementById('flashcards-revisar-vazio').textContent).toBe('Nenhum card pendente para hoje.')
+    expect(document.getElementById('flashcards-revisar-vazio').textContent).toBe('Nenhuma revisão pendente. Ótimo trabalho!')
+    expect(document.getElementById('flashcards-estudo-dia-vazio').textContent).toBe('Estudo do Dia será ativado após configurar a grade de estudos dos flashcards.')
     expect(document.getElementById('btn-iniciar-revisao-flashcards').disabled).toBe(true)
   })
 
