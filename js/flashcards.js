@@ -15,6 +15,7 @@ const ABA_FLASHCARDS_PADRAO = 'revisar-hoje'
 const QUALIDADES_FLASHCARD = [0, 1, 2, 3, 4, 5]
 const EASE_FACTOR_PADRAO_FLASHCARD = 2.5
 const EASE_FACTOR_MINIMO_FLASHCARD = 1.3
+const DIAS_ALERTA_ACUMULO_FLASHCARD = 2
 let flashcardsInicializado = false
 let flashcardsSessaoHoje = []
 let flashcardAtualSessao = null
@@ -745,6 +746,62 @@ function flashcardDevidoHoje(card) {
   return Boolean(dueDate) && dueDate <= dataHojeFlashcards()
 }
 
+function flashcardVencidoAlertaAcumulo(card, dataReferencia = dataHojeFlashcards()) {
+  if (!card || card.ativo === false) return false
+  const dueDate = obterDataComparacaoFlashcard(card.due_date)
+  const dataLimite = adicionarDiasFlashcards(dataReferencia, -DIAS_ALERTA_ACUMULO_FLASHCARD)
+  return Boolean(dueDate) && dueDate <= dataLimite
+}
+
+function contarCardsAcumuladosFlashcards(cards = [], dataReferencia = dataHojeFlashcards()) {
+  return (Array.isArray(cards) ? cards : []).filter(card =>
+    flashcardVencidoAlertaAcumulo(card, dataReferencia)
+  ).length
+}
+
+function navegarParaRevisaoUrgenteFlashcards() {
+  const secao = document.getElementById('secao-flashcards')
+  selecionarAbaFlashcards('revisar-hoje', secao || document)
+  carregarFlashcardsRevisarHoje()
+  carregarEstudoDiaFlashcards()
+  document.getElementById('flashcards-revisao-urgente')?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+}
+
+function renderizarAlertaAcumuloFlashcards(quantidade = 0) {
+  const alerta = document.getElementById('flashcards-alerta-acumulo')
+  const texto = document.getElementById('flashcards-alerta-acumulo-texto')
+  const botao = document.getElementById('btn-revisar-alerta-flashcards')
+  const total = Number(quantidade || 0)
+
+  if (botao) botao.onclick = navegarParaRevisaoUrgenteFlashcards
+  if (!alerta) return
+
+  if (total <= 0) {
+    alerta.hidden = true
+    if (texto) texto.textContent = ''
+    return
+  }
+
+  alerta.hidden = false
+  if (texto) {
+    texto.textContent = `⚠️ Você tem ${total} cards vencidos há mais de 2 dias. Ignorá-los pode comprometer sua memorização.`
+  }
+}
+
+async function carregarAlertaAcumuloFlashcards() {
+  const listar = globalThis.listarFlashcards || listarFlashcards
+  const resultado = await listar()
+
+  if (resultado.error) {
+    renderizarAlertaAcumuloFlashcards(0)
+    return { data: 0, error: resultado.error }
+  }
+
+  const quantidade = contarCardsAcumuladosFlashcards(resultado.data || [])
+  renderizarAlertaAcumuloFlashcards(quantidade)
+  return { data: quantidade, error: null }
+}
+
 function embaralharFlashcardsSessao(cards = []) {
   const copia = [...cards]
   for (let i = copia.length - 1; i > 0; i -= 1) {
@@ -1345,6 +1402,7 @@ function inicializarFlashcards() {
   carregarFlashcardsRevisarHoje()
   carregarEstudoDiaFlashcards()
   carregarListaFlashcards()
+  carregarAlertaAcumuloFlashcards()
 }
 
 async function criarFlashcard(dados = {}) {
@@ -1674,6 +1732,10 @@ if (typeof globalThis !== 'undefined') {
   globalThis.renderizarRevisaoFlashcardsHoje = renderizarRevisaoFlashcardsHoje
   globalThis.renderizarEstudoDiaFlashcards = renderizarEstudoDiaFlashcards
   globalThis.carregarEstudoDiaFlashcards = carregarEstudoDiaFlashcards
+  globalThis.renderizarAlertaAcumuloFlashcards = renderizarAlertaAcumuloFlashcards
+  globalThis.carregarAlertaAcumuloFlashcards = carregarAlertaAcumuloFlashcards
+  globalThis.contarCardsAcumuladosFlashcards = contarCardsAcumuladosFlashcards
+  globalThis.navegarParaRevisaoUrgenteFlashcards = navegarParaRevisaoUrgenteFlashcards
   globalThis.selecionarCardsNovosEstudoDiaFlashcards = selecionarCardsNovosEstudoDiaFlashcards
   globalThis.calcularProximaRevisaoSM2Flashcards = calcularProximaRevisaoSM2Flashcards
   globalThis.calcularEstatisticasFlashcards = calcularEstatisticasFlashcards

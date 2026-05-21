@@ -21,6 +21,10 @@ const {
   mostrarRespostaFlashcardAtual,
   avaliarFlashcardAtual,
   carregarEstudoDiaFlashcards,
+  carregarAlertaAcumuloFlashcards,
+  contarCardsAcumuladosFlashcards,
+  navegarParaRevisaoUrgenteFlashcards,
+  renderizarAlertaAcumuloFlashcards,
   selecionarCardsNovosEstudoDiaFlashcards,
   calcularProximaRevisaoSM2Flashcards,
   calcularEstatisticasFlashcards,
@@ -107,6 +111,13 @@ function montarListaFlashcardsComFiltros() {
 function montarSecaoRevisaoFlashcards() {
   document.body.innerHTML = `
     <section id="secao-flashcards">
+      <div id="flashcards-alerta-acumulo" hidden>
+        <p id="flashcards-alerta-acumulo-texto"></p>
+        <button id="btn-revisar-alerta-flashcards" type="button">Revisar agora</button>
+      </div>
+      <button class="flashcards-aba" data-flashcards-aba="revisar-hoje" aria-selected="false"></button>
+      <button class="flashcards-aba" data-flashcards-aba="todos" aria-selected="false"></button>
+      <div class="flashcards-painel" id="flashcards-painel-revisar-hoje" hidden>
       <div id="flashcards-revisao-urgente">
         <span id="flashcards-pendentes-hoje"></span>
         <p id="flashcards-progresso-sessao"></p>
@@ -119,6 +130,8 @@ function montarSecaoRevisaoFlashcards() {
         <p id="flashcards-estudo-dia-vazio"></p>
         <div id="flashcards-estudo-dia-lista"></div>
       </div>
+      </div>
+      <div class="flashcards-painel" id="flashcards-painel-todos" hidden></div>
     </section>
   `
 }
@@ -222,6 +235,13 @@ describe('esqueleto visual dos flashcards', () => {
     expect(appHtml).toContain('id="flashcards-estudo-dia-vazio"')
   })
 
+  it('adiciona alerta de acumulo de flashcards vencidos', () => {
+    expect(appHtml).toContain('id="flashcards-alerta-acumulo"')
+    expect(appHtml).toContain('id="flashcards-alerta-acumulo-texto"')
+    expect(appHtml).toContain('id="btn-revisar-alerta-flashcards"')
+    expect(appHtml).toContain('Revisar agora')
+  })
+
   it('adiciona filtros e busca em Todos os Cards', () => {
     expect(appHtml).toContain('id="flashcards-busca"')
     expect(appHtml).toContain('id="flashcards-filtro-estado"')
@@ -305,6 +325,10 @@ describe('esqueleto visual dos flashcards', () => {
     expect(globalThis.mostrarRespostaFlashcardAtual).toBe(mostrarRespostaFlashcardAtual)
     expect(globalThis.avaliarFlashcardAtual).toBe(avaliarFlashcardAtual)
     expect(globalThis.carregarEstudoDiaFlashcards).toBe(carregarEstudoDiaFlashcards)
+    expect(globalThis.carregarAlertaAcumuloFlashcards).toBe(carregarAlertaAcumuloFlashcards)
+    expect(globalThis.contarCardsAcumuladosFlashcards).toBe(contarCardsAcumuladosFlashcards)
+    expect(globalThis.navegarParaRevisaoUrgenteFlashcards).toBe(navegarParaRevisaoUrgenteFlashcards)
+    expect(globalThis.renderizarAlertaAcumuloFlashcards).toBe(renderizarAlertaAcumuloFlashcards)
     expect(globalThis.selecionarCardsNovosEstudoDiaFlashcards).toBe(selecionarCardsNovosEstudoDiaFlashcards)
     expect(globalThis.calcularProximaRevisaoSM2Flashcards).toBe(calcularProximaRevisaoSM2Flashcards)
     expect(globalThis.calcularEstatisticasFlashcards).toBe(calcularEstatisticasFlashcards)
@@ -1050,6 +1074,77 @@ describe('esqueleto visual dos flashcards', () => {
     expect(texto).not.toContain('Card inativo')
     expect(texto).not.toContain('Card aprendendo')
     expect(document.getElementById('flashcards-estudo-dia-vazio').hidden).toBe(true)
+  })
+
+  it('alerta de acumulo nao aparece quando nao ha cards vencidos ha mais de 2 dias', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+    montarSecaoRevisaoFlashcards()
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: [
+        criarCardRevisao({ id: 'hoje', due_date: '2026-05-20' }),
+        criarCardRevisao({ id: 'um-dia', due_date: '2026-05-19' }),
+        criarCardRevisao({ id: 'inativo-antigo', due_date: '2026-05-17', ativo: false })
+      ],
+      error: null
+    })
+
+    const resultado = await carregarAlertaAcumuloFlashcards()
+
+    expect(resultado.data).toBe(0)
+    expect(document.getElementById('flashcards-alerta-acumulo').hidden).toBe(true)
+    expect(document.getElementById('flashcards-alerta-acumulo-texto').textContent).toBe('')
+  })
+
+  it('alerta de acumulo aparece para 1 card vencido ha mais de 2 dias', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+    montarSecaoRevisaoFlashcards()
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: [criarCardRevisao({ id: 'antigo', due_date: '2026-05-18' })],
+      error: null
+    })
+
+    const resultado = await carregarAlertaAcumuloFlashcards()
+
+    expect(resultado.data).toBe(1)
+    expect(document.getElementById('flashcards-alerta-acumulo').hidden).toBe(false)
+    expect(document.getElementById('flashcards-alerta-acumulo-texto').textContent).toContain('Você tem 1 cards vencidos há mais de 2 dias')
+  })
+
+  it('alerta de acumulo mostra quantidade correta e nao altera os cards', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+    montarSecaoRevisaoFlashcards()
+    const cards = [
+      criarCardRevisao({ id: 'antigo-1', due_date: '2026-05-18' }),
+      criarCardRevisao({ id: 'antigo-2', due_date: '2026-05-17' }),
+      criarCardRevisao({ id: 'um-dia', due_date: '2026-05-19' }),
+      criarCardRevisao({ id: 'hoje', due_date: '2026-05-20' }),
+      criarCardRevisao({ id: 'inativo', due_date: '2026-05-16', ativo: false })
+    ]
+    const antes = JSON.stringify(cards)
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({ data: cards, error: null })
+
+    const resultado = await carregarAlertaAcumuloFlashcards()
+
+    expect(resultado.data).toBe(2)
+    expect(contarCardsAcumuladosFlashcards(cards, '2026-05-20')).toBe(2)
+    expect(document.getElementById('flashcards-alerta-acumulo-texto').textContent).toContain('Você tem 2 cards vencidos há mais de 2 dias')
+    expect(JSON.stringify(cards)).toBe(antes)
+  })
+
+  it('botao Revisar agora leva para Revisar Hoje e Revisao Urgente', () => {
+    montarSecaoRevisaoFlashcards()
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({ data: [], error: null })
+    vi.spyOn(globalThis, 'listarMateriasPlanejadasHojeFlashcards').mockResolvedValue({ data: [], error: null })
+
+    renderizarAlertaAcumuloFlashcards(2)
+    selecionarAbaFlashcards('todos', document.getElementById('secao-flashcards'))
+    document.getElementById('btn-revisar-alerta-flashcards').click()
+
+    expect(document.getElementById('flashcards-painel-revisar-hoje').hidden).toBe(false)
+    expect(document.querySelector('[data-flashcards-aba="revisar-hoje"]').getAttribute('aria-selected')).toBe('true')
   })
 
   it('erro ao carregar Revisar Hoje mostra mensagem amigavel', async () => {
