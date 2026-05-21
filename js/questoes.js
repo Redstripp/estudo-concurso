@@ -1329,8 +1329,8 @@ function gerarPromptChatGPTEdicao() {
 function montarPromptDiagnosticoChatGPT(dados) {
   const temComentario = Boolean(String(dados.comentario || '').trim())
   const orientacaoComentario = temComentario
-    ? 'Use o comentário do professor/alunos como fonte principal para entender a questão. Se o comentário tiver informações conflitantes, priorize a explicação mais técnica/provável.'
-    : 'Como não há comentário original, analise o enunciado, as alternativas, a alternativa correta, a alternativa marcada e o motivo do erro, se houver. Gere também o campo COMENTÁRIO explicando por que a alternativa correta está correta e, se possível, por que a resposta marcada está errada.'
+    ? 'Use o comentário do professor/alunos como fonte principal para entender a questão e transformar essa fonte em uma explicação didática para estudo. Se o comentário tiver informações conflitantes, priorize a explicação mais técnica/provável.'
+    : 'Como não há comentário original, analise o enunciado, as alternativas, a alternativa correta, a alternativa marcada e o motivo do erro, se houver. Mesmo sem comentário original, tente explicar a questão com base no material disponível, sem inventar fundamento externo.'
 
   return `Você é uma IA assistente de estudos para concursos. Vou te enviar uma questão e/ou o comentário do professor, banca ou alunos.
 
@@ -1354,7 +1354,11 @@ Analise também armadilhas comuns de concursos presentes no enunciado e nas alte
 Responda exatamente no formato abaixo, sem mudar os rótulos, sem adicionar rótulos extras e sem usar subtítulos dentro dos campos. Dentro de PEGADINHAS, não inicie linhas com termos que pareçam rótulos oficiais, como CONCEITO:, RECONHECER: ou AÇÃO CORRETIVA:.
 
 COMENTÁRIO:
-[explique a questão com base no material fornecido. Se não houver informação suficiente, diga objetivamente o que falta.]
+- Alternativa correta: explique de forma didática por que está correta.
+- Alternativa marcada pelo usuário, se houver: explique por que está errada.
+- Demais alternativas: explique por que estão erradas, quando houver informação suficiente no enunciado, nas alternativas ou no comentário fornecido.
+- Síntese do aprendizado: explique o conceito central cobrado pela banca, a armadilha ou raciocínio que poderia levar ao erro e o que devo memorizar para não errar novamente.
+- Se faltar informação para justificar alguma alternativa, diga objetivamente que o material não traz informação suficiente para explicar aquela alternativa.
 
 PEGADINHAS:
 [aponte objetivamente as armadilhas da questão em texto corrido ou lista simples. Se não houver pegadinha clara, diga "Não identifiquei pegadinha relevante".]
