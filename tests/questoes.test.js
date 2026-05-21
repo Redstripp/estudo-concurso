@@ -13,6 +13,15 @@ const {
   alterarQuantidadeAlternativas,
   ordenarQuestoes,
   montarPromptDiagnosticoChatGPT,
+  montarPromptFlashcardsQuestao,
+  coletarDadosPromptFlashcardsQuestao,
+  abrirPromptFlashcardsQuestao,
+  copiarPromptFlashcardsQuestao,
+  abrirColarFlashcardsIA,
+  previsualizarFlashcardsIA,
+  extrairFlashcardsRespostaIA,
+  identificarCampoFlashcardIA,
+  identificarInicioCardFlashcardIA,
   copiarModeloRespostaChatGPT,
   previsualizarRespostaChatGPT,
   aplicarRespostaChatGPT,
@@ -342,6 +351,126 @@ describe('prompt manual da IA', () => {
   })
 })
 
+describe('prompt de flashcards da questao', () => {
+  const dadosCompletos = {
+    materia: 'Direito Constitucional',
+    assunto: 'Controle de constitucionalidade',
+    banca: 'Cespe',
+    enunciado: 'Enunciado completo da questao',
+    textoAlternativas: 'A) Errada\nB) Correta',
+    textoMarcada: 'A) Errada',
+    textoCorreta: 'B) Correta',
+    comentario: 'Comentario do professor',
+    pegadinhas: 'Pegadinha da banca',
+    conceito: 'Conceito central',
+    reconhecer: 'Reconhecer pelo comando',
+    acaoCorretiva: 'Criar quadro comparativo',
+    motivoErro: 'Interpretacao incorreta'
+  }
+
+  it('gera prompt com dados completos da questao e regras principais', () => {
+    const prompt = montarPromptFlashcardsQuestao(dadosCompletos)
+
+    expect(prompt).toContain('criar entre 2 e 5 flashcards')
+    expect(prompt).toContain('Um conceito por card')
+    expect(prompt).toContain('recuperação ativa')
+    expect(prompt).toContain('Não invente lei, artigo, súmula, jurisprudência, doutrina ou fundamento')
+    expect(prompt).toContain('Material insuficiente para preencher este campo.')
+    expect(prompt).toContain('CARD [N] — [TIPO DO CARD]')
+    expect(prompt).toContain('\nFRENTE:\n')
+    expect(prompt).toContain('\nVERSO:\n')
+    expect(prompt).toContain('\nCONTEXTO:\n')
+    expect(prompt).toContain('\nRECONHECER:\n')
+    expect(prompt).toContain('\nALERTA DE BANCA:\n')
+  })
+
+  it('inclui os dados herdados do Caderno de Erros', () => {
+    const prompt = montarPromptFlashcardsQuestao(dadosCompletos)
+
+    expect(prompt).toContain('Matéria:\nDireito Constitucional')
+    expect(prompt).toContain('Assunto:\nControle de constitucionalidade')
+    expect(prompt).toContain('Banca:\nCespe')
+    expect(prompt).toContain('Enunciado:\nEnunciado completo da questao')
+    expect(prompt).toContain('Alternativas:\nA) Errada\nB) Correta')
+    expect(prompt).toContain('Alternativa correta:\nB) Correta')
+    expect(prompt).toContain('Comentário:\nComentario do professor')
+    expect(prompt).toContain('Pegadinhas:\nPegadinha da banca')
+    expect(prompt).toContain('Conceito:\nConceito central')
+    expect(prompt).toContain('Como reconhecer:\nReconhecer pelo comando')
+    expect(prompt).toContain('Ação corretiva:\nCriar quadro comparativo')
+  })
+
+  it('gera prompt mesmo sem comentario usando enunciado e alternativas', () => {
+    const prompt = montarPromptFlashcardsQuestao({
+      ...dadosCompletos,
+      comentario: ''
+    })
+
+    expect(prompt).toContain('Enunciado:\nEnunciado completo da questao')
+    expect(prompt).toContain('Alternativas:\nA) Errada\nB) Correta')
+    expect(prompt).toContain('Comentário:\n[não informado]')
+  })
+
+  it('coleta dados preenchidos no formulario e bloqueia prompt sem enunciado', () => {
+    montarFormularioAlternativas()
+    alterarQuantidadeAlternativas(2)
+    document.getElementById('q-materia').value = 'mat-1'
+    document.getElementById('q-edital-topico').value = 'topico-1'
+    document.getElementById('q-banca').value = 'FGV'
+    document.getElementById('q-enunciado').value = 'Enunciado do formulario'
+    document.getElementById('q-comentario').value = 'Comentario'
+    document.getElementById('q-pegadinha-banca').value = 'Pegadinha'
+    document.getElementById('q-conceito-chave').value = 'Conceito'
+    document.getElementById('q-como-reconhecer').value = 'Reconhecer'
+    document.getElementById('q-acao-corretiva').value = 'Acao'
+    document.getElementById('q-motivo-erro').value = 'Interpretação incorreta'
+    document.getElementById('alt-A').value = 'Alternativa A'
+    document.getElementById('alt-B').value = 'Alternativa B'
+    clicarBotaoAlternativa('#grupo-marcada .btn-letra', 'A')
+    clicarBotaoAlternativa('#grupo-correta .btn-letra', 'B')
+
+    const dados = coletarDadosPromptFlashcardsQuestao()
+
+    expect(dados.materia).toBe('Direito Constitucional')
+    expect(dados.assunto).toBe('Fintechs')
+    expect(dados.banca).toBe('FGV')
+    expect(dados.textoAlternativas).toBe('A) Alternativa A\nB) Alternativa B')
+    expect(dados.textoMarcada).toBe('A) Alternativa A')
+    expect(dados.textoCorreta).toBe('B) Alternativa B')
+
+    document.getElementById('q-enunciado').value = ''
+    document.body.insertAdjacentHTML('beforeend', '<p id="msg-questao"></p>')
+    abrirPromptFlashcardsQuestao()
+
+    expect(document.getElementById('msg-questao').textContent).toBe('Preencha ao menos o enunciado da questão antes de gerar o prompt de flashcards.')
+    expect(document.getElementById('modal-prompt-flashcards-questao')).toBeNull()
+  })
+
+  it('copia o prompt de flashcards para a area de transferencia', async () => {
+    const writeText = vi.fn().mockResolvedValue()
+    const descritorNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { clipboard: { writeText } },
+      configurable: true
+    })
+    document.body.innerHTML = `
+      <textarea id="texto-prompt-flashcards-questao">PROMPT</textarea>
+      <p id="msg-prompt-flashcards-questao"></p>
+    `
+
+    await copiarPromptFlashcardsQuestao()
+
+    expect(writeText).toHaveBeenCalledWith('PROMPT')
+    expect(document.getElementById('msg-prompt-flashcards-questao').textContent).toBe('Prompt de flashcards copiado.')
+
+    if (descritorNavigator) {
+      Object.defineProperty(globalThis, 'navigator', descritorNavigator)
+    } else {
+      delete globalThis.navigator
+    }
+  })
+})
+
 describe('modelo de resposta da IA', () => {
   it('mantem o modelo no formato entendido pelo parser', () => {
     expect(MODELO_RESPOSTA_CHATGPT).toBe(`COMENTÁRIO:
@@ -608,6 +737,153 @@ Criar quadro comparativo e refazer questões semelhantes.</textarea>
     document.getElementById('btn-confirmar-preview-resposta-chatgpt').click()
 
     expect(document.getElementById('q-acao-corretiva').value).toBe('Criar quadro comparativo e refazer questões semelhantes.')
+  })
+})
+
+describe('parser de flashcards da IA', () => {
+  const respostaCards = `CARD 1 — CONCEITO
+FRENTE:
+O que caracteriza controle concentrado?
+
+VERSO:
+É o controle feito em tese por órgão competente.
+Texto com a palavra contexto: não deve virar rótulo.
+
+CONTEXTO:
+Questão sobre controle de constitucionalidade.
+
+RECONHECER:
+Procure expressões como ação direta.
+
+ALERTA DE BANCA:
+Não confundir com controle difuso.
+
+CARD 2 - DISTINÇÃO
+FRENTE:
+Controle difuso se diferencia como?
+
+VERSO:
+Ocorre em caso concreto.
+
+CONTEXTO:
+Comparação entre modelos.
+
+RECONHECER:
+Analise o órgão julgador.
+
+ALERTA DE BANCA:
+Troca de termos parecidos.`
+
+  it('reconhece campos oficiais apenas no inicio da linha', () => {
+    expect(identificarCampoFlashcardIA('FRENTE')).toBe('frente')
+    expect(identificarCampoFlashcardIA('VERSO')).toBe('verso')
+    expect(identificarCampoFlashcardIA('CONTEXTO')).toBe('contexto')
+    expect(identificarCampoFlashcardIA('RECONHECER')).toBe('reconhecer')
+    expect(identificarCampoFlashcardIA('ALERTA DE BANCA')).toBe('alertaBanca')
+    expect(identificarCampoFlashcardIA('Texto com frente')).toBeNull()
+    expect(identificarInicioCardFlashcardIA('CARD 1 — CONCEITO')).toEqual({ numero: 1, tipo: 'CONCEITO' })
+    expect(identificarInicioCardFlashcardIA('CARD 1 - PEGADINHA')).toEqual({ numero: 1, tipo: 'PEGADINHA' })
+  })
+
+  it('reconhece de 2 a 5 cards com hifen normal ou travessao', () => {
+    const resultado = extrairFlashcardsRespostaIA(`${respostaCards}
+
+CARD 3 — PEGADINHA
+FRENTE:
+Frente 3
+VERSO:
+Verso 3
+
+CARD 4 - EXCEÇÃO
+FRENTE:
+Frente 4
+VERSO:
+Verso 4
+
+CARD 5 — APLICAÇÃO
+FRENTE:
+Frente 5
+VERSO:
+Verso 5`)
+
+    expect(resultado.cards).toHaveLength(5)
+    expect(resultado.cards.map(card => card.tipo)).toEqual(['CONCEITO', 'DISTINÇÃO', 'PEGADINHA', 'EXCEÇÃO', 'APLICAÇÃO'])
+  })
+
+  it('extrai frente, verso, contexto, reconhecer e alerta de banca preservando multilinha', () => {
+    const resultado = extrairFlashcardsRespostaIA(respostaCards)
+    const primeiro = resultado.cards[0]
+
+    expect(primeiro.frente).toBe('O que caracteriza controle concentrado?')
+    expect(primeiro.verso).toBe('É o controle feito em tese por órgão competente.\nTexto com a palavra contexto: não deve virar rótulo.')
+    expect(primeiro.contexto).toBe('Questão sobre controle de constitucionalidade.')
+    expect(primeiro.reconhecer).toBe('Procure expressões como ação direta.')
+    expect(primeiro.alertaBanca).toBe('Não confundir com controle difuso.')
+  })
+
+  it('marca card sem frente ou sem verso como incompleto', () => {
+    const semFrente = extrairFlashcardsRespostaIA(`CARD 1 — CONCEITO
+VERSO:
+Resposta sem frente.`)
+    const semVerso = extrairFlashcardsRespostaIA(`CARD 1 — CONCEITO
+FRENTE:
+Pergunta sem verso.`)
+
+    expect(semFrente.cards[0].incompleto).toBe(true)
+    expect(semFrente.mensagens).toContain('Card incompleto: frente ou verso não identificado.')
+    expect(semVerso.cards[0].incompleto).toBe(true)
+    expect(semVerso.mensagens).toContain('Card incompleto: frente ou verso não identificado.')
+  })
+
+  it('retorna mensagem amigavel quando nenhum card e identificado', () => {
+    const resultado = extrairFlashcardsRespostaIA('Resposta fora do formato solicitado.')
+
+    expect(resultado.cards).toEqual([])
+    expect(resultado.mensagens).toContain('Nenhum flashcard foi identificado. Verifique se a resposta da IA seguiu o formato solicitado.')
+  })
+
+  it('previsualiza cards identificados sem salvar no banco nem chamar criarFlashcard', () => {
+    const criarFlashcardOriginal = globalThis.criarFlashcard
+    const from = vi.fn()
+    globalThis.criarFlashcard = vi.fn()
+    globalThis.db = { from }
+    document.body.innerHTML = `
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">${respostaCards}</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+
+    const resultado = previsualizarFlashcardsIA(modal)
+
+    expect(resultado.cards).toHaveLength(2)
+    expect(document.body.textContent).toContain('Prévia dos flashcards da IA')
+    expect(document.body.textContent).toContain('Card 1')
+    expect(document.body.textContent).toContain('O que caracteriza controle concentrado?')
+    expect(document.body.textContent).toContain('Não confundir com controle difuso.')
+    expect(globalThis.criarFlashcard).not.toHaveBeenCalled()
+    expect(from).not.toHaveBeenCalled()
+
+    if (criarFlashcardOriginal) {
+      globalThis.criarFlashcard = criarFlashcardOriginal
+    } else {
+      delete globalThis.criarFlashcard
+    }
+  })
+
+  it('mostra mensagem amigavel no fluxo quando a resposta esta fora do formato', () => {
+    document.body.innerHTML = `
+      <div id="modal-flashcards-ia">
+        <textarea id="texto-flashcards-ia">sem cards</textarea>
+        <p id="msg-flashcards-ia"></p>
+      </div>
+    `
+    const modal = document.getElementById('modal-flashcards-ia')
+
+    previsualizarFlashcardsIA(modal)
+
+    expect(document.getElementById('msg-flashcards-ia').textContent).toBe('Nenhum flashcard foi identificado. Verifique se a resposta da IA seguiu o formato solicitado.')
   })
 })
 
