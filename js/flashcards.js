@@ -163,19 +163,167 @@ function atualizarIndicadoresFlashcardsVazios(raiz = document) {
   if (sequencia) sequencia.textContent = '0'
 }
 
+function mostrarMensagemFlashcards(texto, tipo = '') {
+  const msg = document.getElementById('msg-flashcards')
+  if (!msg) return
+  msg.textContent = texto
+  msg.className = `msg-materia ${tipo}`.trim()
+}
+
+function obterDadosFormularioFlashcards() {
+  const frente = normalizarTextoObrigatorioFlashcards(document.getElementById('flashcard-frente')?.value)
+  const verso = normalizarTextoObrigatorioFlashcards(document.getElementById('flashcard-verso')?.value)
+  const tagsTexto = document.getElementById('flashcard-tags')?.value || ''
+  const tags = tagsTexto
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean)
+
+  return { frente, verso, tags }
+}
+
+function limparFormularioFlashcards() {
+  const frente = document.getElementById('flashcard-frente')
+  const verso = document.getElementById('flashcard-verso')
+  const tags = document.getElementById('flashcard-tags')
+
+  if (frente) frente.value = ''
+  if (verso) verso.value = ''
+  if (tags) tags.value = ''
+}
+
+function criarElementoFlashcardLista(card) {
+  const item = document.createElement('article')
+  item.className = 'card-questao flashcard-lista-item'
+
+  const frente = document.createElement('h4')
+  frente.className = 'card-form-titulo'
+  frente.textContent = card.frente || 'Sem frente'
+
+  const verso = document.createElement('p')
+  verso.className = 'card-questao-comentario'
+  verso.textContent = card.verso || 'Sem verso'
+
+  const meta = document.createElement('div')
+  meta.className = 'revisao-tags'
+
+  const estado = document.createElement('span')
+  estado.className = 'tag-estudo'
+  estado.textContent = `Estado: ${card.estado || 'novo'}`
+  meta.appendChild(estado)
+
+  const proximaRevisao = document.createElement('span')
+  proximaRevisao.className = 'tag-estudo'
+  proximaRevisao.textContent = `Proxima revisao: ${card.due_date || '-'}`
+  meta.appendChild(proximaRevisao)
+
+  if (Array.isArray(card.tags) && card.tags.length > 0) {
+    const tags = document.createElement('span')
+    tags.className = 'tag-estudo'
+    tags.textContent = `Tags: ${card.tags.join(', ')}`
+    meta.appendChild(tags)
+  }
+
+  item.append(frente, verso, meta)
+  return item
+}
+
+function renderizarListaFlashcards(cards = []) {
+  const lista = document.getElementById('flashcards-lista')
+  if (!lista) return
+
+  lista.replaceChildren()
+
+  if (!Array.isArray(cards) || cards.length === 0) {
+    const vazio = document.createElement('p')
+    vazio.className = 'texto-placeholder'
+    vazio.textContent = 'Nenhum flashcard cadastrado ainda.'
+    lista.appendChild(vazio)
+    return
+  }
+
+  cards.forEach(card => lista.appendChild(criarElementoFlashcardLista(card)))
+}
+
+async function carregarListaFlashcards() {
+  const lista = document.getElementById('flashcards-lista')
+  if (!lista) return { data: [], error: null }
+
+  lista.innerHTML = '<p class="texto-placeholder">Carregando flashcards...</p>'
+
+  const listar = globalThis.listarFlashcards || listarFlashcards
+  const resultado = await listar()
+
+  if (resultado.error) {
+    lista.innerHTML = '<p class="texto-placeholder">Nao foi possivel carregar seus flashcards. Verifique sua conexao e tente novamente.</p>'
+    return resultado
+  }
+
+  renderizarListaFlashcards(resultado.data || [])
+  return resultado
+}
+
+async function salvarFlashcardTela() {
+  const btn = document.getElementById('btn-salvar-flashcard')
+  const dados = obterDadosFormularioFlashcards()
+
+  if (!dados.frente) {
+    mostrarMensagemFlashcards('Informe a frente do flashcard.', 'erro')
+    return { data: null, error: criarErroFlashcards('Informe a frente do flashcard.') }
+  }
+
+  if (!dados.verso) {
+    mostrarMensagemFlashcards('Informe o verso do flashcard.', 'erro')
+    return { data: null, error: criarErroFlashcards('Informe o verso do flashcard.') }
+  }
+
+  if (btn) {
+    btn.disabled = true
+    btn.textContent = 'Salvando...'
+  }
+  mostrarMensagemFlashcards('')
+
+  const criar = globalThis.criarFlashcard || criarFlashcard
+  const resultado = await criar({
+    frente: dados.frente,
+    verso: dados.verso,
+    tags: dados.tags
+  })
+
+  if (btn) {
+    btn.disabled = false
+    btn.textContent = 'Salvar Card'
+  }
+
+  if (resultado.error) {
+    mostrarMensagemFlashcards(resultado.error.message || 'Nao foi possivel salvar o flashcard.', 'erro')
+    return resultado
+  }
+
+  limparFormularioFlashcards()
+  mostrarMensagemFlashcards('Flashcard salvo com sucesso!', 'sucesso')
+  await carregarListaFlashcards()
+  return resultado
+}
+
 function inicializarFlashcards() {
   const secao = document.getElementById('secao-flashcards')
   if (!secao) return
 
   if (!flashcardsInicializado) {
     secao.querySelectorAll('[data-flashcards-aba]').forEach(botao => {
-      botao.addEventListener('click', () => selecionarAbaFlashcards(botao.dataset.flashcardsAba, secao))
+      botao.addEventListener('click', () => {
+        selecionarAbaFlashcards(botao.dataset.flashcardsAba, secao)
+        if (botao.dataset.flashcardsAba === 'todos') carregarListaFlashcards()
+      })
     })
+    document.getElementById('btn-salvar-flashcard')?.addEventListener('click', salvarFlashcardTela)
     flashcardsInicializado = true
   }
 
   atualizarIndicadoresFlashcardsVazios(document)
   selecionarAbaFlashcards(ABA_FLASHCARDS_PADRAO, secao)
+  carregarListaFlashcards()
 }
 
 async function criarFlashcard(dados = {}) {
@@ -426,6 +574,9 @@ async function registrarRevisaoFlashcard(id, resultado = {}) {
 if (typeof globalThis !== 'undefined') {
   globalThis.inicializarFlashcards = inicializarFlashcards
   globalThis.selecionarAbaFlashcards = selecionarAbaFlashcards
+  globalThis.salvarFlashcardTela = salvarFlashcardTela
+  globalThis.carregarListaFlashcards = carregarListaFlashcards
+  globalThis.renderizarListaFlashcards = renderizarListaFlashcards
   globalThis.criarFlashcard = criarFlashcard
   globalThis.listarFlashcards = listarFlashcards
   globalThis.listarFlashcardsDevidosHoje = listarFlashcardsDevidosHoje

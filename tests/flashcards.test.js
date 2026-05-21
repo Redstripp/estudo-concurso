@@ -6,6 +6,9 @@ import '../js/flashcards.js'
 const {
   inicializarFlashcards,
   selecionarAbaFlashcards,
+  salvarFlashcardTela,
+  carregarListaFlashcards,
+  renderizarListaFlashcards,
   criarFlashcard,
   listarFlashcards,
   listarFlashcardsDevidosHoje,
@@ -33,6 +36,19 @@ function criarQueryLista(resposta = { data: [], error: null }) {
     lte: vi.fn(function () { return this }),
     order: vi.fn(function () { return this })
   }
+}
+
+function montarFormularioFlashcards() {
+  document.body.innerHTML = `
+    <section id="secao-flashcards">
+      <div id="flashcards-lista"></div>
+      <textarea id="flashcard-frente"></textarea>
+      <textarea id="flashcard-verso"></textarea>
+      <input id="flashcard-tags" />
+      <button id="btn-salvar-flashcard" type="button">Salvar Card</button>
+      <p id="msg-flashcards"></p>
+    </section>
+  `
 }
 
 afterEach(() => {
@@ -70,6 +86,12 @@ describe('esqueleto visual dos flashcards', () => {
     expect(appHtml).toContain('Cards para hoje')
     expect(appHtml).toContain('Taxa de acerto')
     expect(appHtml).toContain('Sequ')
+  })
+
+  it('botao Salvar Card existe e esta funcional para a etapa de cadastro', () => {
+    expect(appHtml).toContain('id="btn-salvar-flashcard"')
+    expect(appHtml).toContain('Salvar Card')
+    expect(appHtml).not.toContain('id="btn-salvar-flashcard" type="button" disabled')
   })
 
   it('carrega js/flashcards.js antes de js/app.js', () => {
@@ -117,12 +139,115 @@ describe('esqueleto visual dos flashcards', () => {
   })
 
   it('continua expondo as funcoes de dados existentes', () => {
+    expect(globalThis.salvarFlashcardTela).toBe(salvarFlashcardTela)
+    expect(globalThis.carregarListaFlashcards).toBe(carregarListaFlashcards)
+    expect(globalThis.renderizarListaFlashcards).toBe(renderizarListaFlashcards)
     expect(globalThis.criarFlashcard).toBe(criarFlashcard)
     expect(globalThis.listarFlashcards).toBe(listarFlashcards)
     expect(globalThis.listarFlashcardsDevidosHoje).toBe(listarFlashcardsDevidosHoje)
     expect(globalThis.atualizarFlashcard).toBe(atualizarFlashcard)
     expect(globalThis.desativarFlashcard).toBe(desativarFlashcard)
     expect(globalThis.registrarRevisaoFlashcard).toBe(registrarRevisaoFlashcard)
+  })
+
+  it('frente vazia impede salvamento pela tela', async () => {
+    montarFormularioFlashcards()
+    document.getElementById('flashcard-verso').value = 'Verso'
+    const criar = vi.spyOn(globalThis, 'criarFlashcard')
+
+    const resultado = await salvarFlashcardTela()
+
+    expect(resultado.error.message).toBe('Informe a frente do flashcard.')
+    expect(document.getElementById('msg-flashcards').textContent).toBe('Informe a frente do flashcard.')
+    expect(criar).not.toHaveBeenCalled()
+  })
+
+  it('verso vazio impede salvamento pela tela', async () => {
+    montarFormularioFlashcards()
+    document.getElementById('flashcard-frente').value = 'Frente'
+    const criar = vi.spyOn(globalThis, 'criarFlashcard')
+
+    const resultado = await salvarFlashcardTela()
+
+    expect(resultado.error.message).toBe('Informe o verso do flashcard.')
+    expect(document.getElementById('msg-flashcards').textContent).toBe('Informe o verso do flashcard.')
+    expect(criar).not.toHaveBeenCalled()
+  })
+
+  it('salva card com frente, verso e tags sem enviar user_id do formulario', async () => {
+    montarFormularioFlashcards()
+    document.getElementById('flashcard-frente').value = ' Frente '
+    document.getElementById('flashcard-verso').value = ' Verso '
+    document.getElementById('flashcard-tags').value = ' constitucional, , prazos '
+    const criar = vi.spyOn(globalThis, 'criarFlashcard').mockResolvedValue({
+      data: { id: 'card-1' },
+      error: null
+    })
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: [{ id: 'card-1', frente: 'Frente', verso: 'Verso', estado: 'novo', due_date: '2026-05-21', tags: ['constitucional'] }],
+      error: null
+    })
+
+    const resultado = await salvarFlashcardTela()
+
+    expect(resultado.error).toBeNull()
+    expect(criar).toHaveBeenCalledWith({
+      frente: 'Frente',
+      verso: 'Verso',
+      tags: ['constitucional', 'prazos']
+    })
+    expect(criar.mock.calls[0][0]).not.toHaveProperty('user_id')
+    expect(document.getElementById('flashcard-frente').value).toBe('')
+    expect(document.getElementById('flashcard-verso').value).toBe('')
+    expect(document.getElementById('flashcard-tags').value).toBe('')
+    expect(document.getElementById('msg-flashcards').textContent).toBe('Flashcard salvo com sucesso!')
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Frente')
+  })
+
+  it('lista Todos os Cards renderiza cards retornados', () => {
+    document.body.innerHTML = '<div id="flashcards-lista"></div>'
+
+    renderizarListaFlashcards([
+      {
+        id: 'card-1',
+        frente: 'Frente do card',
+        verso: 'Verso do card',
+        estado: 'novo',
+        due_date: '2026-05-21',
+        tags: ['constitucional', 'prazos']
+      }
+    ])
+
+    const texto = document.getElementById('flashcards-lista').textContent
+    expect(texto).toContain('Frente do card')
+    expect(texto).toContain('Verso do card')
+    expect(texto).toContain('Estado: novo')
+    expect(texto).toContain('Proxima revisao: 2026-05-21')
+    expect(texto).toContain('Tags: constitucional, prazos')
+  })
+
+  it('lista vazia mostra mensagem correta', () => {
+    document.body.innerHTML = '<div id="flashcards-lista"></div>'
+
+    renderizarListaFlashcards([])
+
+    expect(document.getElementById('flashcards-lista').textContent).toBe('Nenhum flashcard cadastrado ainda.')
+  })
+
+  it('erro do Supabase mostra mensagem amigavel na tela', async () => {
+    montarFormularioFlashcards()
+    document.getElementById('flashcard-frente').value = 'Frente'
+    document.getElementById('flashcard-verso').value = 'Verso'
+    vi.spyOn(globalThis, 'criarFlashcard').mockResolvedValue({
+      data: null,
+      error: new Error('Nao foi possivel criar o flashcard. Verifique sua conexao e tente novamente.')
+    })
+
+    const resultado = await salvarFlashcardTela()
+
+    expect(resultado.error.message).toBe('Nao foi possivel criar o flashcard. Verifique sua conexao e tente novamente.')
+    expect(document.getElementById('msg-flashcards').textContent).toBe('Nao foi possivel criar o flashcard. Verifique sua conexao e tente novamente.')
+    expect(document.getElementById('flashcard-frente').value).toBe('Frente')
   })
 })
 
