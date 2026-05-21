@@ -272,7 +272,7 @@ describe('alterarQuantidadeAlternativas', () => {
 })
 
 describe('prompt manual da IA', () => {
-  it('mantem orientacao atual quando existe comentario', () => {
+  it('gera prompt aprimorado com formato obrigatorio e dados da questao', () => {
     const prompt = montarPromptDiagnosticoChatGPT({
       materia: 'Direito Constitucional',
       topico: 'Controle de constitucionalidade',
@@ -287,21 +287,21 @@ describe('prompt manual da IA', () => {
       pegadinha: ''
     })
 
-    expect(prompt).toContain('Use o comentário do professor/alunos como fonte principal')
-    expect(prompt).toContain('explicação didática para estudo')
+    expect(prompt).toContain('Você é uma IA especialista em análise de questões de concurso público')
+    expect(prompt).toContain('FONTE E LIMITES:')
+    expect(prompt).toContain('Use apenas o material fornecido')
     expect(prompt).toContain('Comentário do professor já existente')
     expect(prompt).toContain('Motivo do erro:\nInterpretação incorreta')
     expect(prompt).toContain('\nCOMENTÁRIO:\n')
-    expect(prompt).toContain('- Alternativa correta: explique de forma didática por que está correta.')
-    expect(prompt).toContain('- Alternativa marcada pelo usuário, se houver: explique por que está errada.')
-    expect(prompt).toContain('- Demais alternativas: explique por que estão erradas, quando houver informação suficiente')
-    expect(prompt).toContain('- Síntese do aprendizado: explique o conceito central cobrado pela banca')
-    expect(prompt).toContain('Não invente lei, artigo, súmula, jurisprudência, doutrina ou fundamento')
+    expect(prompt).toContain('\nPEGADINHAS:\n')
+    expect(prompt).toContain('\nCONCEITO:\n')
+    expect(prompt).toContain('\nRECONHECER:\n')
     expect(prompt).toContain('\nAÇÃO CORRETIVA:\n')
+    expect(prompt).toContain('Tipo de registro:\nErrada')
     expect(prompt).not.toContain('\nACAO:\n')
   })
 
-  it('pede comentario explicativo quando nao existe comentario original', () => {
+  it('orienta comentario didatico sem inventar fundamento externo', () => {
     const prompt = montarPromptDiagnosticoChatGPT({
       materia: 'Direito Administrativo',
       topico: 'Atos administrativos',
@@ -316,17 +316,41 @@ describe('prompt manual da IA', () => {
       pegadinha: ''
     })
 
-    expect(prompt).toContain('Como não há comentário original')
-    expect(prompt).toContain('analise o enunciado, as alternativas, a alternativa correta, a alternativa marcada')
-    expect(prompt).toContain('Mesmo sem comentário original, tente explicar a questão com base no material disponível')
-    expect(prompt).toContain('sem inventar fundamento externo')
-    expect(prompt).toContain('COMENTÁRIO:')
-    expect(prompt).toContain('Se faltar informação para justificar alguma alternativa')
-    expect(prompt).toContain('sem mudar os rótulos')
-    expect(prompt).toContain('não inicie linhas com termos que pareçam rótulos oficiais')
+    expect(prompt).toContain('Alternativa correta: explique por que está correta, conectando ao conceito cobrado.')
+    expect(prompt).toContain('Alternativa marcada pelo usuário, se houver: explique especificamente o erro de raciocínio')
+    expect(prompt).toContain('Demais alternativas: explique o erro de cada uma apenas quando o material fornecido permitir')
+    expect(prompt).toContain('Síntese do aprendizado: em 3 a 5 linhas')
+    expect(prompt).toContain('Não invente lei, artigo, súmula, jurisprudência, doutrina ou fundamento externo')
+    expect(prompt).toContain('O material fornecido não contém informação suficiente para justificar esta alternativa.')
+    expect(prompt).toContain('Se não houver comentário original, analise exclusivamente com base no enunciado e nas alternativas.')
     expect(prompt).toContain('Alternativa que marquei:\nA) Alternativa marcada')
     expect(prompt).toContain('Alternativa correta:\nB) Alternativa correta')
     expect(prompt).toContain('Motivo do erro:\nFalta de conteúdo')
+  })
+
+  it('inclui pegadinhas classicas e acao corretiva pratica', () => {
+    const prompt = montarPromptDiagnosticoChatGPT({
+      materia: '',
+      topico: '',
+      banca: '',
+      tipoQuestao: 'Errada',
+      motivoErro: '',
+      enunciado: 'Enunciado',
+      textoAlternativas: 'A) Errada\nB) Correta',
+      textoMarcada: 'A) Errada',
+      textoCorreta: 'B) Correta',
+      comentario: '',
+      pegadinha: ''
+    })
+
+    expect(prompt).toContain('Palavras absolutas ou restritivas: sempre, nunca, somente, apenas, todos, nenhum.')
+    expect(prompt).toContain('Troca de conceitos parecidos: institutos similares com regimes diferentes.')
+    expect(prompt).toContain('Inversão de lógica: causa e consequência trocadas.')
+    expect(prompt).toContain('Exceções escondidas: regra geral apresentada como absoluta.')
+    expect(prompt).toContain('Alternativas parcialmente corretas: verdadeira no início, errada no final.')
+    expect(prompt).toContain('Lei literal vs. interpretação doutrinária')
+    expect(prompt).toContain('Indique uma ação prática, específica e realizável')
+    expect(prompt).toContain('Evite ações genéricas como "estudar mais o assunto".')
   })
 
   it('mantem o formato rigido dos rotulos na ordem esperada', () => {
@@ -349,6 +373,7 @@ describe('prompt manual da IA', () => {
     expect(posicoes.every(posicao => posicao > -1)).toBe(true)
     expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b))
     expect(prompt).not.toContain('\nACAO:\n')
+    expect(prompt).not.toContain('\nEXPLICAÇÃO:\n')
   })
 })
 
