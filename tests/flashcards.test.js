@@ -14,9 +14,13 @@ const {
   mostrarRespostaFlashcardAtual,
   avaliarFlashcardAtual,
   calcularProximaRevisaoSM2Flashcards,
+  calcularEstatisticasFlashcards,
+  renderizarEstatisticasFlashcards,
+  carregarEstatisticasFlashcards,
   criarFlashcard,
   listarFlashcards,
   listarFlashcardsDevidosHoje,
+  listarRevisoesFlashcards,
   atualizarFlashcard,
   desativarFlashcard,
   registrarRevisaoFlashcard
@@ -64,6 +68,24 @@ function montarSecaoRevisaoFlashcards() {
       <p id="flashcards-revisar-vazio"></p>
       <div id="flashcards-revisao-card"></div>
       <button id="btn-iniciar-revisao-flashcards" type="button" disabled>Iniciar revisao</button>
+    </section>
+  `
+}
+
+function montarSecaoEstatisticasFlashcards() {
+  document.body.innerHTML = `
+    <section id="secao-flashcards">
+      <strong id="flashcards-total-cards"></strong>
+      <strong id="flashcards-cards-hoje"></strong>
+      <strong id="flashcards-cards-novos"></strong>
+      <strong id="flashcards-cards-aprendendo"></strong>
+      <strong id="flashcards-cards-revisando"></strong>
+      <strong id="flashcards-total-revisoes"></strong>
+      <strong id="flashcards-total-acertos"></strong>
+      <strong id="flashcards-taxa-acerto"></strong>
+      <strong id="flashcards-total-erros"></strong>
+      <strong id="flashcards-sequencia-estudos"></strong>
+      <p id="msg-flashcards-estatisticas"></p>
     </section>
   `
 }
@@ -178,9 +200,13 @@ describe('esqueleto visual dos flashcards', () => {
     expect(globalThis.mostrarRespostaFlashcardAtual).toBe(mostrarRespostaFlashcardAtual)
     expect(globalThis.avaliarFlashcardAtual).toBe(avaliarFlashcardAtual)
     expect(globalThis.calcularProximaRevisaoSM2Flashcards).toBe(calcularProximaRevisaoSM2Flashcards)
+    expect(globalThis.calcularEstatisticasFlashcards).toBe(calcularEstatisticasFlashcards)
+    expect(globalThis.renderizarEstatisticasFlashcards).toBe(renderizarEstatisticasFlashcards)
+    expect(globalThis.carregarEstatisticasFlashcards).toBe(carregarEstatisticasFlashcards)
     expect(globalThis.criarFlashcard).toBe(criarFlashcard)
     expect(globalThis.listarFlashcards).toBe(listarFlashcards)
     expect(globalThis.listarFlashcardsDevidosHoje).toBe(listarFlashcardsDevidosHoje)
+    expect(globalThis.listarRevisoesFlashcards).toBe(listarRevisoesFlashcards)
     expect(globalThis.atualizarFlashcard).toBe(atualizarFlashcard)
     expect(globalThis.desativarFlashcard).toBe(desativarFlashcard)
     expect(globalThis.registrarRevisaoFlashcard).toBe(registrarRevisaoFlashcard)
@@ -412,6 +438,102 @@ describe('esqueleto visual dos flashcards', () => {
     expect(resultado.error.message).toBe('Nao foi possivel listar os flashcards de hoje. Verifique sua conexao e tente novamente.')
     expect(document.getElementById('flashcards-revisar-vazio').textContent).toBe('Nao foi possivel listar os flashcards de hoje. Verifique sua conexao e tente novamente.')
   })
+
+  it('Estatisticas mostra valores zerados quando nao ha cards nem revisoes', async () => {
+    montarSecaoEstatisticasFlashcards()
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({ data: [], error: null })
+    vi.spyOn(globalThis, 'listarRevisoesFlashcards').mockResolvedValue({ data: [], error: null })
+
+    const resultado = await carregarEstatisticasFlashcards()
+
+    expect(resultado.error).toBeNull()
+    expect(document.getElementById('flashcards-total-cards').textContent).toBe('0')
+    expect(document.getElementById('flashcards-cards-hoje').textContent).toBe('0')
+    expect(document.getElementById('flashcards-cards-novos').textContent).toBe('0')
+    expect(document.getElementById('flashcards-total-revisoes').textContent).toBe('0')
+    expect(document.getElementById('flashcards-taxa-acerto').textContent).toBe('0%')
+    expect(document.getElementById('msg-flashcards-estatisticas').textContent).toBe('')
+  })
+
+  it('calcula total ativo, cards para hoje e cards por estado', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+
+    const estatisticas = calcularEstatisticasFlashcards([
+      criarCardRevisao({ id: 'novo-hoje', estado: 'novo', due_date: '2026-05-20' }),
+      criarCardRevisao({ id: 'aprendendo-atrasado', estado: 'aprendendo', due_date: '2026-05-19' }),
+      criarCardRevisao({ id: 'revisando-futuro', estado: 'revisando', due_date: '2026-05-21' }),
+      criarCardRevisao({ id: 'inativo', estado: 'novo', ativo: false, due_date: '2026-05-20' })
+    ], [])
+
+    expect(estatisticas.totalCards).toBe(3)
+    expect(estatisticas.cardsHoje).toBe(2)
+    expect(estatisticas.cardsNovos).toBe(1)
+    expect(estatisticas.cardsAprendendo).toBe(1)
+    expect(estatisticas.cardsRevisando).toBe(1)
+  })
+
+  it('calcula revisoes, acertos, erros, taxa e sequencia simples', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+
+    const estatisticas = calcularEstatisticasFlashcards([], [
+      { quality: 5, was_correct: true, reviewed_at: '2026-05-20T09:00:00Z' },
+      { quality: 4, was_correct: true, reviewed_at: '2026-05-19T09:00:00Z' },
+      { quality: 2, was_correct: false, reviewed_at: '2026-05-18T09:00:00Z' },
+      { quality: 1, was_correct: false, reviewed_at: '2026-05-16T09:00:00Z' }
+    ])
+
+    expect(estatisticas.totalRevisoes).toBe(4)
+    expect(estatisticas.totalAcertos).toBe(2)
+    expect(estatisticas.totalErros).toBe(2)
+    expect(estatisticas.taxaAcerto).toBe(50)
+    expect(estatisticas.sequenciaEstudos).toBe(3)
+  })
+
+  it('renderiza estatisticas na aba sem quebrar', () => {
+    montarSecaoEstatisticasFlashcards()
+
+    renderizarEstatisticasFlashcards({
+      totalCards: 4,
+      cardsHoje: 2,
+      cardsNovos: 1,
+      cardsAprendendo: 1,
+      cardsRevisando: 2,
+      totalRevisoes: 10,
+      totalAcertos: 7,
+      taxaAcerto: 70,
+      totalErros: 3,
+      sequenciaEstudos: 5
+    })
+
+    expect(document.getElementById('flashcards-total-cards').textContent).toBe('4')
+    expect(document.getElementById('flashcards-cards-hoje').textContent).toBe('2')
+    expect(document.getElementById('flashcards-cards-novos').textContent).toBe('1')
+    expect(document.getElementById('flashcards-cards-aprendendo').textContent).toBe('1')
+    expect(document.getElementById('flashcards-cards-revisando').textContent).toBe('2')
+    expect(document.getElementById('flashcards-total-revisoes').textContent).toBe('10')
+    expect(document.getElementById('flashcards-total-acertos').textContent).toBe('7')
+    expect(document.getElementById('flashcards-taxa-acerto').textContent).toBe('70%')
+    expect(document.getElementById('flashcards-total-erros').textContent).toBe('3')
+    expect(document.getElementById('flashcards-sequencia-estudos').textContent).toBe('5')
+  })
+
+  it('erro ao carregar Estatisticas mostra mensagem amigavel e valores zerados', async () => {
+    montarSecaoEstatisticasFlashcards()
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: null,
+      error: new Error('Nao foi possivel listar os flashcards. Verifique sua conexao e tente novamente.')
+    })
+    vi.spyOn(globalThis, 'listarRevisoesFlashcards').mockResolvedValue({ data: [], error: null })
+
+    const resultado = await carregarEstatisticasFlashcards()
+
+    expect(resultado.error.message).toBe('Nao foi possivel listar os flashcards. Verifique sua conexao e tente novamente.')
+    expect(document.getElementById('flashcards-total-cards').textContent).toBe('0')
+    expect(document.getElementById('flashcards-taxa-acerto').textContent).toBe('0%')
+    expect(document.getElementById('msg-flashcards-estatisticas').textContent).toBe('Nao foi possivel listar os flashcards. Verifique sua conexao e tente novamente.')
+  })
 })
 
 describe('camada de dados dos flashcards', () => {
@@ -513,6 +635,19 @@ describe('camada de dados dos flashcards', () => {
     expect(query.eq).toHaveBeenCalledWith('user_id', 'user-1')
     expect(query.eq).toHaveBeenCalledWith('ativo', true)
     expect(query.lte).toHaveBeenCalledWith('due_date', '2026-05-20')
+  })
+
+  it('listarRevisoesFlashcards usa a tabela flashcard_reviews do usuario logado', async () => {
+    const query = criarQueryLista({ data: [{ id: 'review-1' }], error: null })
+    const from = vi.fn(() => query)
+    globalThis.db = { auth: criarAuthMock('user-1'), from }
+
+    const resultado = await listarRevisoesFlashcards()
+
+    expect(resultado.data).toEqual([{ id: 'review-1' }])
+    expect(from).toHaveBeenCalledWith('flashcard_reviews')
+    expect(query.eq).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(query.order).toHaveBeenCalledWith('reviewed_at', { ascending: false })
   })
 
   it('atualizarFlashcard nao permite trocar user_id manualmente', async () => {
