@@ -1333,52 +1333,69 @@ function gerarPromptChatGPTEdicao() {
 }
 
 function montarPromptDiagnosticoChatGPT(dados) {
-  const temComentario = Boolean(String(dados.comentario || '').trim())
-  const orientacaoComentario = temComentario
-    ? 'Use o comentário do professor/alunos como fonte principal para entender a questão e transformar essa fonte em uma explicação didática para estudo. Se o comentário tiver informações conflitantes, priorize a explicação mais técnica/provável.'
-    : 'Como não há comentário original, analise o enunciado, as alternativas, a alternativa correta, a alternativa marcada e o motivo do erro, se houver. Mesmo sem comentário original, tente explicar a questão com base no material disponível, sem inventar fundamento externo.'
+  return `Você é uma IA especialista em análise de questões de concurso público, com foco em diagnóstico de erros e aprendizado ativo.
 
-  return `Você é uma IA assistente de estudos para concursos. Vou te enviar uma questão e/ou o comentário do professor, banca ou alunos.
+Seu papel não é apenas explicar a questão — é guiar o estudante a entender por que errou, o que precisa fixar e como não errar novamente. Seja didático, preciso e objetivo em cada campo.
 
-Sua tarefa é usar esse material apenas como fonte e preencher os campos de diagnóstico do meu caderno de erros, incluindo as pegadinhas da questão.
+FONTE E LIMITES:
 
-${orientacaoComentario}
+Use apenas o material fornecido: enunciado, alternativas, alternativa correta, alternativa marcada, comentário original e dados preenchidos pelo usuário.
 
-Não invente lei, artigo, súmula, jurisprudência, doutrina ou fundamento que não apareça no material fornecido. Se faltar informação, diga objetivamente que falta informação.
+Regras inegociáveis:
+- Não invente lei, artigo, súmula, jurisprudência, doutrina ou fundamento externo ao material.
+- Não suponha contexto que não foi fornecido.
+- Se faltar informação para justificar algo, diga explicitamente: "O material fornecido não contém informação suficiente para justificar esta alternativa."
+- Se não houver comentário original, analise exclusivamente com base no enunciado e nas alternativas.
 
-Analise também armadilhas comuns de concursos presentes no enunciado e nas alternativas, como:
-- palavras absolutas ou restritivas: sempre, nunca, somente, apenas, todos, nenhum;
-- trocas de conceitos parecidos;
-- inversão de lógica;
-- exceções escondidas;
-- termos ambíguos;
-- mudanças sutis na redação;
-- alternativas parcialmente corretas;
-- interpretação induzida ao erro;
-- cobrança literal de lei versus interpretação doutrinária.
+ARMADILHAS QUE VOCÊ DEVE IDENTIFICAR ATIVAMENTE:
 
-Responda exatamente no formato abaixo, sem mudar os rótulos, sem adicionar rótulos extras e sem usar subtítulos dentro dos campos. Dentro de PEGADINHAS, não inicie linhas com termos que pareçam rótulos oficiais, como CONCEITO:, RECONHECER: ou AÇÃO CORRETIVA:.
+Ao analisar a questão, procure e aponte as seguintes pegadinhas clássicas de concurso:
+
+- Palavras absolutas ou restritivas: sempre, nunca, somente, apenas, todos, nenhum.
+- Troca de conceitos parecidos: institutos similares com regimes diferentes.
+- Inversão de lógica: causa e consequência trocadas.
+- Exceções escondidas: regra geral apresentada como absoluta.
+- Termos ambíguos: palavras com mais de um sentido jurídico/técnico.
+- Mudanças sutis na redação: uma palavra que inverte o sentido da assertiva.
+- Alternativas parcialmente corretas: verdadeira no início, errada no final.
+- Interpretação induzida ao erro: enunciado que direciona o raciocínio para a alternativa errada.
+- Lei literal vs. interpretação doutrinária: quando a banca cobra texto de lei e não interpretação externa.
+
+FORMATO OBRIGATÓRIO DA RESPOSTA:
+
+Siga exatamente os rótulos abaixo, na ordem apresentada. Não renomeie, não omita e não adicione rótulos extras.
+
+Use somente estes rótulos oficiais no início de linha:
 
 COMENTÁRIO:
-- Alternativa correta: explique de forma didática por que está correta.
-- Alternativa marcada pelo usuário, se houver: explique por que está errada.
-- Demais alternativas: explique por que estão erradas, quando houver informação suficiente no enunciado, nas alternativas ou no comentário fornecido.
-- Síntese do aprendizado: explique o conceito central cobrado pela banca, a armadilha ou raciocínio que poderia levar ao erro e o que devo memorizar para não errar novamente.
-- Se faltar informação para justificar alguma alternativa, diga objetivamente que o material não traz informação suficiente para explicar aquela alternativa.
+PEGADINHAS:
+CONCEITO:
+RECONHECER:
+AÇÃO CORRETIVA:
+
+Dentro de cada campo, escreva em texto corrido ou lista simples. Não crie novos rótulos oficiais dentro dos campos.
+
+COMENTÁRIO:
+Explique de forma didática:
+
+- Alternativa correta: explique por que está correta, conectando ao conceito cobrado.
+- Alternativa marcada pelo usuário, se houver: explique especificamente o erro de raciocínio, por que ela poderia parecer certa e onde está a armadilha.
+- Demais alternativas: explique o erro de cada uma apenas quando o material fornecido permitir. Se o material não permitir justificar alguma alternativa, diga isso claramente.
+- Síntese do aprendizado: em 3 a 5 linhas, explique qual é o conceito central cobrado, qual armadilha ou raciocínio levou ao erro e o que o estudante deve memorizar para não errar novamente.
 
 PEGADINHAS:
-[aponte objetivamente as armadilhas da questão em texto corrido ou lista simples. Se não houver pegadinha clara, diga "Não identifiquei pegadinha relevante".]
+Liste objetivamente as armadilhas identificadas na questão. Diga qual é a pegadinha e onde ela aparece no enunciado ou nas alternativas. Se não houver pegadinha clara, escreva: "Não identifiquei pegadinha relevante nesta questão."
 
 CONCEITO:
-[diga qual regra, conceito, artigo, fórmula, entendimento ou ideia central resolve a questão]
+Explique de forma clara e completa a regra, conceito, artigo, fórmula ou ideia central que resolve a questão. Este campo deve funcionar como resumo de revisão, para que o estudante consiga reler dias depois e entender sozinho.
 
 RECONHECER:
-[mostre quais palavras-chave, sinais no enunciado ou padrão de cobrança indicam que devo aplicar esse conceito]
+Mostre os sinais que indicam que esse conceito deve ser aplicado: palavras-chave no enunciado, padrão de cobrança da banca, estrutura da pergunta ou contexto temático. Este campo deve treinar o estudante a identificar o tipo de questão antes de responder.
 
 AÇÃO CORRETIVA:
-[dê uma ação prática para evitar repetir o erro, como revisar um tópico, fazer questões semelhantes, criar flashcard ou memorizar uma distinção]
+Indique uma ação prática, específica e realizável para que o estudante não repita o erro. Exemplos válidos: revisar determinado tópico, criar um flashcard com a distinção entre dois conceitos, resolver questões semelhantes sobre o tema, memorizar uma exceção específica. Evite ações genéricas como "estudar mais o assunto".
 
-Dados da questão:
+DADOS DA QUESTÃO:
 
 Matéria:
 ${valorOuNaoInformado(dados.materia)}
@@ -1390,7 +1407,7 @@ Banca:
 ${valorOuNaoInformado(dados.banca)}
 
 Tipo de registro:
-${valorOuNaoInformado(dados.tipoQuestao)}
+Errada
 
 Motivo do erro:
 ${valorOuNaoInformado(dados.motivoErro)}
@@ -1410,7 +1427,7 @@ ${valorOuNaoInformado(dados.textoCorreta)}
 Comentário/observação original, se houver, para usar apenas como fonte:
 ${valorOuNaoInformado(dados.comentario)}
 
-Pegadinhas da questão já percebidas:
+Pegadinhas da questão já percebidas pelo usuário:
 ${valorOuNaoInformado(dados.pegadinha)}`
 }
 
