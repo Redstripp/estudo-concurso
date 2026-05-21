@@ -68,6 +68,11 @@ function dataHojeFlashcards() {
   return dataISOFlashcards(new Date())
 }
 
+function converterDiaSemanaFlashcards(dataISO) {
+  const dia = new Date(`${dataISO}T12:00:00`).getDay()
+  return dia === 0 ? 7 : dia
+}
+
 function adicionarDiasFlashcards(dataISO, dias) {
   const data = new Date(`${dataISO}T12:00:00`)
   data.setDate(data.getDate() + Number(dias || 0))
@@ -762,12 +767,144 @@ function atualizarIndicadoresRevisaoFlashcards() {
 function renderizarEstudoDiaFlashcards() {
   const status = document.getElementById('flashcards-estudo-dia-status')
   const mensagem = document.getElementById('flashcards-estudo-dia-vazio')
+  const lista = obterListaEstudoDiaFlashcards()
 
-  if (status) status.textContent = 'Preparação'
+  if (status) status.textContent = 'Planejamento'
   if (mensagem) {
     mensagem.hidden = false
-    mensagem.textContent = 'Estudo do Dia será ativado após configurar a grade de estudos dos flashcards.'
+    mensagem.textContent = 'Carregando estudo do dia...'
   }
+  if (lista) lista.replaceChildren()
+}
+
+function obterListaEstudoDiaFlashcards() {
+  const secao = document.getElementById('flashcards-estudo-dia')
+  if (!secao) return null
+
+  let lista = document.getElementById('flashcards-estudo-dia-lista')
+  if (!lista) {
+    lista = document.createElement('div')
+    lista.id = 'flashcards-estudo-dia-lista'
+    secao.appendChild(lista)
+  }
+  return lista
+}
+
+function mostrarMensagemEstudoDiaFlashcards(texto, statusTexto = 'Planejamento') {
+  const status = document.getElementById('flashcards-estudo-dia-status')
+  const mensagem = document.getElementById('flashcards-estudo-dia-vazio')
+  const lista = obterListaEstudoDiaFlashcards()
+
+  if (status) status.textContent = statusTexto
+  if (mensagem) {
+    mensagem.hidden = false
+    mensagem.textContent = texto
+  }
+  if (lista) lista.replaceChildren()
+}
+
+function obterMateriaPlanejadaIdFlashcards(item) {
+  return normalizarMateriaIdFlashcards(item?.materia_id)
+}
+
+function obterNomeMateriaPlanejadaFlashcards(materiaId, materiasPlanejadas = []) {
+  const planejada = materiasPlanejadas.find(item => obterMateriaPlanejadaIdFlashcards(item) === materiaId)
+  return planejada?.materias?.nome || planejada?.nome || obterNomeMateriaFlashcard({ materia_id: materiaId })
+}
+
+function selecionarCardsNovosEstudoDiaFlashcards(cards = [], materiasPlanejadas = []) {
+  const materiaIds = new Set(
+    (Array.isArray(materiasPlanejadas) ? materiasPlanejadas : [])
+      .map(obterMateriaPlanejadaIdFlashcards)
+      .filter(Boolean)
+  )
+
+  if (materiaIds.size === 0) return []
+
+  return (Array.isArray(cards) ? cards : []).filter(card =>
+    card?.ativo !== false &&
+    (card?.estado || 'novo') === 'novo' &&
+    Boolean(card?.materia_id) &&
+    materiaIds.has(card.materia_id)
+  )
+}
+
+function criarElementoEstudoDiaFlashcard(card, materiasPlanejadas = []) {
+  const item = document.createElement('article')
+  item.className = 'card-questao flashcard-estudo-dia-item'
+
+  const tag = document.createElement('span')
+  tag.className = 'tag-estudo'
+  tag.textContent = 'Novo'
+
+  const frente = document.createElement('h4')
+  frente.className = 'card-form-titulo'
+  frente.textContent = card.frente || 'Sem frente'
+
+  const materia = document.createElement('p')
+  materia.className = 'texto-apoio'
+  materia.textContent = `Matéria: ${obterNomeMateriaPlanejadaFlashcards(card.materia_id, materiasPlanejadas)}`
+
+  item.append(tag, frente, materia)
+  return item
+}
+
+function renderizarCardsEstudoDiaFlashcards(cards = [], materiasPlanejadas = []) {
+  const status = document.getElementById('flashcards-estudo-dia-status')
+  const mensagem = document.getElementById('flashcards-estudo-dia-vazio')
+  const lista = obterListaEstudoDiaFlashcards()
+
+  if (status) status.textContent = `${cards.length} card(s) novo(s)`
+  if (mensagem) {
+    mensagem.hidden = true
+    mensagem.textContent = ''
+  }
+  if (!lista) return
+
+  lista.replaceChildren()
+  cards.forEach(card => lista.appendChild(criarElementoEstudoDiaFlashcard(card, materiasPlanejadas)))
+}
+
+async function carregarEstudoDiaFlashcards() {
+  renderizarEstudoDiaFlashcards()
+
+  const listarMaterias = globalThis.listarMateriasPlanejadasHojeFlashcards || listarMateriasPlanejadasHojeFlashcards
+  const resultadoMaterias = await listarMaterias()
+
+  if (resultadoMaterias.error) {
+    mostrarMensagemEstudoDiaFlashcards(
+      resultadoMaterias.error.message || 'Nao foi possivel carregar o estudo do dia. Verifique sua conexao e tente novamente.',
+      'Erro'
+    )
+    return { data: [], materias: [], error: resultadoMaterias.error }
+  }
+
+  const materiasPlanejadas = resultadoMaterias.data || []
+  if (materiasPlanejadas.length === 0) {
+    mostrarMensagemEstudoDiaFlashcards('Nenhuma matéria programada para hoje. Configure seu planejamento.')
+    return { data: [], materias: [], error: null }
+  }
+
+  const listarCards = globalThis.listarFlashcards || listarFlashcards
+  const resultadoCards = await listarCards()
+
+  if (resultadoCards.error) {
+    mostrarMensagemEstudoDiaFlashcards(
+      resultadoCards.error.message || 'Nao foi possivel carregar os flashcards do estudo do dia. Verifique sua conexao e tente novamente.',
+      'Erro'
+    )
+    return { data: [], materias: materiasPlanejadas, error: resultadoCards.error }
+  }
+
+  const cardsNovos = selecionarCardsNovosEstudoDiaFlashcards(resultadoCards.data || [], materiasPlanejadas)
+
+  if (cardsNovos.length === 0) {
+    mostrarMensagemEstudoDiaFlashcards('Não há cards novos para as matérias planejadas hoje.')
+    return { data: [], materias: materiasPlanejadas, error: null }
+  }
+
+  renderizarCardsEstudoDiaFlashcards(cardsNovos, materiasPlanejadas)
+  return { data: cardsNovos, materias: materiasPlanejadas, error: null }
 }
 
 function obterDataRevisaoFlashcard(revisao) {
@@ -987,8 +1124,6 @@ async function carregarFlashcardsRevisarHoje() {
   const areaCard = document.getElementById('flashcards-revisao-card')
   const botaoIniciar = document.getElementById('btn-iniciar-revisao-flashcards')
 
-  renderizarEstudoDiaFlashcards()
-
   if (vazio) {
     vazio.hidden = false
     vazio.textContent = 'Carregando revisão urgente...'
@@ -1190,7 +1325,10 @@ function inicializarFlashcards() {
       botao.addEventListener('click', () => {
         selecionarAbaFlashcards(botao.dataset.flashcardsAba, secao)
         if (botao.dataset.flashcardsAba === 'todos') carregarListaFlashcards()
-        if (botao.dataset.flashcardsAba === 'revisar-hoje') carregarFlashcardsRevisarHoje()
+        if (botao.dataset.flashcardsAba === 'revisar-hoje') {
+          carregarFlashcardsRevisarHoje()
+          carregarEstudoDiaFlashcards()
+        }
         if (botao.dataset.flashcardsAba === 'estatisticas') carregarEstatisticasFlashcards()
       })
     })
@@ -1205,6 +1343,7 @@ function inicializarFlashcards() {
   selecionarAbaFlashcards(ABA_FLASHCARDS_PADRAO, secao)
   carregarMateriasFlashcards()
   carregarFlashcardsRevisarHoje()
+  carregarEstudoDiaFlashcards()
   carregarListaFlashcards()
 }
 
@@ -1271,6 +1410,27 @@ async function listarFlashcards() {
   return tratarRespostaSupabaseFlashcards(
     resposta,
     'Nao foi possivel listar os flashcards. Verifique sua conexao e tente novamente.'
+  )
+}
+
+async function listarMateriasPlanejadasHojeFlashcards(dataReferencia = dataHojeFlashcards()) {
+  let usuario
+  try {
+    usuario = await obterUsuarioAutenticadoFlashcards()
+  } catch (erro) {
+    return respostaErroFlashcards(erro.message, erro.detalhes)
+  }
+
+  const resposta = await obterClienteSupabaseFlashcards()
+    .from('planejamento_semanal')
+    .select('id, dia_semana, materia_id, materias(nome)')
+    .eq('user_id', usuario.id)
+    .eq('dia_semana', converterDiaSemanaFlashcards(dataReferencia))
+    .order('ordem', { ascending: true })
+
+  return tratarRespostaSupabaseFlashcards(
+    resposta,
+    'Nao foi possivel carregar as materias planejadas para hoje. Verifique sua conexao e tente novamente.'
   )
 }
 
@@ -1513,12 +1673,15 @@ if (typeof globalThis !== 'undefined') {
   globalThis.avaliarFlashcardAtual = avaliarFlashcardAtual
   globalThis.renderizarRevisaoFlashcardsHoje = renderizarRevisaoFlashcardsHoje
   globalThis.renderizarEstudoDiaFlashcards = renderizarEstudoDiaFlashcards
+  globalThis.carregarEstudoDiaFlashcards = carregarEstudoDiaFlashcards
+  globalThis.selecionarCardsNovosEstudoDiaFlashcards = selecionarCardsNovosEstudoDiaFlashcards
   globalThis.calcularProximaRevisaoSM2Flashcards = calcularProximaRevisaoSM2Flashcards
   globalThis.calcularEstatisticasFlashcards = calcularEstatisticasFlashcards
   globalThis.renderizarEstatisticasFlashcards = renderizarEstatisticasFlashcards
   globalThis.carregarEstatisticasFlashcards = carregarEstatisticasFlashcards
   globalThis.criarFlashcard = criarFlashcard
   globalThis.listarFlashcards = listarFlashcards
+  globalThis.listarMateriasPlanejadasHojeFlashcards = listarMateriasPlanejadasHojeFlashcards
   globalThis.listarFlashcardsDevidosHoje = listarFlashcardsDevidosHoje
   globalThis.listarRevisoesFlashcards = listarRevisoesFlashcards
   globalThis.listarMateriasFlashcards = listarMateriasFlashcards

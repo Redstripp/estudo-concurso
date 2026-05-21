@@ -20,6 +20,8 @@ const {
   iniciarSessaoRevisaoFlashcards,
   mostrarRespostaFlashcardAtual,
   avaliarFlashcardAtual,
+  carregarEstudoDiaFlashcards,
+  selecionarCardsNovosEstudoDiaFlashcards,
   calcularProximaRevisaoSM2Flashcards,
   calcularEstatisticasFlashcards,
   renderizarEstatisticasFlashcards,
@@ -27,6 +29,7 @@ const {
   carregarMateriasFlashcards,
   criarFlashcard,
   listarFlashcards,
+  listarMateriasPlanejadasHojeFlashcards,
   listarFlashcardsDevidosHoje,
   listarRevisoesFlashcards,
   listarMateriasFlashcards,
@@ -114,6 +117,7 @@ function montarSecaoRevisaoFlashcards() {
       <div id="flashcards-estudo-dia">
         <span id="flashcards-estudo-dia-status"></span>
         <p id="flashcards-estudo-dia-vazio"></p>
+        <div id="flashcards-estudo-dia-lista"></div>
       </div>
     </section>
   `
@@ -229,7 +233,8 @@ describe('esqueleto visual dos flashcards', () => {
 
   it('mantem placeholders da primeira versao visual', () => {
     expect(appHtml).toContain('Nenhuma revisão pendente. Ótimo trabalho!')
-    expect(appHtml).toContain('Estudo do Dia será ativado após configurar a grade de estudos dos flashcards.')
+    expect(appHtml).toContain('Carregando estudo do dia...')
+    expect(appHtml).toContain('id="flashcards-estudo-dia-lista"')
     expect(appHtml).toContain('Nenhum flashcard cadastrado ainda.')
     expect(appHtml).toContain('id="flashcard-frente"')
     expect(appHtml).toContain('id="flashcard-verso"')
@@ -299,12 +304,15 @@ describe('esqueleto visual dos flashcards', () => {
     expect(globalThis.iniciarSessaoRevisaoFlashcards).toBe(iniciarSessaoRevisaoFlashcards)
     expect(globalThis.mostrarRespostaFlashcardAtual).toBe(mostrarRespostaFlashcardAtual)
     expect(globalThis.avaliarFlashcardAtual).toBe(avaliarFlashcardAtual)
+    expect(globalThis.carregarEstudoDiaFlashcards).toBe(carregarEstudoDiaFlashcards)
+    expect(globalThis.selecionarCardsNovosEstudoDiaFlashcards).toBe(selecionarCardsNovosEstudoDiaFlashcards)
     expect(globalThis.calcularProximaRevisaoSM2Flashcards).toBe(calcularProximaRevisaoSM2Flashcards)
     expect(globalThis.calcularEstatisticasFlashcards).toBe(calcularEstatisticasFlashcards)
     expect(globalThis.renderizarEstatisticasFlashcards).toBe(renderizarEstatisticasFlashcards)
     expect(globalThis.carregarEstatisticasFlashcards).toBe(carregarEstatisticasFlashcards)
     expect(globalThis.criarFlashcard).toBe(criarFlashcard)
     expect(globalThis.listarFlashcards).toBe(listarFlashcards)
+    expect(globalThis.listarMateriasPlanejadasHojeFlashcards).toBe(listarMateriasPlanejadasHojeFlashcards)
     expect(globalThis.listarFlashcardsDevidosHoje).toBe(listarFlashcardsDevidosHoje)
     expect(globalThis.listarRevisoesFlashcards).toBe(listarRevisoesFlashcards)
     expect(globalThis.listarMateriasFlashcards).toBe(listarMateriasFlashcards)
@@ -971,8 +979,77 @@ describe('esqueleto visual dos flashcards', () => {
     await carregarFlashcardsRevisarHoje()
 
     expect(document.getElementById('flashcards-revisar-vazio').textContent).toBe('Nenhuma revisão pendente. Ótimo trabalho!')
-    expect(document.getElementById('flashcards-estudo-dia-vazio').textContent).toBe('Estudo do Dia será ativado após configurar a grade de estudos dos flashcards.')
     expect(document.getElementById('btn-iniciar-revisao-flashcards').disabled).toBe(true)
+  })
+
+  it('Estudo do Dia mostra mensagem quando nao ha materia planejada', async () => {
+    montarSecaoRevisaoFlashcards()
+    const listarCards = vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({ data: [], error: null })
+    vi.spyOn(globalThis, 'listarMateriasPlanejadasHojeFlashcards').mockResolvedValue({ data: [], error: null })
+
+    const resultado = await carregarEstudoDiaFlashcards()
+
+    expect(resultado.data).toEqual([])
+    expect(listarCards).not.toHaveBeenCalled()
+    expect(document.getElementById('flashcards-estudo-dia-vazio').textContent).toBe('Nenhuma matéria programada para hoje. Configure seu planejamento.')
+    expect(document.getElementById('flashcards-estudo-dia-lista').textContent).toBe('')
+  })
+
+  it('Estudo do Dia mostra mensagem quando ha materia planejada mas nao ha cards novos', async () => {
+    montarSecaoRevisaoFlashcards()
+    vi.spyOn(globalThis, 'listarMateriasPlanejadasHojeFlashcards').mockResolvedValue({
+      data: [{ materia_id: 'mat-1', materias: { nome: 'Direito Constitucional' } }],
+      error: null
+    })
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: [
+        criarCardRevisao({ id: 'revisando', estado: 'revisando', materia_id: 'mat-1' }),
+        criarCardRevisao({ id: 'aprendendo', estado: 'aprendendo', materia_id: 'mat-1' }),
+        criarCardRevisao({ id: 'inativo', estado: 'novo', materia_id: 'mat-1', ativo: false }),
+        criarCardRevisao({ id: 'outra-materia', estado: 'novo', materia_id: 'mat-2' })
+      ],
+      error: null
+    })
+
+    const resultado = await carregarEstudoDiaFlashcards()
+
+    expect(resultado.data).toEqual([])
+    expect(document.getElementById('flashcards-estudo-dia-vazio').textContent).toBe('Não há cards novos para as matérias planejadas hoje.')
+    expect(document.getElementById('flashcards-estudo-dia-lista').textContent).toBe('')
+  })
+
+  it('Estudo do Dia lista somente cards novos das materias planejadas', async () => {
+    montarSecaoRevisaoFlashcards()
+    vi.spyOn(globalThis, 'listarMateriasPlanejadasHojeFlashcards').mockResolvedValue({
+      data: [
+        { materia_id: 'mat-1', materias: { nome: 'Direito Constitucional' } },
+        { materia_id: 'mat-2', materias: { nome: 'Direito Administrativo' } }
+      ],
+      error: null
+    })
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: [
+        criarCardRevisao({ id: 'card-mat-1', frente: 'Controle difuso', estado: 'novo', materia_id: 'mat-1' }),
+        criarCardRevisao({ id: 'card-mat-2', frente: 'Prazo administrativo', estado: 'novo', materia_id: 'mat-2' }),
+        criarCardRevisao({ id: 'card-mat-3', frente: 'Matéria fora da grade', estado: 'novo', materia_id: 'mat-3' }),
+        criarCardRevisao({ id: 'card-inativo', frente: 'Card inativo', estado: 'novo', materia_id: 'mat-1', ativo: false }),
+        criarCardRevisao({ id: 'card-aprendendo', frente: 'Card aprendendo', estado: 'aprendendo', materia_id: 'mat-1' })
+      ],
+      error: null
+    })
+
+    const resultado = await carregarEstudoDiaFlashcards()
+    const texto = document.getElementById('flashcards-estudo-dia-lista').textContent
+
+    expect(resultado.data.map(card => card.id)).toEqual(['card-mat-1', 'card-mat-2'])
+    expect(texto).toContain('Controle difuso')
+    expect(texto).toContain('Direito Constitucional')
+    expect(texto).toContain('Prazo administrativo')
+    expect(texto).toContain('Direito Administrativo')
+    expect(texto).not.toContain('Matéria fora da grade')
+    expect(texto).not.toContain('Card inativo')
+    expect(texto).not.toContain('Card aprendendo')
+    expect(document.getElementById('flashcards-estudo-dia-vazio').hidden).toBe(true)
   })
 
   it('erro ao carregar Revisar Hoje mostra mensagem amigavel', async () => {
@@ -1168,6 +1245,21 @@ describe('camada de dados dos flashcards', () => {
     expect(from).toHaveBeenCalledWith('flashcards')
     expect(query.eq).toHaveBeenCalledWith('user_id', 'user-1')
     expect(query.order).toHaveBeenCalledWith('created_at', { ascending: false })
+  })
+
+  it('listarMateriasPlanejadasHojeFlashcards usa planejamento_semanal do dia', async () => {
+    const query = criarQueryLista({ data: [{ materia_id: 'mat-1' }], error: null })
+    const from = vi.fn(() => query)
+    globalThis.db = { auth: criarAuthMock('user-1'), from }
+
+    const resultado = await listarMateriasPlanejadasHojeFlashcards('2026-05-20')
+
+    expect(resultado.data).toEqual([{ materia_id: 'mat-1' }])
+    expect(from).toHaveBeenCalledWith('planejamento_semanal')
+    expect(query.select).toHaveBeenCalledWith('id, dia_semana, materia_id, materias(nome)')
+    expect(query.eq).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(query.eq).toHaveBeenCalledWith('dia_semana', 3)
+    expect(query.order).toHaveBeenCalledWith('ordem', { ascending: true })
   })
 
   it('listarFlashcardsDevidosHoje filtra due_date menor ou igual a hoje e ativo true', async () => {
