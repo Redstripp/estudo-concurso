@@ -7,6 +7,10 @@ const {
   inicializarFlashcards,
   selecionarAbaFlashcards,
   salvarFlashcardTela,
+  abrirEdicaoFlashcardLista,
+  salvarEdicaoFlashcardLista,
+  mostrarConfirmacaoDesativarFlashcardLista,
+  confirmarDesativacaoFlashcardLista,
   carregarListaFlashcards,
   renderizarListaFlashcards,
   carregarFlashcardsRevisarHoje,
@@ -286,6 +290,175 @@ describe('esqueleto visual dos flashcards', () => {
     expect(texto).toContain('Estado: novo')
     expect(texto).toContain('Proxima revisao: 2026-05-21')
     expect(texto).toContain('Tags: constitucional, prazos')
+  })
+
+  it('Todos os Cards mostra botoes Editar e Desativar', () => {
+    document.body.innerHTML = '<div id="flashcards-lista"></div>'
+
+    renderizarListaFlashcards([
+      criarCardRevisao({
+        id: 'card-1',
+        frente: 'Frente do card',
+        verso: 'Verso do card',
+        tags: ['tag']
+      })
+    ])
+
+    const botoes = [...document.querySelectorAll('#flashcards-lista button')].map(botao => botao.textContent)
+    expect(botoes).toContain('Editar')
+    expect(botoes).toContain('Desativar')
+  })
+
+  it('Editar abre formulario com dados atuais', () => {
+    document.body.innerHTML = '<div id="flashcards-lista"></div>'
+    const card = criarCardRevisao({
+      id: 'card-1',
+      frente: 'Frente atual',
+      verso: 'Verso atual',
+      tags: ['constitucional', 'prazos']
+    })
+
+    renderizarListaFlashcards([card])
+    document.querySelector('#flashcards-lista button').click()
+
+    expect(document.querySelector('[data-flashcard-edicao="frente"]').value).toBe('Frente atual')
+    expect(document.querySelector('[data-flashcard-edicao="verso"]').value).toBe('Verso atual')
+    expect(document.querySelector('[data-flashcard-edicao="tags"]').value).toBe('constitucional, prazos')
+  })
+
+  it('Editar frente, verso e tags chama atualizarFlashcard sem enviar user_id', async () => {
+    montarFormularioFlashcards()
+    const card = criarCardRevisao({
+      id: 'card-1',
+      frente: 'Frente atual',
+      verso: 'Verso atual',
+      tags: ['antiga']
+    })
+    renderizarListaFlashcards([card])
+    const item = document.querySelector('[data-flashcard-id="card-1"]')
+    abrirEdicaoFlashcardLista(card, item)
+
+    document.querySelector('[data-flashcard-edicao="frente"]').value = ' Nova frente '
+    document.querySelector('[data-flashcard-edicao="verso"]').value = ' Novo verso '
+    document.querySelector('[data-flashcard-edicao="tags"]').value = ' nova, , revisao '
+    const atualizar = vi.spyOn(globalThis, 'atualizarFlashcard').mockResolvedValue({
+      data: { id: 'card-1' },
+      error: null
+    })
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: [criarCardRevisao({ id: 'card-1', frente: 'Nova frente', verso: 'Novo verso', tags: ['nova'] })],
+      error: null
+    })
+
+    const resultado = await salvarEdicaoFlashcardLista('card-1', item)
+
+    expect(resultado.error).toBeNull()
+    expect(atualizar).toHaveBeenCalledWith('card-1', {
+      frente: 'Nova frente',
+      verso: 'Novo verso',
+      tags: ['nova', 'revisao']
+    })
+    expect(atualizar.mock.calls[0][1]).not.toHaveProperty('user_id')
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Nova frente')
+    expect(document.getElementById('msg-flashcards-lista').textContent).toBe('Flashcard atualizado com sucesso.')
+  })
+
+  it('Frente vazia impede salvar edicao', async () => {
+    document.body.innerHTML = '<div id="flashcards-lista"></div>'
+    const card = criarCardRevisao({ id: 'card-1' })
+    renderizarListaFlashcards([card])
+    const item = document.querySelector('[data-flashcard-id="card-1"]')
+    abrirEdicaoFlashcardLista(card, item)
+    document.querySelector('[data-flashcard-edicao="frente"]').value = '   '
+    const atualizar = vi.spyOn(globalThis, 'atualizarFlashcard')
+
+    const resultado = await salvarEdicaoFlashcardLista('card-1', item)
+
+    expect(resultado.error.message).toBe('Informe a frente do flashcard.')
+    expect(atualizar).not.toHaveBeenCalled()
+    expect(item.textContent).toContain('Informe a frente do flashcard.')
+  })
+
+  it('Verso vazio impede salvar edicao', async () => {
+    document.body.innerHTML = '<div id="flashcards-lista"></div>'
+    const card = criarCardRevisao({ id: 'card-1' })
+    renderizarListaFlashcards([card])
+    const item = document.querySelector('[data-flashcard-id="card-1"]')
+    abrirEdicaoFlashcardLista(card, item)
+    document.querySelector('[data-flashcard-edicao="verso"]').value = '   '
+    const atualizar = vi.spyOn(globalThis, 'atualizarFlashcard')
+
+    const resultado = await salvarEdicaoFlashcardLista('card-1', item)
+
+    expect(resultado.error.message).toBe('Informe o verso do flashcard.')
+    expect(atualizar).not.toHaveBeenCalled()
+    expect(item.textContent).toContain('Informe o verso do flashcard.')
+  })
+
+  it('Desativar pede confirmacao antes de chamar desativarFlashcard', () => {
+    document.body.innerHTML = '<div id="flashcards-lista"></div>'
+    const card = criarCardRevisao({ id: 'card-1' })
+    renderizarListaFlashcards([card])
+    const desativar = vi.spyOn(globalThis, 'desativarFlashcard')
+
+    const botaoDesativar = [...document.querySelectorAll('#flashcards-lista button')]
+      .find(botao => botao.textContent === 'Desativar')
+    botaoDesativar.click()
+
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Desativar este flashcard?')
+    expect(desativar).not.toHaveBeenCalled()
+  })
+
+  it('desativarFlashcard e chamado ao confirmar e o card sai da lista', async () => {
+    montarFormularioFlashcards()
+    const card = criarCardRevisao({ id: 'card-1', frente: 'Frente para desativar' })
+    renderizarListaFlashcards([card])
+    const item = document.querySelector('[data-flashcard-id="card-1"]')
+    mostrarConfirmacaoDesativarFlashcardLista(card, item)
+    const desativar = vi.spyOn(globalThis, 'desativarFlashcard').mockResolvedValue({
+      data: { id: 'card-1', ativo: false },
+      error: null
+    })
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: [],
+      error: null
+    })
+
+    const resultado = await confirmarDesativacaoFlashcardLista('card-1', item)
+
+    expect(resultado.error).toBeNull()
+    expect(desativar).toHaveBeenCalledWith('card-1')
+    expect(document.getElementById('flashcards-lista').textContent).not.toContain('Frente para desativar')
+    expect(document.getElementById('msg-flashcards-lista').textContent).toBe('Flashcard desativado com sucesso.')
+  })
+
+  it('erro ao atualizar flashcard mostra mensagem amigavel', async () => {
+    document.body.innerHTML = '<div id="flashcards-lista"></div>'
+    const card = criarCardRevisao({ id: 'card-1' })
+    renderizarListaFlashcards([card])
+    const item = document.querySelector('[data-flashcard-id="card-1"]')
+    abrirEdicaoFlashcardLista(card, item)
+    vi.spyOn(globalThis, 'atualizarFlashcard').mockResolvedValue({
+      data: null,
+      error: new Error('Nao foi possivel atualizar o flashcard.')
+    })
+
+    const resultado = await salvarEdicaoFlashcardLista('card-1', item)
+
+    expect(resultado.error.message).toBe('Nao foi possivel atualizar o flashcard.')
+    expect(item.textContent).toContain('Nao foi possivel atualizar o flashcard.')
+  })
+
+  it('card desativado nao aparece na lista de cards ativos', () => {
+    document.body.innerHTML = '<div id="flashcards-lista"></div>'
+
+    renderizarListaFlashcards([
+      criarCardRevisao({ id: 'card-ativo', frente: 'Card ativo', ativo: true }),
+      criarCardRevisao({ id: 'card-inativo', frente: 'Card inativo', ativo: false })
+    ])
+
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Card ativo')
+    expect(document.getElementById('flashcards-lista').textContent).not.toContain('Card inativo')
   })
 
   it('lista vazia mostra mensagem correta', () => {

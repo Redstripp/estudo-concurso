@@ -251,6 +251,27 @@ function mostrarMensagemFlashcards(texto, tipo = '') {
   msg.className = `msg-materia ${tipo}`.trim()
 }
 
+function obterMensagemListaFlashcards() {
+  const existente = document.getElementById('msg-flashcards-lista')
+  if (existente) return existente
+
+  const lista = document.getElementById('flashcards-lista')
+  if (!lista) return null
+
+  const msg = document.createElement('p')
+  msg.id = 'msg-flashcards-lista'
+  msg.className = 'msg-materia'
+  lista.insertAdjacentElement('afterend', msg)
+  return msg
+}
+
+function mostrarMensagemListaFlashcards(texto, tipo = '') {
+  const msg = obterMensagemListaFlashcards()
+  if (!msg) return
+  msg.textContent = texto
+  msg.className = `msg-materia ${tipo}`.trim()
+}
+
 function obterDadosFormularioFlashcards() {
   const frente = normalizarTextoObrigatorioFlashcards(document.getElementById('flashcard-frente')?.value)
   const verso = normalizarTextoObrigatorioFlashcards(document.getElementById('flashcard-verso')?.value)
@@ -273,9 +294,177 @@ function limparFormularioFlashcards() {
   if (tags) tags.value = ''
 }
 
+function obterTagsTextoFlashcard(card) {
+  return Array.isArray(card?.tags) ? card.tags.join(', ') : ''
+}
+
+function criarCampoEdicaoFlashcard(nome, rotulo, valor, tipo = 'textarea') {
+  const campo = document.createElement('div')
+  campo.className = 'campo-form'
+
+  const label = document.createElement('label')
+  label.className = 'campo-label'
+  label.textContent = rotulo
+
+  const input = document.createElement(tipo)
+  input.className = tipo === 'textarea' ? 'input-texto input-textarea' : 'input-texto'
+  input.dataset.flashcardEdicao = nome
+  input.value = valor || ''
+  if (tipo === 'textarea') input.rows = 3
+
+  campo.append(label, input)
+  return campo
+}
+
+function mostrarMensagemEdicaoFlashcard(item, texto, tipo = '') {
+  const msg = item?.querySelector?.('[data-flashcard-edicao-msg]')
+  if (!msg) return
+  msg.textContent = texto
+  msg.className = `msg-materia ${tipo}`.trim()
+}
+
+function obterDadosEdicaoFlashcard(item) {
+  const frente = normalizarTextoObrigatorioFlashcards(item.querySelector('[data-flashcard-edicao="frente"]')?.value)
+  const verso = normalizarTextoObrigatorioFlashcards(item.querySelector('[data-flashcard-edicao="verso"]')?.value)
+  const tagsTexto = item.querySelector('[data-flashcard-edicao="tags"]')?.value || ''
+  const tags = tagsTexto
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean)
+
+  return { frente, verso, tags }
+}
+
+function abrirEdicaoFlashcardLista(card, item) {
+  if (!item || !card) return
+
+  item.replaceChildren()
+
+  const titulo = document.createElement('h4')
+  titulo.className = 'card-form-titulo'
+  titulo.textContent = 'Editar flashcard'
+
+  const acoes = document.createElement('div')
+  acoes.className = 'flashcard-lista-acoes'
+
+  const salvar = document.createElement('button')
+  salvar.className = 'btn-primario'
+  salvar.type = 'button'
+  salvar.textContent = 'Salvar edicao'
+  salvar.addEventListener('click', () => salvarEdicaoFlashcardLista(card.id, item))
+
+  const cancelar = document.createElement('button')
+  cancelar.className = 'btn-secundario'
+  cancelar.type = 'button'
+  cancelar.textContent = 'Cancelar'
+  cancelar.addEventListener('click', () => item.replaceWith(criarElementoFlashcardLista(card)))
+
+  const msg = document.createElement('p')
+  msg.className = 'msg-materia'
+  msg.dataset.flashcardEdicaoMsg = 'true'
+
+  acoes.append(salvar, cancelar)
+  item.append(
+    titulo,
+    criarCampoEdicaoFlashcard('frente', 'Frente', card.frente),
+    criarCampoEdicaoFlashcard('verso', 'Verso', card.verso),
+    criarCampoEdicaoFlashcard('tags', 'Tags, opcional', obterTagsTextoFlashcard(card), 'input'),
+    acoes,
+    msg
+  )
+}
+
+async function salvarEdicaoFlashcardLista(id, item) {
+  if (!item) return respostaErroFlashcards('Informe o flashcard que deve ser atualizado.')
+
+  const dados = obterDadosEdicaoFlashcard(item)
+
+  if (!dados.frente) {
+    mostrarMensagemEdicaoFlashcard(item, 'Informe a frente do flashcard.', 'erro')
+    return { data: null, error: criarErroFlashcards('Informe a frente do flashcard.') }
+  }
+
+  if (!dados.verso) {
+    mostrarMensagemEdicaoFlashcard(item, 'Informe o verso do flashcard.', 'erro')
+    return { data: null, error: criarErroFlashcards('Informe o verso do flashcard.') }
+  }
+
+  const atualizar = globalThis.atualizarFlashcard || atualizarFlashcard
+  const resultado = await atualizar(id, {
+    frente: dados.frente,
+    verso: dados.verso,
+    tags: dados.tags
+  })
+
+  if (resultado.error) {
+    mostrarMensagemEdicaoFlashcard(
+      item,
+      resultado.error.message || 'Nao foi possivel atualizar o flashcard.',
+      'erro'
+    )
+    return resultado
+  }
+
+  await carregarListaFlashcards()
+  mostrarMensagemListaFlashcards('Flashcard atualizado com sucesso.', 'sucesso')
+  return resultado
+}
+
+function mostrarConfirmacaoDesativarFlashcardLista(card, item) {
+  if (!item || !card) return
+
+  item.querySelector('.flashcard-confirmacao-desativar')?.remove()
+
+  const confirmacao = document.createElement('div')
+  confirmacao.className = 'flashcard-confirmacao-desativar'
+
+  const texto = document.createElement('p')
+  texto.className = 'texto-apoio'
+  texto.textContent = 'Desativar este flashcard? Ele deixara de aparecer na lista de cards ativos.'
+
+  const confirmar = document.createElement('button')
+  confirmar.className = 'btn-primario'
+  confirmar.type = 'button'
+  confirmar.textContent = 'Confirmar desativacao'
+  confirmar.addEventListener('click', () => confirmarDesativacaoFlashcardLista(card.id, item))
+
+  const cancelar = document.createElement('button')
+  cancelar.className = 'btn-secundario'
+  cancelar.type = 'button'
+  cancelar.textContent = 'Cancelar'
+  cancelar.addEventListener('click', () => confirmacao.remove())
+
+  const msg = document.createElement('p')
+  msg.className = 'msg-materia'
+  msg.dataset.flashcardEdicaoMsg = 'true'
+
+  confirmacao.append(texto, confirmar, cancelar, msg)
+  item.appendChild(confirmacao)
+}
+
+async function confirmarDesativacaoFlashcardLista(id, item) {
+  const desativar = globalThis.desativarFlashcard || desativarFlashcard
+  const resultado = await desativar(id)
+
+  if (resultado.error) {
+    mostrarMensagemEdicaoFlashcard(
+      item,
+      resultado.error.message || 'Nao foi possivel desativar o flashcard.',
+      'erro'
+    )
+    return resultado
+  }
+
+  item?.remove()
+  await carregarListaFlashcards()
+  mostrarMensagemListaFlashcards('Flashcard desativado com sucesso.', 'sucesso')
+  return resultado
+}
+
 function criarElementoFlashcardLista(card) {
   const item = document.createElement('article')
   item.className = 'card-questao flashcard-lista-item'
+  if (card?.id) item.dataset.flashcardId = card.id
 
   const frente = document.createElement('h4')
   frente.className = 'card-form-titulo'
@@ -305,7 +494,25 @@ function criarElementoFlashcardLista(card) {
     meta.appendChild(tags)
   }
 
-  item.append(frente, verso, meta)
+  const acoes = document.createElement('div')
+  acoes.className = 'flashcard-lista-acoes'
+
+  const editar = document.createElement('button')
+  editar.className = 'btn-secundario'
+  editar.type = 'button'
+  editar.textContent = 'Editar'
+  editar.disabled = !card?.id
+  editar.addEventListener('click', () => abrirEdicaoFlashcardLista(card, item))
+
+  const desativar = document.createElement('button')
+  desativar.className = 'btn-secundario'
+  desativar.type = 'button'
+  desativar.textContent = 'Desativar'
+  desativar.disabled = !card?.id
+  desativar.addEventListener('click', () => mostrarConfirmacaoDesativarFlashcardLista(card, item))
+
+  acoes.append(editar, desativar)
+  item.append(frente, verso, meta, acoes)
   return item
 }
 
@@ -315,7 +522,11 @@ function renderizarListaFlashcards(cards = []) {
 
   lista.replaceChildren()
 
-  if (!Array.isArray(cards) || cards.length === 0) {
+  const cardsAtivos = Array.isArray(cards)
+    ? cards.filter(card => card?.ativo !== false)
+    : []
+
+  if (cardsAtivos.length === 0) {
     const vazio = document.createElement('p')
     vazio.className = 'texto-placeholder'
     vazio.textContent = 'Nenhum flashcard cadastrado ainda.'
@@ -323,7 +534,7 @@ function renderizarListaFlashcards(cards = []) {
     return
   }
 
-  cards.forEach(card => lista.appendChild(criarElementoFlashcardLista(card)))
+  cardsAtivos.forEach(card => lista.appendChild(criarElementoFlashcardLista(card)))
 }
 
 function obterDataComparacaoFlashcard(data) {
@@ -1037,6 +1248,10 @@ if (typeof globalThis !== 'undefined') {
   globalThis.inicializarFlashcards = inicializarFlashcards
   globalThis.selecionarAbaFlashcards = selecionarAbaFlashcards
   globalThis.salvarFlashcardTela = salvarFlashcardTela
+  globalThis.abrirEdicaoFlashcardLista = abrirEdicaoFlashcardLista
+  globalThis.salvarEdicaoFlashcardLista = salvarEdicaoFlashcardLista
+  globalThis.mostrarConfirmacaoDesativarFlashcardLista = mostrarConfirmacaoDesativarFlashcardLista
+  globalThis.confirmarDesativacaoFlashcardLista = confirmarDesativacaoFlashcardLista
   globalThis.carregarListaFlashcards = carregarListaFlashcards
   globalThis.renderizarListaFlashcards = renderizarListaFlashcards
   globalThis.carregarFlashcardsRevisarHoje = carregarFlashcardsRevisarHoje
