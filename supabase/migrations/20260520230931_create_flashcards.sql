@@ -107,37 +107,65 @@ drop policy if exists flashcards_select_proprios on public.flashcards;
 create policy flashcards_select_proprios
 on public.flashcards
 for select
+to authenticated
 using (auth.uid() = user_id);
 
 drop policy if exists flashcards_insert_proprios on public.flashcards;
 create policy flashcards_insert_proprios
 on public.flashcards
 for insert
-with check (auth.uid() = user_id);
+to authenticated
+with check (
+  auth.uid() = user_id
+  and (
+    materia_id is null
+    or exists (
+      select 1
+      from public.materias
+      where materias.id = flashcards.materia_id
+        and materias.user_id = auth.uid()
+    )
+  )
+);
 
 drop policy if exists flashcards_update_proprios on public.flashcards;
 create policy flashcards_update_proprios
 on public.flashcards
 for update
+to authenticated
 using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+with check (
+  auth.uid() = user_id
+  and (
+    materia_id is null
+    or exists (
+      select 1
+      from public.materias
+      where materias.id = flashcards.materia_id
+        and materias.user_id = auth.uid()
+    )
+  )
+);
 
 drop policy if exists flashcards_delete_proprios on public.flashcards;
 create policy flashcards_delete_proprios
 on public.flashcards
 for delete
+to authenticated
 using (auth.uid() = user_id);
 
 drop policy if exists flashcard_reviews_select_proprias on public.flashcard_reviews;
 create policy flashcard_reviews_select_proprias
 on public.flashcard_reviews
 for select
+to authenticated
 using (auth.uid() = user_id);
 
 drop policy if exists flashcard_reviews_insert_proprias on public.flashcard_reviews;
 create policy flashcard_reviews_insert_proprias
 on public.flashcard_reviews
 for insert
+to authenticated
 with check (
   auth.uid() = user_id
   and exists (
