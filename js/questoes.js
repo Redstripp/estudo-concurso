@@ -1648,6 +1648,7 @@ function abrirColarFlashcardsIA() {
   const modal = document.createElement('div')
   modal.id = 'modal-flashcards-ia'
   modal.className = 'modal-overlay'
+  modal.dataset.materiaId = obterMateriaIdFlashcardsQuestaoAtual()
   modal.innerHTML = `
     <div class="modal-caixa">
       <div class="modal-topo">
@@ -1993,10 +1994,17 @@ function montarTagsFlashcardIAParaDeck(tipo) {
   return [...new Set(tags)]
 }
 
+function obterMateriaIdFlashcardsQuestaoAtual(modal = null) {
+  const materiaModal = String(modal?.dataset?.materiaId || '').trim()
+  if (materiaModal) return materiaModal
+  return String(document.getElementById('q-materia')?.value || '').trim()
+}
+
 async function adicionarFlashcardsPreviewIAAoDeck(modal) {
   const feedback = document.getElementById('msg-preview-flashcards-ia')
   const criar = globalThis.criarFlashcard
   const cardsValidos = coletarCardsValidosPreviewFlashcardsIA(modal)
+  const materiaId = obterMateriaIdFlashcardsQuestaoAtual(modal)
 
   if (cardsValidos.length === 0) {
     if (feedback) {
@@ -2025,11 +2033,14 @@ async function adicionarFlashcardsPreviewIAAoDeck(modal) {
   let falhas = 0
 
   for (const card of cardsValidos) {
-    const resultado = await criar({
+    const payload = {
       frente: card.frente,
       verso: montarVersoFlashcardIAParaDeck(card),
       tags: montarTagsFlashcardIAParaDeck(card.tipo)
-    })
+    }
+    if (materiaId) payload.materia_id = materiaId
+
+    const resultado = await criar(payload)
 
     if (resultado?.error) {
       falhas += 1
