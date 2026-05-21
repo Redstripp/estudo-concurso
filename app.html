@@ -1015,6 +1015,34 @@
     <div class="flashcards-painel" id="flashcards-painel-todos" role="tabpanel" aria-labelledby="flashcards-aba-todos" hidden>
       <div class="card-form">
         <h3 class="card-form-titulo">Todos os Cards</h3>
+        <div class="form-grid">
+          <div class="campo-form">
+            <label class="campo-label" for="flashcards-busca">Busca</label>
+            <input id="flashcards-busca" class="input-texto" type="search" placeholder="Buscar por frente, verso ou tags">
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="flashcards-filtro-estado">Estado</label>
+            <select id="flashcards-filtro-estado" class="input-texto">
+              <option value="todos">Todos</option>
+              <option value="novo">Novo</option>
+              <option value="aprendendo">Aprendendo</option>
+              <option value="revisando">Revisando</option>
+            </select>
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="flashcards-filtro-vencimento">Vencimento</label>
+            <select id="flashcards-filtro-vencimento" class="input-texto">
+              <option value="todos">Todos</option>
+              <option value="hoje">Para hoje</option>
+              <option value="futuros">Futuros</option>
+            </select>
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="flashcards-filtro-tag">Tag</label>
+            <input id="flashcards-filtro-tag" class="input-texto" type="text" placeholder="Filtrar por tag">
+          </div>
+        </div>
+        <button class="btn-secundario" id="btn-limpar-filtros-flashcards" type="button">Limpar filtros</button>
         <div id="flashcards-lista">
           <p class="texto-placeholder">Nenhum flashcard cadastrado ainda.</p>
         </div>

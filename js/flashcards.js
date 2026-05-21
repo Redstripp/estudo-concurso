@@ -19,6 +19,7 @@ let flashcardsInicializado = false
 let flashcardsSessaoHoje = []
 let flashcardAtualSessao = null
 let flashcardsTotalSessaoHoje = 0
+let flashcardsListaTodos = []
 
 function obterClienteSupabaseFlashcards() {
   if (typeof globalThis !== 'undefined' && globalThis.db) return globalThis.db
@@ -74,6 +75,10 @@ function adicionarDiasFlashcards(dataISO, dias) {
 
 function normalizarTextoObrigatorioFlashcards(valor) {
   return String(valor || '').trim()
+}
+
+function normalizarTextoBuscaFlashcards(valor) {
+  return String(valor || '').trim().toLowerCase()
 }
 
 function normalizarTagsFlashcards(tags) {
@@ -270,6 +275,70 @@ function mostrarMensagemListaFlashcards(texto, tipo = '') {
   if (!msg) return
   msg.textContent = texto
   msg.className = `msg-materia ${tipo}`.trim()
+}
+
+function obterFiltrosFlashcards(raiz = document) {
+  return {
+    busca: normalizarTextoBuscaFlashcards(raiz.getElementById?.('flashcards-busca')?.value),
+    estado: raiz.getElementById?.('flashcards-filtro-estado')?.value || 'todos',
+    vencimento: raiz.getElementById?.('flashcards-filtro-vencimento')?.value || 'todos',
+    tag: normalizarTextoBuscaFlashcards(raiz.getElementById?.('flashcards-filtro-tag')?.value)
+  }
+}
+
+function filtrosFlashcardsAtivos(filtros = obterFiltrosFlashcards()) {
+  return Boolean(
+    filtros.busca ||
+    filtros.tag ||
+    (filtros.estado && filtros.estado !== 'todos') ||
+    (filtros.vencimento && filtros.vencimento !== 'todos')
+  )
+}
+
+function textoPesquisavelFlashcard(card) {
+  return [
+    card?.frente,
+    card?.verso,
+    ...(Array.isArray(card?.tags) ? card.tags : [])
+  ]
+    .map(normalizarTextoBuscaFlashcards)
+    .join(' ')
+}
+
+function flashcardPassaFiltroBusca(card, busca) {
+  if (!busca) return true
+  return textoPesquisavelFlashcard(card).includes(busca)
+}
+
+function flashcardPassaFiltroTag(card, tag) {
+  if (!tag) return true
+  if (!Array.isArray(card?.tags)) return false
+  return card.tags.some(tagCard => normalizarTextoBuscaFlashcards(tagCard).includes(tag))
+}
+
+function flashcardPassaFiltroEstado(card, estado) {
+  if (!estado || estado === 'todos') return true
+  return (card?.estado || 'novo') === estado
+}
+
+function flashcardPassaFiltroVencimento(card, vencimento) {
+  if (!vencimento || vencimento === 'todos') return true
+  const dueDate = obterDataComparacaoFlashcard(card?.due_date)
+  if (!dueDate) return false
+  if (vencimento === 'hoje') return dueDate <= dataHojeFlashcards()
+  if (vencimento === 'futuros') return dueDate > dataHojeFlashcards()
+  return true
+}
+
+function aplicarFiltrosFlashcards(cards = [], filtros = obterFiltrosFlashcards()) {
+  const lista = Array.isArray(cards) ? cards : []
+  return lista.filter(card =>
+    card?.ativo !== false &&
+    flashcardPassaFiltroBusca(card, filtros.busca) &&
+    flashcardPassaFiltroTag(card, filtros.tag) &&
+    flashcardPassaFiltroEstado(card, filtros.estado) &&
+    flashcardPassaFiltroVencimento(card, filtros.vencimento)
+  )
 }
 
 function obterDadosFormularioFlashcards() {
@@ -516,7 +585,7 @@ function criarElementoFlashcardLista(card) {
   return item
 }
 
-function renderizarListaFlashcards(cards = []) {
+function renderizarListaFlashcards(cards = [], opcoes = {}) {
   const lista = document.getElementById('flashcards-lista')
   if (!lista) return
 
@@ -529,12 +598,50 @@ function renderizarListaFlashcards(cards = []) {
   if (cardsAtivos.length === 0) {
     const vazio = document.createElement('p')
     vazio.className = 'texto-placeholder'
-    vazio.textContent = 'Nenhum flashcard cadastrado ainda.'
+    vazio.textContent = opcoes.mensagemVazia || 'Nenhum flashcard cadastrado ainda.'
     lista.appendChild(vazio)
     return
   }
 
   cardsAtivos.forEach(card => lista.appendChild(criarElementoFlashcardLista(card)))
+}
+
+function renderizarListaFlashcardsFiltrada() {
+  const filtros = obterFiltrosFlashcards()
+  const cardsFiltrados = aplicarFiltrosFlashcards(flashcardsListaTodos, filtros)
+  const mensagemVazia = filtrosFlashcardsAtivos(filtros)
+    ? 'Nenhum flashcard encontrado com os filtros atuais.'
+    : 'Nenhum flashcard cadastrado ainda.'
+
+  renderizarListaFlashcards(cardsFiltrados, { mensagemVazia })
+}
+
+function limparFiltrosFlashcards() {
+  const busca = document.getElementById('flashcards-busca')
+  const estado = document.getElementById('flashcards-filtro-estado')
+  const vencimento = document.getElementById('flashcards-filtro-vencimento')
+  const tag = document.getElementById('flashcards-filtro-tag')
+
+  if (busca) busca.value = ''
+  if (estado) estado.value = 'todos'
+  if (vencimento) vencimento.value = 'todos'
+  if (tag) tag.value = ''
+
+  renderizarListaFlashcardsFiltrada()
+}
+
+function inicializarFiltrosFlashcards(secao = document) {
+  const busca = secao.querySelector?.('#flashcards-busca')
+  const estado = secao.querySelector?.('#flashcards-filtro-estado')
+  const vencimento = secao.querySelector?.('#flashcards-filtro-vencimento')
+  const tag = secao.querySelector?.('#flashcards-filtro-tag')
+  const limpar = secao.querySelector?.('#btn-limpar-filtros-flashcards')
+
+  busca?.addEventListener('input', renderizarListaFlashcardsFiltrada)
+  estado?.addEventListener('change', renderizarListaFlashcardsFiltrada)
+  vencimento?.addEventListener('change', renderizarListaFlashcardsFiltrada)
+  tag?.addEventListener('input', renderizarListaFlashcardsFiltrada)
+  limpar?.addEventListener('click', limparFiltrosFlashcards)
 }
 
 function obterDataComparacaoFlashcard(data) {
@@ -888,7 +995,8 @@ async function carregarListaFlashcards() {
     return resultado
   }
 
-  renderizarListaFlashcards(resultado.data || [])
+  flashcardsListaTodos = resultado.data || []
+  renderizarListaFlashcardsFiltrada()
   return resultado
 }
 
@@ -970,6 +1078,7 @@ function inicializarFlashcards() {
     })
     secao.addEventListener('click', manipularCliqueFlashcards)
     document.getElementById('btn-salvar-flashcard')?.addEventListener('click', salvarFlashcardTela)
+    inicializarFiltrosFlashcards(secao)
     flashcardsInicializado = true
   }
 
@@ -1252,6 +1361,10 @@ if (typeof globalThis !== 'undefined') {
   globalThis.salvarEdicaoFlashcardLista = salvarEdicaoFlashcardLista
   globalThis.mostrarConfirmacaoDesativarFlashcardLista = mostrarConfirmacaoDesativarFlashcardLista
   globalThis.confirmarDesativacaoFlashcardLista = confirmarDesativacaoFlashcardLista
+  globalThis.obterFiltrosFlashcards = obterFiltrosFlashcards
+  globalThis.aplicarFiltrosFlashcards = aplicarFiltrosFlashcards
+  globalThis.renderizarListaFlashcardsFiltrada = renderizarListaFlashcardsFiltrada
+  globalThis.limparFiltrosFlashcards = limparFiltrosFlashcards
   globalThis.carregarListaFlashcards = carregarListaFlashcards
   globalThis.renderizarListaFlashcards = renderizarListaFlashcards
   globalThis.carregarFlashcardsRevisarHoje = carregarFlashcardsRevisarHoje
