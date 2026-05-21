@@ -9,6 +9,11 @@ const {
   salvarFlashcardTela,
   carregarListaFlashcards,
   renderizarListaFlashcards,
+  carregarFlashcardsRevisarHoje,
+  iniciarSessaoRevisaoFlashcards,
+  mostrarRespostaFlashcardAtual,
+  avaliarFlashcardAtual,
+  calcularProximaRevisaoSM2Flashcards,
   criarFlashcard,
   listarFlashcards,
   listarFlashcardsDevidosHoje,
@@ -49,6 +54,32 @@ function montarFormularioFlashcards() {
       <p id="msg-flashcards"></p>
     </section>
   `
+}
+
+function montarSecaoRevisaoFlashcards() {
+  document.body.innerHTML = `
+    <section id="secao-flashcards">
+      <span id="flashcards-pendentes-hoje"></span>
+      <p id="flashcards-progresso-sessao"></p>
+      <p id="flashcards-revisar-vazio"></p>
+      <div id="flashcards-revisao-card"></div>
+      <button id="btn-iniciar-revisao-flashcards" type="button" disabled>Iniciar revisao</button>
+    </section>
+  `
+}
+
+function criarCardRevisao(sobrescritas = {}) {
+  return {
+    id: 'card-1',
+    frente: 'Frente do card',
+    verso: 'Verso do card',
+    ativo: true,
+    due_date: '2026-05-20',
+    repetitions: 0,
+    interval_days: 1,
+    ease_factor: 2.5,
+    ...sobrescritas
+  }
 }
 
 afterEach(() => {
@@ -142,6 +173,11 @@ describe('esqueleto visual dos flashcards', () => {
     expect(globalThis.salvarFlashcardTela).toBe(salvarFlashcardTela)
     expect(globalThis.carregarListaFlashcards).toBe(carregarListaFlashcards)
     expect(globalThis.renderizarListaFlashcards).toBe(renderizarListaFlashcards)
+    expect(globalThis.carregarFlashcardsRevisarHoje).toBe(carregarFlashcardsRevisarHoje)
+    expect(globalThis.iniciarSessaoRevisaoFlashcards).toBe(iniciarSessaoRevisaoFlashcards)
+    expect(globalThis.mostrarRespostaFlashcardAtual).toBe(mostrarRespostaFlashcardAtual)
+    expect(globalThis.avaliarFlashcardAtual).toBe(avaliarFlashcardAtual)
+    expect(globalThis.calcularProximaRevisaoSM2Flashcards).toBe(calcularProximaRevisaoSM2Flashcards)
     expect(globalThis.criarFlashcard).toBe(criarFlashcard)
     expect(globalThis.listarFlashcards).toBe(listarFlashcards)
     expect(globalThis.listarFlashcardsDevidosHoje).toBe(listarFlashcardsDevidosHoje)
@@ -248,6 +284,133 @@ describe('esqueleto visual dos flashcards', () => {
     expect(resultado.error.message).toBe('Nao foi possivel criar o flashcard. Verifique sua conexao e tente novamente.')
     expect(document.getElementById('msg-flashcards').textContent).toBe('Nao foi possivel criar o flashcard. Verifique sua conexao e tente novamente.')
     expect(document.getElementById('flashcard-frente').value).toBe('Frente')
+  })
+
+  it('Revisar Hoje renderiza apenas cards ativos com due_date menor ou igual a hoje', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+    montarSecaoRevisaoFlashcards()
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+      data: [
+        criarCardRevisao({ id: 'card-devido', frente: 'Card devido' }),
+        criarCardRevisao({ id: 'card-futuro', frente: 'Card futuro', due_date: '2026-05-21' }),
+        criarCardRevisao({ id: 'card-inativo', frente: 'Card inativo', ativo: false })
+      ],
+      error: null
+    })
+
+    const resultado = await carregarFlashcardsRevisarHoje()
+
+    expect(resultado.data.map(card => card.id)).toEqual(['card-devido'])
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('Cards pendentes hoje: 1')
+    expect(document.getElementById('btn-iniciar-revisao-flashcards').disabled).toBe(false)
+
+    iniciarSessaoRevisaoFlashcards()
+
+    expect(document.getElementById('flashcards-revisao-card').textContent).toContain('Card devido')
+    expect(document.getElementById('flashcards-revisao-card').textContent).not.toContain('Card futuro')
+    expect(document.getElementById('flashcards-revisao-card').textContent).not.toContain('Card inativo')
+  })
+
+  it('botao Mostrar resposta revela o verso e os botoes de avaliacao', async () => {
+    montarSecaoRevisaoFlashcards()
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+      data: [criarCardRevisao()],
+      error: null
+    })
+
+    await carregarFlashcardsRevisarHoje()
+    iniciarSessaoRevisaoFlashcards()
+
+    expect(document.getElementById('flashcards-verso-atual').hidden).toBe(true)
+    mostrarRespostaFlashcardAtual()
+
+    expect(document.getElementById('flashcards-verso-atual').hidden).toBe(false)
+    expect(document.getElementById('flashcards-verso-atual').textContent).toContain('Verso do card')
+    expect(document.querySelectorAll('[data-flashcard-quality]')).toHaveLength(6)
+  })
+
+  it.each([0, 1, 2])(
+    'avaliacao quality %s marca dueAgainToday e recoloca o card na fila',
+    async (quality) => {
+      montarSecaoRevisaoFlashcards()
+      const card = criarCardRevisao({ id: `card-${quality}` })
+      vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+        data: [card],
+        error: null
+      })
+      const registrar = vi.spyOn(globalThis, 'registrarRevisaoFlashcard').mockResolvedValue({
+        data: { flashcard: card },
+        error: null
+      })
+
+      await carregarFlashcardsRevisarHoje()
+      iniciarSessaoRevisaoFlashcards()
+      const resultado = await avaliarFlashcardAtual(quality)
+
+      expect(resultado.error).toBeNull()
+      expect(registrar).toHaveBeenCalledWith(card.id, expect.objectContaining({
+        quality,
+        dueAgainToday: true,
+        wasCorrect: false,
+        repetitions: 0,
+        intervalDays: 1
+      }))
+      expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('Cards pendentes hoje: 1')
+      expect(document.getElementById('flashcards-revisao-card').textContent).toContain('Frente do card')
+    }
+  )
+
+  it.each([3, 4, 5])('avaliacao quality %s remove o card da sessao de hoje', async (quality) => {
+    montarSecaoRevisaoFlashcards()
+    const card = criarCardRevisao({ id: `card-${quality}` })
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+      data: [card],
+      error: null
+    })
+    const registrar = vi.spyOn(globalThis, 'registrarRevisaoFlashcard').mockResolvedValue({
+      data: { flashcard: { ...card, due_date: '2026-05-21' } },
+      error: null
+    })
+
+    await carregarFlashcardsRevisarHoje()
+    iniciarSessaoRevisaoFlashcards()
+    await avaliarFlashcardAtual(quality)
+
+    expect(registrar).toHaveBeenCalledWith(card.id, expect.objectContaining({
+      quality,
+      dueAgainToday: false,
+      wasCorrect: true
+    }))
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('Cards pendentes hoje: 0')
+    expect(document.getElementById('flashcards-progresso-sessao').textContent).toBe('Progresso: 1/1')
+    expect(document.getElementById('flashcards-revisar-vazio').textContent).toBe('Nenhum card pendente para hoje.')
+  })
+
+  it('mostra mensagem de sessao vazia quando nao ha cards pendentes', async () => {
+    montarSecaoRevisaoFlashcards()
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+      data: [],
+      error: null
+    })
+
+    await carregarFlashcardsRevisarHoje()
+
+    expect(document.getElementById('flashcards-revisar-vazio').textContent).toBe('Nenhum card pendente para hoje.')
+    expect(document.getElementById('btn-iniciar-revisao-flashcards').disabled).toBe(true)
+  })
+
+  it('erro ao carregar Revisar Hoje mostra mensagem amigavel', async () => {
+    montarSecaoRevisaoFlashcards()
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+      data: null,
+      error: new Error('Nao foi possivel listar os flashcards de hoje. Verifique sua conexao e tente novamente.')
+    })
+
+    const resultado = await carregarFlashcardsRevisarHoje()
+
+    expect(resultado.error.message).toBe('Nao foi possivel listar os flashcards de hoje. Verifique sua conexao e tente novamente.')
+    expect(document.getElementById('flashcards-revisar-vazio').textContent).toBe('Nao foi possivel listar os flashcards de hoje. Verifique sua conexao e tente novamente.')
   })
 })
 
