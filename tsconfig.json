@@ -12,6 +12,7 @@
   },
   "include": [
     "js/**/*.js",
+    "src/**/*.ts",
     "scripts/**/*.mjs",
     "tests/**/*.js",
     "vite.config.js"
