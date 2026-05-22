@@ -218,6 +218,11 @@ async function carregarMateriasNoSelect() {
     option.textContent = m.nome
     select.appendChild(option)
   })
+
+  const msgQuestao = document.getElementById('msg-questao')
+  if (msgQuestao?.textContent === 'Cadastre ao menos uma matéria antes.') {
+    mostrarMsgQuestao('', '')
+  }
 }
 
 async function carregarTopicosQuestao(topicoAtualId = '') {
@@ -3638,7 +3643,13 @@ function adicionarLinhaAcerto() {
     .join('')
 
   if (opcoes.length === 0) {
-    mostrarMsgQuestao('Cadastre ao menos uma matéria antes.', 'erro')
+    const materiasCarregando = Array.from(selectOrigem.options)
+      .some(o => o.textContent.includes('Buscando opções'))
+
+    if (!materiasCarregando) {
+      mostrarMsgQuestao('Cadastre ao menos uma matéria antes.', 'erro')
+    }
+
     return
   }
 
