@@ -918,8 +918,7 @@ async function buscarProtecaoBancoCheio(userId) {
     nivel,
     totalDetalhadas,
     antigas,
-    estimativaMb,
-    limiteMb: 25
+    estimativaMb
   }
 }
 
@@ -929,8 +928,8 @@ function criarPainelProtecaoBancoCheio(protecao) {
   const textos = {
     ok: 'Volume saudável de questões detalhadas.',
     atencao: 'Há questões antigas que já podem ser arquivadas para evitar acúmulo.',
-    aviso: 'O volume de questões detalhadas está subindo. Arquivar ciclos antigos ajuda a proteger o limite do banco.',
-    critico: 'Atenção: o volume estimado está perto de uma zona perigosa para um banco pequeno.'
+    aviso: 'O volume de questões detalhadas está subindo. Arquivar ciclos antigos ajuda a manter o sistema leve.',
+    critico: 'Atenção: o volume estimado está alto. Acompanhe os dados e considere arquivar registros antigos quando necessário.'
   }
 
   return `
@@ -942,7 +941,7 @@ function criarPainelProtecaoBancoCheio(protecao) {
       <div class="protecao-banco-metricas">
         <span>${protecao.totalDetalhadas} detalhadas ativas</span>
         <span>${protecao.antigas} de meses anteriores</span>
-        <span>~${protecao.estimativaMb} MB estimados / ${protecao.limiteMb} MB</span>
+        <span>Volume estimado: ~${protecao.estimativaMb} MB</span>
       </div>
     </div>
   `
