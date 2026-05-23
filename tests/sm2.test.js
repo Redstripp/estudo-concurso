@@ -1,6 +1,27 @@
 import { describe, expect, it } from 'vitest';
 
 import { calcularProximaRevisaoSM2 } from '../src/utils/sm2.ts';
+import '../js/flashcards.js';
+
+const { calcularProximaRevisaoSM2Flashcards } = globalThis;
+
+function compararResultadoSM2(params) {
+  const resultadoTs = calcularProximaRevisaoSM2(params);
+  const resultadoJs = calcularProximaRevisaoSM2Flashcards(
+    {
+      repetitions: params.repetitions,
+      interval_days: params.intervalDays,
+      ease_factor: params.easeFactor
+    },
+    params.quality
+  );
+
+  expect(resultadoJs.repetitions).toBe(resultadoTs.repetitions);
+  expect(resultadoJs.intervalDays).toBe(resultadoTs.intervalDays);
+  expect(resultadoJs.easeFactor).toBeCloseTo(resultadoTs.easeFactor, 10);
+  expect(resultadoJs.dueAgainToday).toBe(resultadoTs.dueAgainToday);
+  expect(resultadoJs.wasCorrect).toBe(resultadoTs.wasCorrect);
+}
 
 describe('calcularProximaRevisaoSM2', () => {
   it('gera intervalo de 1 dia e 1 repeticao para novo card com quality 5', () => {
@@ -169,5 +190,18 @@ describe('calcularProximaRevisaoSM2', () => {
 
     expect(resultado.intervalDays).toBe(8);
     expect(resultado.easeFactor).toBeCloseTo(1.4, 10);
+  });
+});
+
+describe('equivalencia entre SM-2 TypeScript e Flashcards JS', () => {
+  it.each([
+    ['quality 0 com reset', { quality: 0, repetitions: 4, intervalDays: 20, easeFactor: 2.5 }],
+    ['quality 2 com reset', { quality: 2, repetitions: 3, intervalDays: 12, easeFactor: 2.1 }],
+    ['quality 3 na primeira repeticao', { quality: 3, repetitions: 0, intervalDays: 0, easeFactor: 2.5 }],
+    ['quality 4 na segunda repeticao', { quality: 4, repetitions: 1, intervalDays: 1, easeFactor: 2.5 }],
+    ['quality 5 em repeticao posterior', { quality: 5, repetitions: 2, intervalDays: 6, easeFactor: 2.5 }],
+    ['ease factor minimo de 1.3', { quality: 0, repetitions: 5, intervalDays: 30, easeFactor: 1.3 }]
+  ])('mantem o mesmo resultado para %s', (_cenario, params) => {
+    compararResultadoSM2(params);
   });
 });
