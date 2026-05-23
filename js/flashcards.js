@@ -1123,6 +1123,11 @@ function criarElementoRevisaoFlashcard(card) {
   instrucao.textContent = 'Avalie sua resposta de 0 a 5.'
   avaliacao.appendChild(instrucao)
 
+  const legenda = document.createElement('p')
+  legenda.className = 'texto-apoio'
+  legenda.textContent = 'Como avaliar: 0-2: errei ou não lembrei - o card volta para revisar hoje. 3: acertei com dificuldade. 4: acertei bem. 5: acertei com facilidade - o intervalo aumenta mais.'
+  avaliacao.appendChild(legenda)
+
   QUALIDADES_FLASHCARD.forEach(quality => {
     const botao = document.createElement('button')
     botao.className = quality >= 3 ? 'btn-primario' : 'btn-secundario'

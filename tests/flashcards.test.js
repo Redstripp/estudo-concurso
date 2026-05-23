@@ -933,6 +933,8 @@ describe('esqueleto visual dos flashcards', () => {
 
     expect(document.getElementById('flashcards-verso-atual').hidden).toBe(false)
     expect(document.getElementById('flashcards-verso-atual').textContent).toContain('Verso do card')
+    expect(document.getElementById('flashcards-avaliacao-atual').textContent).toContain('Como avaliar:')
+    expect(document.getElementById('flashcards-avaliacao-atual').textContent).toContain('0-2: errei ou não lembrei')
     expect(document.querySelectorAll('[data-flashcard-quality]')).toHaveLength(6)
   })
 
