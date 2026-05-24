@@ -93,8 +93,11 @@ function formatarProximaRevisaoFlashcard(data) {
 
   if (diferencaDias === 0) return `hoje (${dueDate})`
   if (diferencaDias === 1) return `amanhã (${dueDate})`
-  if (diferencaDias < 0) return `atrasado há ${Math.abs(diferencaDias)} dia(s) (${dueDate})`
-  return `em ${diferencaDias} dia(s) (${dueDate})`
+  if (diferencaDias < 0) {
+    const diasAtraso = Math.abs(diferencaDias)
+    return `atrasado há ${diasAtraso} ${diasAtraso === 1 ? 'dia' : 'dias'} (${dueDate})`
+  }
+  return `em ${diferencaDias} ${diferencaDias === 1 ? 'dia' : 'dias'} (${dueDate})`
 }
 
 function normalizarTextoObrigatorioFlashcards(valor) {

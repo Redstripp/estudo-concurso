@@ -473,15 +473,17 @@ describe('esqueleto visual dos flashcards', () => {
       criarCardRevisao({ id: 'hoje', frente: 'Hoje', due_date: '2026-05-20' }),
       criarCardRevisao({ id: 'amanha', frente: 'Amanha', due_date: '2026-05-21' }),
       criarCardRevisao({ id: 'futuro', frente: 'Futuro', due_date: '2026-05-23' }),
-      criarCardRevisao({ id: 'atrasado', frente: 'Atrasado', due_date: '2026-05-18' }),
+      criarCardRevisao({ id: 'atrasado-1', frente: 'Atrasado 1', due_date: '2026-05-19' }),
+      criarCardRevisao({ id: 'atrasado-2', frente: 'Atrasado 2', due_date: '2026-05-18' }),
       criarCardRevisao({ id: 'sem-data', frente: 'Sem data', due_date: null })
     ])
 
     const texto = document.getElementById('flashcards-lista').textContent
     expect(texto).toContain('Proxima revisao: hoje (2026-05-20)')
     expect(texto).toContain('Proxima revisao: amanhã (2026-05-21)')
-    expect(texto).toContain('Proxima revisao: em 3 dia(s) (2026-05-23)')
-    expect(texto).toContain('Proxima revisao: atrasado há 2 dia(s) (2026-05-18)')
+    expect(texto).toContain('Proxima revisao: em 3 dias (2026-05-23)')
+    expect(texto).toContain('Proxima revisao: atrasado há 1 dia (2026-05-19)')
+    expect(texto).toContain('Proxima revisao: atrasado há 2 dias (2026-05-18)')
     expect(texto).toContain('Proxima revisao: sem data definida')
   })
 
