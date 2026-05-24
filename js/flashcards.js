@@ -1034,10 +1034,20 @@ function calcularEstatisticasFlashcards(cards = [], revisoes = []) {
   const totalRevisoes = revisoesLista.length
   const totalAcertos = revisoesLista.filter(revisarFoiAcertoFlashcard).length
   const totalErros = totalRevisoes - totalAcertos
+  const hoje = dataHojeFlashcards()
+  const cardsAtrasados = cardsAtivos.filter(card => {
+    const dueDate = obterDataComparacaoFlashcard(card?.due_date)
+    return Boolean(dueDate) && dueDate < hoje
+  }).length
+  const cardsParaHoje = cardsAtivos.filter(card =>
+    obterDataComparacaoFlashcard(card?.due_date) === hoje
+  ).length
 
   return {
     totalCards: cardsAtivos.length,
     cardsHoje: cardsAtivos.filter(flashcardDevidoHoje).length,
+    cardsAtrasados,
+    cardsParaHoje,
     cardsNovos: cardsAtivos.filter(card => (card.estado || 'novo') === 'novo').length,
     cardsAprendendo: cardsAtivos.filter(card => card.estado === 'aprendendo').length,
     cardsRevisando: cardsAtivos.filter(card => card.estado === 'revisando').length,
@@ -1057,6 +1067,8 @@ function definirTextoElementoFlashcards(id, texto) {
 function renderizarEstatisticasFlashcards(estatisticas = calcularEstatisticasFlashcards()) {
   definirTextoElementoFlashcards('flashcards-total-cards', estatisticas.totalCards || 0)
   definirTextoElementoFlashcards('flashcards-cards-hoje', estatisticas.cardsHoje || 0)
+  definirTextoElementoFlashcards('flashcards-cards-atrasados', estatisticas.cardsAtrasados || 0)
+  definirTextoElementoFlashcards('flashcards-cards-para-hoje', estatisticas.cardsParaHoje || 0)
   definirTextoElementoFlashcards('flashcards-cards-novos', estatisticas.cardsNovos || 0)
   definirTextoElementoFlashcards('flashcards-cards-aprendendo', estatisticas.cardsAprendendo || 0)
   definirTextoElementoFlashcards('flashcards-cards-revisando', estatisticas.cardsRevisando || 0)

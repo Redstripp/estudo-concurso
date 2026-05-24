@@ -142,6 +142,8 @@ function montarSecaoEstatisticasFlashcards() {
     <section id="secao-flashcards">
       <strong id="flashcards-total-cards"></strong>
       <strong id="flashcards-cards-hoje"></strong>
+      <strong id="flashcards-cards-atrasados"></strong>
+      <strong id="flashcards-cards-para-hoje"></strong>
       <strong id="flashcards-cards-novos"></strong>
       <strong id="flashcards-cards-aprendendo"></strong>
       <strong id="flashcards-cards-revisando"></strong>
@@ -264,6 +266,8 @@ describe('esqueleto visual dos flashcards', () => {
     expect(appHtml).toContain('id="flashcard-materia"')
     expect(appHtml).toContain('Total de cards')
     expect(appHtml).toContain('Cards para hoje')
+    expect(appHtml).toContain('id="flashcards-cards-atrasados"')
+    expect(appHtml).toContain('id="flashcards-cards-para-hoje"')
     expect(appHtml).toContain('Taxa de acerto')
     expect(appHtml).toContain('Sequ')
   })
@@ -1217,6 +1221,8 @@ describe('esqueleto visual dos flashcards', () => {
     expect(resultado.error).toBeNull()
     expect(document.getElementById('flashcards-total-cards').textContent).toBe('0')
     expect(document.getElementById('flashcards-cards-hoje').textContent).toBe('0')
+    expect(document.getElementById('flashcards-cards-atrasados').textContent).toBe('0')
+    expect(document.getElementById('flashcards-cards-para-hoje').textContent).toBe('0')
     expect(document.getElementById('flashcards-cards-novos').textContent).toBe('0')
     expect(document.getElementById('flashcards-total-revisoes').textContent).toBe('0')
     expect(document.getElementById('flashcards-taxa-acerto').textContent).toBe('0%')
@@ -1236,6 +1242,8 @@ describe('esqueleto visual dos flashcards', () => {
 
     expect(estatisticas.totalCards).toBe(3)
     expect(estatisticas.cardsHoje).toBe(2)
+    expect(estatisticas.cardsAtrasados).toBe(1)
+    expect(estatisticas.cardsParaHoje).toBe(1)
     expect(estatisticas.cardsNovos).toBe(1)
     expect(estatisticas.cardsAprendendo).toBe(1)
     expect(estatisticas.cardsRevisando).toBe(1)
@@ -1265,6 +1273,8 @@ describe('esqueleto visual dos flashcards', () => {
     renderizarEstatisticasFlashcards({
       totalCards: 4,
       cardsHoje: 2,
+      cardsAtrasados: 1,
+      cardsParaHoje: 1,
       cardsNovos: 1,
       cardsAprendendo: 1,
       cardsRevisando: 2,
@@ -1277,6 +1287,8 @@ describe('esqueleto visual dos flashcards', () => {
 
     expect(document.getElementById('flashcards-total-cards').textContent).toBe('4')
     expect(document.getElementById('flashcards-cards-hoje').textContent).toBe('2')
+    expect(document.getElementById('flashcards-cards-atrasados').textContent).toBe('1')
+    expect(document.getElementById('flashcards-cards-para-hoje').textContent).toBe('1')
     expect(document.getElementById('flashcards-cards-novos').textContent).toBe('1')
     expect(document.getElementById('flashcards-cards-aprendendo').textContent).toBe('1')
     expect(document.getElementById('flashcards-cards-revisando').textContent).toBe('2')
