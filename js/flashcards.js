@@ -80,6 +80,23 @@ function adicionarDiasFlashcards(dataISO, dias) {
   return dataISOFlashcards(data)
 }
 
+function formatarProximaRevisaoFlashcard(data) {
+  const dueDate = obterDataComparacaoFlashcard(data)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return 'sem data definida'
+
+  const dataRevisao = new Date(`${dueDate}T12:00:00`)
+  if (Number.isNaN(dataRevisao.getTime())) return 'sem data definida'
+
+  const hoje = dataHojeFlashcards()
+  const dataHoje = new Date(`${hoje}T12:00:00`)
+  const diferencaDias = Math.round((dataRevisao.getTime() - dataHoje.getTime()) / 86400000)
+
+  if (diferencaDias === 0) return `hoje (${dueDate})`
+  if (diferencaDias === 1) return `amanhã (${dueDate})`
+  if (diferencaDias < 0) return `atrasado há ${Math.abs(diferencaDias)} dia(s) (${dueDate})`
+  return `em ${diferencaDias} dia(s) (${dueDate})`
+}
+
 function normalizarTextoObrigatorioFlashcards(valor) {
   return String(valor || '').trim()
 }
@@ -636,7 +653,7 @@ function criarElementoFlashcardLista(card) {
 
   const proximaRevisao = document.createElement('span')
   proximaRevisao.className = 'tag-estudo'
-  proximaRevisao.textContent = `Proxima revisao: ${card.due_date || '-'}`
+  proximaRevisao.textContent = `Proxima revisao: ${formatarProximaRevisaoFlashcard(card.due_date)}`
   meta.appendChild(proximaRevisao)
 
   if (Array.isArray(card.tags) && card.tags.length > 0) {

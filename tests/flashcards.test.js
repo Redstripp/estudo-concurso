@@ -424,6 +424,7 @@ describe('esqueleto visual dos flashcards', () => {
   })
 
   it('lista Todos os Cards renderiza cards retornados', () => {
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
     document.body.innerHTML = '<div id="flashcards-lista"></div>'
 
     renderizarListaFlashcards([
@@ -443,7 +444,7 @@ describe('esqueleto visual dos flashcards', () => {
     expect(texto).toContain('Frente do card')
     expect(texto).toContain('Verso do card')
     expect(texto).toContain('Estado: novo')
-    expect(texto).toContain('Proxima revisao: 2026-05-21')
+    expect(texto).toContain('Proxima revisao: amanhã (2026-05-21)')
     expect(texto).toContain('Tags: constitucional, prazos')
     expect(texto).toContain('Matéria: Direito Constitucional')
   })
@@ -460,6 +461,26 @@ describe('esqueleto visual dos flashcards', () => {
     ])
 
     expect(document.getElementById('flashcards-lista').textContent).toContain('Matéria: Sem matéria')
+  })
+
+  it('Todos os Cards exibe proxima revisao em texto amigavel', () => {
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+    document.body.innerHTML = '<div id="flashcards-lista"></div>'
+
+    renderizarListaFlashcards([
+      criarCardRevisao({ id: 'hoje', frente: 'Hoje', due_date: '2026-05-20' }),
+      criarCardRevisao({ id: 'amanha', frente: 'Amanha', due_date: '2026-05-21' }),
+      criarCardRevisao({ id: 'futuro', frente: 'Futuro', due_date: '2026-05-23' }),
+      criarCardRevisao({ id: 'atrasado', frente: 'Atrasado', due_date: '2026-05-18' }),
+      criarCardRevisao({ id: 'sem-data', frente: 'Sem data', due_date: null })
+    ])
+
+    const texto = document.getElementById('flashcards-lista').textContent
+    expect(texto).toContain('Proxima revisao: hoje (2026-05-20)')
+    expect(texto).toContain('Proxima revisao: amanhã (2026-05-21)')
+    expect(texto).toContain('Proxima revisao: em 3 dia(s) (2026-05-23)')
+    expect(texto).toContain('Proxima revisao: atrasado há 2 dia(s) (2026-05-18)')
+    expect(texto).toContain('Proxima revisao: sem data definida')
   })
 
   it('Todos os Cards mostra botoes Editar e Desativar', () => {
