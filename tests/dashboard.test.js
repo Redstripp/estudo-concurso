@@ -187,7 +187,7 @@ describe('dashboard helpers', () => {
     expect(criarDonutAproveitamentoDashboard(-10)).toContain('stroke-dasharray="0 100"')
   })
 
-  it('nao arquiva nem apaga questoes sem relatorio mensal marcado como gerado', async () => {
+  it('nao arquiva sem relatorio mensal marcado como gerado', async () => {
     montarMensagemArquivamento()
     const deleteQuestao = vi.fn()
     const from = vi.fn(() => ({ delete: deleteQuestao }))
@@ -212,7 +212,7 @@ describe('dashboard helpers', () => {
     expect(document.getElementById('msg-arquivamento-mensal').textContent).toContain('Gere o PDF')
   })
 
-  it('exige confirmacao ARQUIVAR antes do delete mensal', async () => {
+  it('exige confirmacao ARQUIVAR antes de salvar o resumo mensal', async () => {
     montarMensagemArquivamento()
     const deleteQuestao = vi.fn()
     const from = vi.fn(() => ({ delete: deleteQuestao }))
@@ -234,20 +234,15 @@ describe('dashboard helpers', () => {
     expect(deleteQuestao).not.toHaveBeenCalled()
   })
 
-  it('restringe o delete mensal por usuario e intervalo do periodo', async () => {
+  it('salva o resumo mensal sem apagar questoes detalhadas', async () => {
     montarMensagemArquivamento()
     const periodo = criarPeriodoArquivamentoTeste()
     const dados = { questoes: [{ id: 'q1' }], sessoes: [{ id: 's1' }] }
     const resumo = { totalDetalhadas: 1 }
-    const lte = vi.fn(async () => ({ error: null }))
-    const deleteChain = {
-      delete: vi.fn(function () { return this }),
-      eq: vi.fn(function () { return this }),
-      gte: vi.fn(function () { return this }),
-      lte
-    }
-    const from = vi.fn(() => deleteChain)
+    const deleteQuestao = vi.fn()
+    const from = vi.fn(() => ({ delete: deleteQuestao }))
     const salvarResumoMensal = vi.fn(async () => {})
+    const recalcularTotalQuestoesSessao = vi.fn(async () => {})
     const arquivarELimparMes = criarArquivarELimparMesParaTeste({
       relatorioMensalGerado: vi.fn(() => true),
       db: { from },
@@ -255,7 +250,7 @@ describe('dashboard helpers', () => {
       buscarDadosArquivamentoMensal: vi.fn(async () => dados),
       montarResumoArquivamentoMensal: vi.fn(() => resumo),
       salvarResumoMensal,
-      recalcularTotalQuestoesSessao: vi.fn(async () => {}),
+      recalcularTotalQuestoesSessao,
       inicializarDashboard: vi.fn(async () => {}),
       verificarAvisoArquivamentoPendente: vi.fn()
     })
@@ -263,11 +258,10 @@ describe('dashboard helpers', () => {
     await arquivarELimparMes('user-1', periodo)
 
     expect(salvarResumoMensal).toHaveBeenCalledWith('user-1', periodo, resumo)
-    expect(from).toHaveBeenCalledWith('questoes')
-    expect(deleteChain.delete).toHaveBeenCalled()
-    expect(deleteChain.eq).toHaveBeenCalledWith('user_id', 'user-1')
-    expect(deleteChain.gte).toHaveBeenCalledWith('criado_em', '2026-05-01T00:00:00')
-    expect(deleteChain.lte).toHaveBeenCalledWith('criado_em', '2026-05-31T23:59:59.999Z')
+    expect(from).not.toHaveBeenCalled()
+    expect(deleteQuestao).not.toHaveBeenCalled()
+    expect(recalcularTotalQuestoesSessao).not.toHaveBeenCalled()
+    expect(document.getElementById('msg-arquivamento-mensal').textContent).toContain('questões detalhadas foram mantidas')
   })
 
   it('salva o resumo mensal na tabela estatisticas_mensais', async () => {

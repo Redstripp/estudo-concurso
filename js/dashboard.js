@@ -927,8 +927,8 @@ function criarPainelProtecaoBancoCheio(protecao) {
 
   const textos = {
     ok: 'Volume saudável de questões detalhadas.',
-    atencao: 'Há questões antigas que já podem ser arquivadas para evitar acúmulo.',
-    aviso: 'O volume de questões detalhadas está subindo. Arquivar ciclos antigos ajuda a manter o sistema leve.',
+    atencao: 'Há questões antigas que já podem ter o resumo mensal registrado.',
+    aviso: 'O volume de questões detalhadas está subindo. Acompanhe os ciclos antigos e registre os resumos mensais.',
     critico: 'Atenção: o volume estimado está alto. Acompanhe os dados e considere arquivar registros antigos quando necessário.'
   }
 
@@ -949,16 +949,16 @@ function criarPainelProtecaoBancoCheio(protecao) {
 
 function criarPainelArquivamentoMensal(periodo, resumo, resumoSalvo, protecaoBanco) {
   const statusTexto = periodo.pendente
-    ? `Há questões de ${periodo.rotulo} pendentes. Gere o PDF e arquive para liberar espaço no Supabase.`
+    ? `Há questões de ${periodo.rotulo} pendentes. Gere o PDF e arquive o resumo mensal sem apagar suas questões.`
     : periodo.podeLimpar
-    ? `O ciclo de ${periodo.rotulo} já pode ser arquivado e limpo.`
+    ? `O ciclo de ${periodo.rotulo} já pode ter o resumo mensal arquivado.`
     : periodo.fimDeMes
-      ? `Faltam cerca de ${periodo.diasParaVirada} dia${periodo.diasParaVirada !== 1 ? 's' : ''} para virar o mês. Gere o PDF antes da limpeza.`
+      ? `Faltam cerca de ${periodo.diasParaVirada} dia${periodo.diasParaVirada !== 1 ? 's' : ''} para virar o mês. Gere o PDF antes de arquivar o resumo.`
       : `O ciclo de ${periodo.rotulo} está em andamento.`
 
   const avisoTabela = resumoSalvo.tabelaDisponivel
     ? ''
-    : '<p class="arquivamento-alerta">Para arquivar e limpar, execute antes o arquivo supabase-arquivamento-mensal.sql no Supabase.</p>'
+    : '<p class="arquivamento-alerta">Para salvar o resumo mensal, execute antes o arquivo supabase-arquivamento-mensal.sql no Supabase.</p>'
 
   const arquivadoTexto = resumoSalvo.data?.arquivado_em
     ? `<span class="tag-revisao tag-revisao--acerto">Arquivado em ${formatarDataHoraArquivamento(resumoSalvo.data.arquivado_em)}</span>`
@@ -966,7 +966,7 @@ function criarPainelArquivamentoMensal(periodo, resumo, resumoSalvo, protecaoBan
   const pdfGerado = relatorioMensalGerado(periodo)
   const podeArquivar = periodo.podeLimpar && resumo.totalDetalhadas > 0 && resumoSalvo.tabelaDisponivel && pdfGerado
   const avisoPdf = periodo.podeLimpar && resumo.totalDetalhadas > 0 && resumoSalvo.tabelaDisponivel && !pdfGerado
-    ? '<p class="arquivamento-alerta" id="aviso-pdf-obrigatorio">Gere o PDF deste ciclo antes de arquivar e limpar as questões.</p>'
+    ? '<p class="arquivamento-alerta" id="aviso-pdf-obrigatorio">Gere o PDF deste ciclo antes de arquivar o resumo mensal.</p>'
     : ''
 
   return `
@@ -993,9 +993,10 @@ function criarPainelArquivamentoMensal(periodo, resumo, resumoSalvo, protecaoBan
       <div class="arquivamento-acoes">
         <button class="btn-secundario" id="btn-gerar-pdf-mensal" type="button">Gerar PDF do mês</button>
         <button class="btn-secundario" id="btn-arquivar-limpar-mensal" type="button" ${podeArquivar ? '' : 'disabled'}>
-          Arquivar resumo e limpar questões
+          Arquivar resumo mensal
         </button>
       </div>
+      <p class="arquivamento-ajuda">As questões detalhadas serão mantidas para revisão futura.</p>
       <p class="msg-materia" id="msg-arquivamento-mensal"></p>
     </div>
   `
@@ -1043,12 +1044,12 @@ async function arquivarELimparMes(userId, periodo) {
   const msg = document.getElementById('msg-arquivamento-mensal')
 
   if (!relatorioMensalGerado(periodo)) {
-    msg.textContent = 'Gere o PDF deste ciclo antes de arquivar e limpar as questões.'
+    msg.textContent = 'Gere o PDF deste ciclo antes de arquivar o resumo mensal.'
     msg.className = 'msg-materia erro'
     return
   }
 
-  const confirmacao = prompt(`Digite ARQUIVAR para salvar o resumo de ${periodo.rotulo} e apagar as questões detalhadas desse mês.`)
+  const confirmacao = prompt(`Digite ARQUIVAR para salvar o resumo de ${periodo.rotulo}. As questões detalhadas serão mantidas.`)
   if (confirmacao !== 'ARQUIVAR') return
 
   msg.textContent = 'Arquivando resumo mensal...'
@@ -1059,27 +1060,14 @@ async function arquivarELimparMes(userId, periodo) {
     const resumo = montarResumoArquivamentoMensal(dados, periodo)
 
     if (resumo.totalDetalhadas === 0) {
-      msg.textContent = 'Não há questões detalhadas para limpar neste ciclo.'
+      msg.textContent = 'Não há questões detalhadas neste ciclo.'
       msg.className = 'msg-materia erro'
       return
     }
 
     await salvarResumoMensal(userId, periodo, resumo)
 
-    const { error: erroDelete } = await db
-      .from('questoes')
-      .delete()
-      .eq('user_id', userId)
-      .gte('criado_em', `${periodo.inicio}T00:00:00`)
-      .lte('criado_em', periodo.fimDataHora)
-
-    if (erroDelete) throw erroDelete
-
-    if (typeof recalcularTotalQuestoesSessao === 'function') {
-      await Promise.all((dados.sessoes || []).map(sessao => recalcularTotalQuestoesSessao(sessao.id)))
-    }
-
-    msg.textContent = 'Resumo salvo e questões detalhadas limpas.'
+    msg.textContent = 'Resumo salvo. As questões detalhadas foram mantidas.'
     msg.className = 'msg-materia sucesso'
     await inicializarDashboard()
     if (typeof verificarAvisoArquivamentoPendente === 'function') verificarAvisoArquivamentoPendente()
@@ -1087,7 +1075,7 @@ async function arquivarELimparMes(userId, periodo) {
     console.error(erro)
     msg.textContent = erro?.message?.includes('estatisticas_mensais')
       ? 'Execute o arquivo supabase-arquivamento-mensal.sql no Supabase e tente novamente.'
-      : 'Não foi possível arquivar e limpar o ciclo. Verifique sua conexão e tente novamente.'
+      : 'Não foi possível salvar o resumo mensal. Verifique sua conexão e tente novamente.'
     msg.className = 'msg-materia erro'
   }
 }
