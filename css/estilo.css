@@ -215,8 +215,16 @@ button {
   flex-direction: column;
   overflow-x: hidden;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   z-index: 100;
   transition: var(--transicao);
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
  
 .sidebar-logo {
@@ -240,11 +248,20 @@ button {
 .sidebar-nav {
   flex: 1;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   padding: 16px 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
  
 .nav-item {
