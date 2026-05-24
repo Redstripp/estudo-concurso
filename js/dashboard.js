@@ -618,10 +618,16 @@ async function carregarArquivamentoMensal(userId) {
 
   // Remove listeners antigos antes de adicionar novos
   const btnPdf = container.querySelector('#btn-gerar-pdf-mensal')
+  const inputMesPdf = container.querySelector('#input-mes-pdf-mensal')
   if (btnPdf) {
     const novoBtnPdf = btnPdf.cloneNode(true)
     btnPdf.parentNode.replaceChild(novoBtnPdf, btnPdf)
-    novoBtnPdf.addEventListener('click', () => gerarPdfArquivamentoMensal(userId, periodo))
+    novoBtnPdf.addEventListener('click', () => {
+      const periodoPdf = criarPeriodoPdfMensalSelecionado(inputMesPdf?.value)
+      gerarPdfArquivamentoMensal(userId, periodoPdf, {
+        atualizarBloqueioArquivamento: periodoPdf.periodoMes === periodo.periodoMes
+      })
+    })
   }
 
   const btnArquivar = container.querySelector('#btn-arquivar-limpar-mensal')
@@ -695,6 +701,23 @@ function criarPeriodoArquivamento(alvo, opcoes = {}) {
 function criarDataInicioMesAtualArquivamento() {
   const hoje = new Date()
   return new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+}
+
+function criarValorMesPdfPadrao(dataBase = new Date()) {
+  const ano = dataBase.getFullYear()
+  const mes = String(dataBase.getMonth() + 1).padStart(2, '0')
+  return `${ano}-${mes}`
+}
+
+function criarPeriodoPdfMensalSelecionado(valorMes, dataBase = new Date()) {
+  const valorPadrao = criarValorMesPdfPadrao(dataBase)
+  const texto = String(valorMes || '')
+  const match = /^(\d{4})-(\d{2})$/.exec(texto)
+  const mes = Number(match?.[2])
+  const valor = match && mes >= 1 && mes <= 12 ? texto : valorPadrao
+  const valorSeguro = valor > valorPadrao ? valorPadrao : valor
+  const [anoSelecionado, mesSelecionado] = valorSeguro.split('-').map(Number)
+  return criarPeriodoArquivamento(new Date(anoSelecionado, mesSelecionado - 1, 1))
 }
 
 async function buscarDadosArquivamentoMensal(userId, periodo) {
@@ -948,6 +971,7 @@ function criarPainelProtecaoBancoCheio(protecao) {
 }
 
 function criarPainelArquivamentoMensal(periodo, resumo, resumoSalvo, protecaoBanco) {
+  const mesPdfPadrao = criarValorMesPdfPadrao()
   const statusTexto = periodo.pendente
     ? `Há questões de ${periodo.rotulo} pendentes. Gere o PDF e arquive o resumo mensal sem apagar suas questões.`
     : periodo.podeLimpar
@@ -990,8 +1014,13 @@ function criarPainelArquivamentoMensal(periodo, resumo, resumoSalvo, protecaoBan
       ${avisoTabela}
       ${avisoPdf}
       ${criarPainelProtecaoBancoCheio(protecaoBanco)}
+      <div class="arquivamento-pdf-opcoes">
+        <label for="input-mes-pdf-mensal">Mês do PDF</label>
+        <input id="input-mes-pdf-mensal" type="month" value="${mesPdfPadrao}" max="${mesPdfPadrao}" />
+        <small>Selecione o mês que deseja exportar.</small>
+      </div>
       <div class="arquivamento-acoes">
-        <button class="btn-secundario" id="btn-gerar-pdf-mensal" type="button">Gerar PDF do mês</button>
+        <button class="btn-secundario" id="btn-gerar-pdf-mensal" type="button">Gerar PDF do período selecionado</button>
         <button class="btn-secundario" id="btn-arquivar-limpar-mensal" type="button" ${podeArquivar ? '' : 'disabled'}>
           Arquivar resumo mensal
         </button>
@@ -1002,7 +1031,8 @@ function criarPainelArquivamentoMensal(periodo, resumo, resumoSalvo, protecaoBan
   `
 }
 
-async function gerarPdfArquivamentoMensal(userId, periodo) {
+async function gerarPdfArquivamentoMensal(userId, periodo, opcoes) {
+  const opcoesPdf = opcoes || {}
   const msg = document.getElementById('msg-arquivamento-mensal')
   const janela = window.open('', '_blank')
 
@@ -1025,7 +1055,9 @@ async function gerarPdfArquivamentoMensal(userId, periodo) {
     const resumo = montarResumoArquivamentoMensal(dados, periodo)
     abrirRelatorioMensalParaImpressao(janela, periodo, dados, resumo)
     marcarRelatorioMensalGerado(periodo)
-    atualizarBloqueioArquivamentoAposPdf(periodo, resumo)
+    if (opcoesPdf.atualizarBloqueioArquivamento !== false) {
+      atualizarBloqueioArquivamentoAposPdf(periodo, resumo)
+    }
     if (msg) {
       msg.textContent = 'Relatório aberto. Use Imprimir > Salvar como PDF.'
       msg.className = 'msg-materia sucesso'
@@ -2207,6 +2239,9 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.criarEstadoVazioDashboard = criarEstadoVazioDashboard
   globalThis.criarCardsDashboardVazios = criarCardsDashboardVazios
   globalThis.criarPeriodoArquivamento = criarPeriodoArquivamento
+  globalThis.criarValorMesPdfPadrao = criarValorMesPdfPadrao
+  globalThis.criarPeriodoPdfMensalSelecionado = criarPeriodoPdfMensalSelecionado
+  globalThis.criarPainelArquivamentoMensal = criarPainelArquivamentoMensal
   globalThis.montarResumoArquivamentoMensal = montarResumoArquivamentoMensal
   globalThis.criarResumoMateriaArquivamento = criarResumoMateriaArquivamento
   globalThis.normalizarTipoArquivamento = normalizarTipoArquivamento

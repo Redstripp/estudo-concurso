@@ -5,6 +5,9 @@ const {
   criarEstadoVazioDashboard,
   criarCardsDashboardVazios,
   criarPeriodoArquivamento,
+  criarValorMesPdfPadrao,
+  criarPeriodoPdfMensalSelecionado,
+  criarPainelArquivamentoMensal,
   montarResumoArquivamentoMensal,
   criarResumoMateriaArquivamento,
   normalizarTipoArquivamento,
@@ -64,6 +67,35 @@ function criarSalvarResumoMensalParaTeste(db) {
   return Function('db', `${fonte}; return salvarResumoMensal;`)(db)
 }
 
+function criarBuscarDadosArquivamentoMensalParaTeste(db) {
+  const fonte = extrairFuncaoDashboard('buscarDadosArquivamentoMensal')
+  return Function(
+    'db',
+    'criarErroConsultaDashboard',
+    `${fonte}; return buscarDadosArquivamentoMensal;`
+  )(db, (mensagem, erro) => new Error(`${mensagem} ${erro?.message || ''}`.trim()))
+}
+
+function criarGerarPdfArquivamentoMensalParaTeste(dependencias) {
+  const fonte = extrairFuncaoDashboard('gerarPdfArquivamentoMensal')
+  return Function(
+    'buscarDadosArquivamentoMensal',
+    'montarResumoArquivamentoMensal',
+    'abrirRelatorioMensalParaImpressao',
+    'marcarRelatorioMensalGerado',
+    'atualizarBloqueioArquivamentoAposPdf',
+    'console',
+    `${fonte}; return gerarPdfArquivamentoMensal;`
+  )(
+    dependencias.buscarDadosArquivamentoMensal,
+    dependencias.montarResumoArquivamentoMensal,
+    dependencias.abrirRelatorioMensalParaImpressao,
+    dependencias.marcarRelatorioMensalGerado,
+    dependencias.atualizarBloqueioArquivamentoAposPdf,
+    console
+  )
+}
+
 function criarPeriodoArquivamentoTeste() {
   return {
     inicio: '2026-05-01',
@@ -114,6 +146,122 @@ describe('dashboard helpers', () => {
       fimDeMes: true,
       pendente: true
     })
+  })
+
+  it('usa o mes atual como periodo padrao do PDF mensal', () => {
+    const dataBase = new Date('2026-05-24T12:00:00')
+    const periodo = criarPeriodoPdfMensalSelecionado('', dataBase)
+
+    expect(criarValorMesPdfPadrao(dataBase)).toBe('2026-05')
+    expect(periodo).toMatchObject({
+      inicio: '2026-05-01',
+      fim: '2026-05-31',
+      periodoMes: '2026-05-01'
+    })
+  })
+
+  it('renderiza seletor de mes e ano para o PDF mensal', () => {
+    const html = criarPainelArquivamentoMensal(
+      criarPeriodoArquivamentoTeste(),
+      { totalDetalhadas: 1, totalErradas: 1, totalChutadas: 0, totalAcertos: 0 },
+      { tabelaDisponivel: true, data: null },
+      null
+    )
+
+    expect(html).toContain('Mês do PDF')
+    expect(html).toContain('id="input-mes-pdf-mensal"')
+    expect(html).toContain('type="month"')
+    expect(html).toContain('Gerar PDF do período selecionado')
+  })
+
+  it('monta periodo do PDF a partir do mes e ano selecionados', () => {
+    const dataBase = new Date('2026-05-24T12:00:00')
+    const periodo = criarPeriodoPdfMensalSelecionado('2026-04', dataBase)
+    const futuro = criarPeriodoPdfMensalSelecionado('2026-06', dataBase)
+
+    expect(periodo).toMatchObject({
+      inicio: '2026-04-01',
+      fim: '2026-04-30',
+      periodoMes: '2026-04-01'
+    })
+    expect(futuro).toMatchObject({
+      inicio: '2026-05-01',
+      fim: '2026-05-31',
+      periodoMes: '2026-05-01'
+    })
+  })
+
+  it('gera PDF usando o periodo selecionado', async () => {
+    montarMensagemArquivamento()
+    const periodoSelecionado = criarPeriodoPdfMensalSelecionado('2026-04', new Date('2026-05-24T12:00:00'))
+    const janela = { closed: false, document: { write: vi.fn() } }
+    const windowOpenOriginal = globalThis.window.open
+    globalThis.window.open = vi.fn(() => janela)
+    const buscarDadosArquivamentoMensal = vi.fn(async () => ({ questoes: [], sessoes: [], questoesCertas: [], simulados: [] }))
+    const montarResumo = vi.fn(() => ({ totalDetalhadas: 0 }))
+    const abrirRelatorio = vi.fn()
+    const marcarRelatorio = vi.fn()
+    const atualizarBloqueio = vi.fn()
+    const gerarPdf = criarGerarPdfArquivamentoMensalParaTeste({
+      buscarDadosArquivamentoMensal,
+      montarResumoArquivamentoMensal: montarResumo,
+      abrirRelatorioMensalParaImpressao: abrirRelatorio,
+      marcarRelatorioMensalGerado: marcarRelatorio,
+      atualizarBloqueioArquivamentoAposPdf: atualizarBloqueio
+    })
+
+    try {
+      await gerarPdf('user-1', periodoSelecionado, { atualizarBloqueioArquivamento: false })
+    } finally {
+      globalThis.window.open = windowOpenOriginal
+    }
+
+    expect(buscarDadosArquivamentoMensal).toHaveBeenCalledWith('user-1', expect.objectContaining({
+      inicio: '2026-04-01',
+      fim: '2026-04-30',
+      periodoMes: '2026-04-01'
+    }))
+    expect(abrirRelatorio).toHaveBeenCalledWith(janela, expect.objectContaining({ periodoMes: '2026-04-01' }), expect.any(Object), expect.any(Object))
+    expect(marcarRelatorio).toHaveBeenCalledWith(expect.objectContaining({ periodoMes: '2026-04-01' }))
+    expect(atualizarBloqueio).not.toHaveBeenCalled()
+  })
+
+  it('busca dados do PDF mensal filtrando questoes por criado_em no periodo', async () => {
+    const deleteQuestao = vi.fn()
+    const questoesChain = {
+      select: vi.fn(function () { return this }),
+      eq: vi.fn(function () { return this }),
+      gte: vi.fn(function () { return this }),
+      lte: vi.fn(function () { return this }),
+      order: vi.fn(async function () { return { data: [], error: null } }),
+      delete: deleteQuestao
+    }
+    const sessoesChain = {
+      select: vi.fn(function () { return this }),
+      eq: vi.fn(function () { return this }),
+      gte: vi.fn(function () { return this }),
+      lte: vi.fn(async function () { return { data: [], error: null } })
+    }
+    const simuladosChain = {
+      select: vi.fn(function () { return this }),
+      eq: vi.fn(function () { return this }),
+      gte: vi.fn(function () { return this }),
+      lte: vi.fn(function () { return this }),
+      order: vi.fn(async function () { return { data: [], error: null } })
+    }
+    const from = vi.fn(tabela => ({
+      questoes: questoesChain,
+      sessoes_estudo: sessoesChain,
+      simulados: simuladosChain
+    })[tabela])
+    const buscarDadosArquivamentoMensal = criarBuscarDadosArquivamentoMensalParaTeste({ from })
+
+    await buscarDadosArquivamentoMensal('user-1', criarPeriodoArquivamentoTeste())
+
+    expect(from).toHaveBeenCalledWith('questoes')
+    expect(questoesChain.gte).toHaveBeenCalledWith('criado_em', '2026-05-01T00:00:00')
+    expect(questoesChain.lte).toHaveBeenCalledWith('criado_em', '2026-05-31T23:59:59.999Z')
+    expect(deleteQuestao).not.toHaveBeenCalled()
   })
 
   it('monta resumo mensal com erradas, chutadas e acertos por materia', () => {
