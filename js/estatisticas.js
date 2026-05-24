@@ -186,11 +186,11 @@ async function buscarQuestoesPorPeriodo(userId, periodo, materias = []) {
     const [erradasResp, certasResp, arquivadas] = await Promise.all([
       db
         .from('questoes')
-        .select('materia_id')
+        .select('materia_id, criado_em')
         .eq('user_id', userId),
       db
         .from('questoes_certas')
-        .select('materia_id, quantidade')
+        .select('materia_id, quantidade, criado_em')
         .eq('user_id', userId),
       buscarEstatisticasMensaisArquivadas(userId)
     ])
@@ -203,7 +203,8 @@ async function buscarQuestoesPorPeriodo(userId, periodo, materias = []) {
       throw criarErroConsulta('Não foi possível carregar as questões certas.', certasResp.error)
     }
 
-    const arquivadasPorMateria = criarRegistrosArquivadosPorMateria(arquivadas, materias)
+    const mesesComDetalhes = criarMesesComDetalhesEstatisticas(erradasResp.data || [], certasResp.data || [])
+    const arquivadasPorMateria = criarRegistrosArquivadosPorMateria(arquivadas, materias, mesesComDetalhes)
 
     return {
       erradas: [...(erradasResp.data || []), ...arquivadasPorMateria.erradas],
@@ -258,19 +259,44 @@ async function buscarQuestoesPorPeriodo(userId, periodo, materias = []) {
 async function buscarEstatisticasMensaisArquivadas(userId) {
   const { data, error } = await db
     .from('estatisticas_mensais')
-    .select('desempenho_por_materia')
+    .select('periodo_mes, periodo_inicio, desempenho_por_materia')
     .eq('user_id', userId)
 
   if (error) return []
   return data || []
 }
 
-function criarRegistrosArquivadosPorMateria(registros, materias) {
+function normalizarMesEstatisticas(valor) {
+  const mes = String(valor || '').substring(0, 7)
+  return /^\d{4}-\d{2}$/.test(mes) ? mes : null
+}
+
+function criarMesesComDetalhesEstatisticas(...listas) {
+  const meses = new Set()
+
+  listas.forEach(lista => {
+    ;(lista || []).forEach(item => {
+      const mes = normalizarMesEstatisticas(item?.criado_em)
+      if (mes) meses.add(mes)
+    })
+  })
+
+  return meses
+}
+
+function estatisticaMensalTemDetalhes(registro, mesesComDetalhes) {
+  const mes = normalizarMesEstatisticas(registro?.periodo_mes || registro?.periodo_inicio)
+  return Boolean(mes && mesesComDetalhes?.has(mes))
+}
+
+function criarRegistrosArquivadosPorMateria(registros, materias, mesesComDetalhes = new Set()) {
   const materiasPorNome = new Map((materias || []).map(m => [m.nome, m.id]))
   const erradas = []
   const certas = []
 
   ;(registros || []).forEach(registro => {
+    if (estatisticaMensalTemDetalhes(registro, mesesComDetalhes)) return
+
     ;(registro.desempenho_por_materia || []).forEach(m => {
       const materiaId = m.materia_id || materiasPorNome.get(m.materia) || `arquivada:${m.materia || 'Sem matéria'}`
       const totalErradas = (Number(m.erradas) || 0) + (Number(m.chutadas) || 0)
@@ -823,4 +849,6 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.calcularResumoPeriodo = calcularResumoPeriodo
   globalThis.formatarDeltaRelatorio = formatarDeltaRelatorio
   globalThis.escaparHtmlEstatisticas = escaparHtmlEstatisticas
+  globalThis.criarMesesComDetalhesEstatisticas = criarMesesComDetalhesEstatisticas
+  globalThis.criarRegistrosArquivadosPorMateria = criarRegistrosArquivadosPorMateria
 }

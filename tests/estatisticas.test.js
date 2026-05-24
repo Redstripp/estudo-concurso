@@ -9,7 +9,9 @@ const {
   agruparCertasPorMateria,
   calcularResumoPeriodo,
   formatarDeltaRelatorio,
-  escaparHtmlEstatisticas
+  escaparHtmlEstatisticas,
+  criarMesesComDetalhesEstatisticas,
+  criarRegistrosArquivadosPorMateria
 } = globalThis
 
 describe('estatisticas helpers', () => {
@@ -85,6 +87,36 @@ describe('estatisticas helpers', () => {
       totalErradas: 3,
       aproveitamento: 70
     })
+  })
+
+  it('ignora estatistica mensal quando o mes tem questoes detalhadas', () => {
+    const mesesComDetalhes = criarMesesComDetalhesEstatisticas(
+      [{ materia_id: 'm1', criado_em: '2026-05-10T12:00:00Z' }],
+      [{ materia_id: 'm1', quantidade: 2, criado_em: '2026-05-11T12:00:00Z' }]
+    )
+    const registros = criarRegistrosArquivadosPorMateria([
+      {
+        periodo_mes: '2026-05-01',
+        desempenho_por_materia: [{ materia_id: 'm1', materia: 'Direito', acertos: 10, erradas: 4, chutadas: 1 }]
+      }
+    ], [{ id: 'm1', nome: 'Direito' }], mesesComDetalhes)
+
+    expect(registros).toEqual({ erradas: [], certas: [] })
+  })
+
+  it('usa estatistica mensal quando o mes nao tem questoes detalhadas', () => {
+    const mesesComDetalhes = criarMesesComDetalhesEstatisticas([
+      { materia_id: 'm1', criado_em: '2026-05-10T12:00:00Z' }
+    ])
+    const registros = criarRegistrosArquivadosPorMateria([
+      {
+        periodo_mes: '2026-04-01',
+        desempenho_por_materia: [{ materia_id: 'm1', materia: 'Direito', acertos: 3, erradas: 1, chutadas: 2 }]
+      }
+    ], [{ id: 'm1', nome: 'Direito' }], mesesComDetalhes)
+
+    expect(agruparErradasPorMateria(registros.erradas)).toEqual({ m1: 3 })
+    expect(agruparCertasPorMateria(registros.certas)).toEqual({ m1: 3 })
   })
 
   it('formata datas, deltas e HTML seguro', () => {

@@ -1444,17 +1444,45 @@ function formatarDataHoraArquivamento(valor) {
   return data.toLocaleString('pt-BR')
 }
 
-async function buscarTotaisMensaisArquivados(userId) {
-  const totais = criarTotaisMensaisArquivadosVazios()
-
+async function buscarTotaisMensaisArquivados(userId, mesesComDetalhes = new Set()) {
   const { data, error } = await db
     .from('estatisticas_mensais')
-    .select('total_questoes, total_acertos, total_erradas, total_chutadas, desempenho_por_materia')
+    .select('periodo_mes, periodo_inicio, total_questoes, total_acertos, total_erradas, total_chutadas, desempenho_por_materia')
     .eq('user_id', userId)
 
-  if (error) return totais
+  if (error) return criarTotaisMensaisArquivadosVazios()
+  return somarTotaisMensaisArquivadosDashboard(data || [], mesesComDetalhes)
+}
 
-  ;(data || []).forEach(registro => {
+function normalizarMesDashboard(valor) {
+  const mes = String(valor || '').substring(0, 7)
+  return /^\d{4}-\d{2}$/.test(mes) ? mes : null
+}
+
+function criarMesesComDetalhesDashboard(...listas) {
+  const meses = new Set()
+
+  listas.forEach(lista => {
+    ;(lista || []).forEach(item => {
+      const mes = normalizarMesDashboard(item?.criado_em)
+      if (mes) meses.add(mes)
+    })
+  })
+
+  return meses
+}
+
+function estatisticaMensalDashboardTemDetalhes(registro, mesesComDetalhes) {
+  const mes = normalizarMesDashboard(registro?.periodo_mes || registro?.periodo_inicio)
+  return Boolean(mes && mesesComDetalhes?.has(mes))
+}
+
+function somarTotaisMensaisArquivadosDashboard(registros, mesesComDetalhes = new Set()) {
+  const totais = criarTotaisMensaisArquivadosVazios()
+
+  ;(registros || []).forEach(registro => {
+    if (estatisticaMensalDashboardTemDetalhes(registro, mesesComDetalhes)) return
+
     totais.totalQuestoes += Number(registro.total_questoes) || 0
     totais.totalAcertos += Number(registro.total_acertos) || 0
     totais.totalErradas += Number(registro.total_erradas) || 0
@@ -1780,14 +1808,14 @@ function criarChipsRelatorioErros(itens) {
 }
 
 async function carregarCardsDashboard(userId) {
-  const [totalErradasResp, certasResp, totalMateriasResp, questoesComMateriaResp, pendentesResp, revisoesFeitasResp, totaisArquivados] = await Promise.all([
+  const [totalErradasResp, certasResp, totalMateriasResp, questoesComMateriaResp, pendentesResp, revisoesFeitasResp] = await Promise.all([
     db
       .from('questoes')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId),
     db
       .from('questoes_certas')
-      .select('quantidade')
+      .select('quantidade, criado_em')
       .eq('user_id', userId),
     db
       .from('materias')
@@ -1795,7 +1823,7 @@ async function carregarCardsDashboard(userId) {
       .eq('user_id', userId),
     db
       .from('questoes')
-      .select('materia_id, materias(nome)')
+      .select('materia_id, criado_em, materias(nome)')
       .eq('user_id', userId),
     db
       .from('questoes')
@@ -1805,8 +1833,7 @@ async function carregarCardsDashboard(userId) {
     db
       .from('questoes_revisoes')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId),
-    buscarTotaisMensaisArquivados(userId)
+      .eq('user_id', userId)
   ])
 
   if (totalErradasResp.error) {
@@ -1833,6 +1860,8 @@ async function carregarCardsDashboard(userId) {
     throw criarErroConsultaDashboard('Não foi possível contar suas revisões feitas.', revisoesFeitasResp.error)
   }
 
+  const mesesComDetalhes = criarMesesComDetalhesDashboard(questoesComMateriaResp.data || [], certasResp.data || [])
+  const totaisArquivados = await buscarTotaisMensaisArquivados(userId, mesesComDetalhes)
   const totalErradasAtivas = totalErradasResp.count || 0
   const totalCertasAtivas = (certasResp.data || []).reduce((acc, r) => acc + (Number(r.quantidade) || 0), 0)
   const totalErradasArquivadas = totaisArquivados.totalErradas + totaisArquivados.totalChutadas
@@ -2180,14 +2209,15 @@ async function carregarRankingMaterias(userId) {
   const materias = materiasResp.data || []
   const erradasResp = await db
     .from('questoes')
-    .select('materia_id')
+    .select('materia_id, criado_em')
     .eq('user_id', userId)
 
   if (erradasResp.error) {
     throw criarErroConsultaDashboard('Não foi possível carregar os erros do ranking.', erradasResp.error)
   }
 
-  const totaisArquivados = await buscarTotaisMensaisArquivados(userId)
+  const mesesComDetalhes = criarMesesComDetalhesDashboard(erradasResp.data || [])
+  const totaisArquivados = await buscarTotaisMensaisArquivados(userId, mesesComDetalhes)
   const erradasPorMateria = {}
   ;(erradasResp.data || []).forEach(q => {
     erradasPorMateria[q.materia_id] = (erradasPorMateria[q.materia_id] || 0) + 1
@@ -2248,4 +2278,6 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.formatarDataBRArquivamento = formatarDataBRArquivamento
   globalThis.obterClasseAproveitamentoDashboard = obterClasseAproveitamentoDashboard
   globalThis.criarDonutAproveitamentoDashboard = criarDonutAproveitamentoDashboard
+  globalThis.criarMesesComDetalhesDashboard = criarMesesComDetalhesDashboard
+  globalThis.somarTotaisMensaisArquivadosDashboard = somarTotaisMensaisArquivadosDashboard
 }

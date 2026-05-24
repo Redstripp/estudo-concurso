@@ -13,7 +13,9 @@ const {
   normalizarTipoArquivamento,
   formatarDataBRArquivamento,
   obterClasseAproveitamentoDashboard,
-  criarDonutAproveitamentoDashboard
+  criarDonutAproveitamentoDashboard,
+  criarMesesComDetalhesDashboard,
+  somarTotaisMensaisArquivadosDashboard
 } = globalThis
 
 const dashboardSource = readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8')
@@ -333,6 +335,50 @@ describe('dashboard helpers', () => {
   it('limita o donut de aproveitamento entre 0 e 100', () => {
     expect(criarDonutAproveitamentoDashboard(120)).toContain('stroke-dasharray="100 0"')
     expect(criarDonutAproveitamentoDashboard(-10)).toContain('stroke-dasharray="0 100"')
+  })
+
+  it('nao soma estatisticas mensais quando o dashboard tem detalhes do mesmo mes', () => {
+    const mesesComDetalhes = criarMesesComDetalhesDashboard([
+      { criado_em: '2026-05-10T12:00:00Z' }
+    ])
+    const totais = somarTotaisMensaisArquivadosDashboard([
+      {
+        periodo_mes: '2026-05-01',
+        total_questoes: 10,
+        total_acertos: 6,
+        total_erradas: 3,
+        total_chutadas: 1,
+        desempenho_por_materia: [{ materia_id: 'm1', materia: 'Direito', acertos: 6, erradas: 3, chutadas: 1 }]
+      }
+    ], mesesComDetalhes)
+
+    expect(totais.totalQuestoes).toBe(0)
+    expect(totais.totalAcertos).toBe(0)
+    expect(totais.listaPorMateria).toEqual([])
+  })
+
+  it('mantem estatisticas mensais como historico quando o dashboard nao tem detalhes do mes', () => {
+    const mesesComDetalhes = criarMesesComDetalhesDashboard([
+      { criado_em: '2026-05-10T12:00:00Z' }
+    ])
+    const totais = somarTotaisMensaisArquivadosDashboard([
+      {
+        periodo_mes: '2026-04-01',
+        total_questoes: 7,
+        total_acertos: 4,
+        total_erradas: 2,
+        total_chutadas: 1,
+        desempenho_por_materia: [{ materia_id: 'm1', materia: 'Direito', acertos: 4, erradas: 2, chutadas: 1 }]
+      }
+    ], mesesComDetalhes)
+
+    expect(totais).toMatchObject({
+      totalQuestoes: 7,
+      totalAcertos: 4,
+      totalErradas: 2,
+      totalChutadas: 1
+    })
+    expect(totais.porMateria.m1).toMatchObject({ acertos: 4, erradas: 2, chutadas: 1 })
   })
 
   it('nao arquiva sem relatorio mensal marcado como gerado', async () => {
