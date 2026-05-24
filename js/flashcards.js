@@ -255,6 +255,7 @@ function selecionarAbaFlashcards(aba, raiz = document) {
 
 function atualizarIndicadoresFlashcardsVazios(raiz = document) {
   const pendentesHoje = raiz.getElementById?.('flashcards-pendentes-hoje')
+  const resumoVencimento = raiz.getElementById?.('flashcards-resumo-vencimento')
   const totalCards = raiz.getElementById?.('flashcards-total-cards')
   const cardsHoje = raiz.getElementById?.('flashcards-cards-hoje')
   const cardsNovos = raiz.getElementById?.('flashcards-cards-novos')
@@ -267,6 +268,7 @@ function atualizarIndicadoresFlashcardsVazios(raiz = document) {
   const sequencia = raiz.getElementById?.('flashcards-sequencia-estudos')
 
   if (pendentesHoje) pendentesHoje.textContent = '0 cards vencidos/devidos'
+  if (resumoVencimento) resumoVencimento.textContent = '0 atrasado(s) · 0 para hoje'
   if (totalCards) totalCards.textContent = '0'
   if (cardsHoje) cardsHoje.textContent = '0'
   if (cardsNovos) cardsNovos.textContent = '0'
@@ -828,14 +830,27 @@ function embaralharFlashcardsSessao(cards = []) {
   return copia
 }
 
+function contarVencimentosRevisaoUrgenteFlashcards(cards = flashcardsSessaoHoje) {
+  const hoje = dataHojeFlashcards()
+  return (Array.isArray(cards) ? cards : []).reduce((totais, card) => {
+    const dueDate = obterDataComparacaoFlashcard(card?.due_date)
+    if (dueDate && dueDate < hoje) totais.atrasados += 1
+    if (dueDate === hoje) totais.paraHoje += 1
+    return totais
+  }, { atrasados: 0, paraHoje: 0 })
+}
+
 function atualizarIndicadoresRevisaoFlashcards() {
   const pendentesHoje = document.getElementById('flashcards-pendentes-hoje')
   const progresso = document.getElementById('flashcards-progresso-sessao')
+  const resumoVencimento = document.getElementById('flashcards-resumo-vencimento')
   const restantes = flashcardsSessaoHoje.length
   const concluidos = Math.max(0, flashcardsTotalSessaoHoje - restantes)
+  const vencimentos = contarVencimentosRevisaoUrgenteFlashcards()
 
   if (pendentesHoje) pendentesHoje.textContent = `${restantes} cards vencidos/devidos`
   if (progresso) progresso.textContent = `Progresso: ${concluidos}/${flashcardsTotalSessaoHoje}`
+  if (resumoVencimento) resumoVencimento.textContent = `${vencimentos.atrasados} atrasado(s) · ${vencimentos.paraHoje} para hoje`
 }
 
 function renderizarEstudoDiaFlashcards() {

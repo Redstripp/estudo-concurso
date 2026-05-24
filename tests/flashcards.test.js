@@ -121,6 +121,7 @@ function montarSecaoRevisaoFlashcards() {
       <div id="flashcards-revisao-urgente">
         <span id="flashcards-pendentes-hoje"></span>
         <p id="flashcards-progresso-sessao"></p>
+        <p id="flashcards-resumo-vencimento"></p>
         <p id="flashcards-revisar-vazio"></p>
         <div id="flashcards-revisao-card"></div>
         <button id="btn-iniciar-revisao-flashcards" type="button" disabled>Iniciar revisao</button>
@@ -229,6 +230,7 @@ describe('esqueleto visual dos flashcards', () => {
 
   it('separa Revisar Hoje em Revisao Urgente e Estudo do Dia', () => {
     expect(appHtml).toContain('id="flashcards-revisao-urgente"')
+    expect(appHtml).toContain('id="flashcards-resumo-vencimento"')
     expect(appHtml).toContain('Revisão Urgente')
     expect(appHtml).toContain('id="flashcards-estudo-dia"')
     expect(appHtml).toContain('Estudo do Dia')
@@ -907,6 +909,7 @@ describe('esqueleto visual dos flashcards', () => {
 
     expect(resultado.data.map(card => card.id)).toEqual(['card-devido'])
     expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('1 cards vencidos/devidos')
+    expect(document.getElementById('flashcards-resumo-vencimento').textContent).toBe('0 atrasado(s) · 1 para hoje')
     expect(document.getElementById('btn-iniciar-revisao-flashcards').disabled).toBe(false)
 
     iniciarSessaoRevisaoFlashcards()
@@ -914,6 +917,25 @@ describe('esqueleto visual dos flashcards', () => {
     expect(document.getElementById('flashcards-revisao-card').textContent).toContain('Card devido')
     expect(document.getElementById('flashcards-revisao-card').textContent).not.toContain('Card futuro')
     expect(document.getElementById('flashcards-revisao-card').textContent).not.toContain('Card inativo')
+  })
+
+  it('Revisao Urgente separa visualmente cards atrasados e para hoje', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+    montarSecaoRevisaoFlashcards()
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+      data: [
+        criarCardRevisao({ id: 'atrasado', due_date: '2026-05-18' }),
+        criarCardRevisao({ id: 'hoje', due_date: '2026-05-20' }),
+        criarCardRevisao({ id: 'futuro', due_date: '2026-05-21' })
+      ],
+      error: null
+    })
+
+    await carregarFlashcardsRevisarHoje()
+
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('2 cards vencidos/devidos')
+    expect(document.getElementById('flashcards-resumo-vencimento').textContent).toBe('1 atrasado(s) · 1 para hoje')
   })
 
   it('Revisao Urgente inclui cards devidos de qualquer materia e estado', async () => {
