@@ -1,4 +1,8 @@
+import { readFileSync } from 'node:fs'
 import { describe, it, expect } from 'vitest'
+
+const appHtml = readFileSync(new URL('../app.html', import.meta.url), 'utf8')
+const revisaoJs = readFileSync(new URL('../js/revisao.js', import.meta.url), 'utf8')
 
 const {
   calcularProximaRevisao24730,
@@ -65,5 +69,21 @@ describe('calcularEtapaRevisao24730', () => {
     expect(calcularEtapaRevisao24730({ revisao_etapa: 0 }, true, 'Dúvida', '2026-05-15')).toBe(0)
     expect(calcularEtapaRevisao24730({ revisao_etapa: 1 }, true, 'Chutei', '2026-05-21')).toBe(1)
     expect(calcularEtapaRevisao24730({ revisao_etapa: 2 }, true, 'Dúvida', '2026-06-13')).toBe(2)
+  })
+})
+
+describe('clareza do treino filtrado da Revisao', () => {
+  it('usa rotulo claro para treinar a lista filtrada', () => {
+    const inicioBotao = appHtml.indexOf('id="btn-iniciar-treino-revisao"')
+    const trechoBotao = appHtml.slice(inicioBotao, inicioBotao + 260)
+
+    expect(trechoBotao).toContain('Treinar lista filtrada')
+    expect(trechoBotao).not.toContain('Flashcards')
+  })
+
+  it('explica que a lista vazia depende dos filtros atuais', () => {
+    expect(revisaoJs).toContain('Nenhuma questão pendente com estes filtros')
+    expect(revisaoJs).toContain('Use a fila inteligente para revisar itens priorizados do ciclo')
+    expect(revisaoJs).not.toContain('Nenhuma questão pendente para treinar com esses filtros')
   })
 })

@@ -1271,7 +1271,7 @@ async function iniciarTreinoRevisao() {
   }
 
   if (!data || data.length === 0) {
-    lista.innerHTML = '<p class="texto-placeholder">📭 Nenhuma questão pendente para treinar com esses filtros.</p>'
+    lista.innerHTML = '<p class="texto-placeholder">📭 Nenhuma questão pendente com estes filtros. Use a fila inteligente para revisar itens priorizados do ciclo.</p>'
     if (btnModoFoco) btnModoFoco.style.display = 'none'
     return
   }
