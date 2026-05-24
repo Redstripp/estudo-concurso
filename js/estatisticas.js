@@ -17,7 +17,7 @@ const PERIODOS_ESTATISTICAS = {
   },
   geral: {
     titulo: 'Geral',
-    descricao: 'Acumulado total'
+    descricao: 'Histórico geral consolidado'
   },
   personalizado: {
     titulo: 'Personalizado',
@@ -847,6 +847,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.agruparErradasPorMateria = agruparErradasPorMateria
   globalThis.agruparCertasPorMateria = agruparCertasPorMateria
   globalThis.calcularResumoPeriodo = calcularResumoPeriodo
+  globalThis.criarResumoPeriodoEstatisticas = criarResumoPeriodo
   globalThis.formatarDeltaRelatorio = formatarDeltaRelatorio
   globalThis.escaparHtmlEstatisticas = escaparHtmlEstatisticas
   globalThis.criarMesesComDetalhesEstatisticas = criarMesesComDetalhesEstatisticas

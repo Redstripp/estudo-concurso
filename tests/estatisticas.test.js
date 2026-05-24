@@ -8,6 +8,7 @@ const {
   agruparErradasPorMateria,
   agruparCertasPorMateria,
   calcularResumoPeriodo,
+  criarResumoPeriodoEstatisticas,
   formatarDeltaRelatorio,
   escaparHtmlEstatisticas,
   criarMesesComDetalhesEstatisticas,
@@ -87,6 +88,13 @@ describe('estatisticas helpers', () => {
       totalErradas: 3,
       aproveitamento: 70
     })
+  })
+
+  it('mostra a visao geral como historico consolidado', () => {
+    const resumo = criarResumoPeriodoEstatisticas({ erradas: [], certas: [] })
+
+    expect(resumo.textContent).toContain('Geral')
+    expect(resumo.textContent).toContain('Histórico geral consolidado')
   })
 
   it('ignora estatistica mensal quando o mes tem questoes detalhadas', () => {

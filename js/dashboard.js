@@ -98,7 +98,7 @@ function criarCardsDashboardVazios() {
       </div>
       <div class="dash-card dash-card--vazio">
         <div class="dash-card-valor">0%</div>
-        <div class="dash-card-label">aproveitamento geral</div>
+        <div class="dash-card-label">aproveitamento histórico</div>
       </div>
       <div class="dash-card dash-card--vazio">
         <div class="dash-card-valor">0</div>
@@ -1904,7 +1904,7 @@ async function carregarCardsDashboard(userId) {
         </div>
         <div class="dash-card-valor dash-card-valor--grande">${totalGeral}</div>
         <div class="dash-card-label">questões no caderno</div>
-        <p class="dash-card-subtexto">${totalGeral > 0 ? 'Base para diagnosticar padrões e revisar melhor.' : 'Registre o primeiro erro para começar o histórico.'}</p>
+        <p class="dash-card-subtexto">${totalGeral > 0 ? 'Histórico geral para diagnosticar padrões e revisar melhor.' : 'Registre o primeiro erro para começar o histórico geral.'}</p>
       </article>
 
       <article class="dash-card dash-card--principal dash-card--aproveitamento dash-card--aproveitamento-${obterClasseAproveitamentoDashboard(aproveitamento)}">
@@ -1913,7 +1913,7 @@ async function carregarCardsDashboard(userId) {
           <span class="dash-card-tag">Aproveitamento</span>
         </div>
         ${criarDonutAproveitamentoDashboard(aproveitamento)}
-        <div class="dash-card-label">aproveitamento geral</div>
+        <div class="dash-card-label">aproveitamento histórico</div>
       </article>
 
       <article class="dash-card dash-card--principal">
@@ -1942,12 +1942,12 @@ async function carregarCardsDashboard(userId) {
       <div class="dash-mini-card dash-mini-card--certa">
         <span>&#9989;</span>
         <strong>${totalCertas}</strong>
-        <small>questões certas</small>
+        <small>certas no histórico</small>
       </div>
       <div class="dash-mini-card dash-mini-card--errada">
         <span>&#10060;</span>
         <strong>${totalErradas}</strong>
-        <small>erros e chutes</small>
+        <small>erros/chutes no histórico</small>
       </div>
       <div class="dash-mini-card">
         <span>&#128218;</span>

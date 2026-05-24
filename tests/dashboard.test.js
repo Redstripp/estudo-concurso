@@ -131,6 +131,7 @@ describe('dashboard helpers', () => {
 
     expect(html).toContain('dash-resumo-principal')
     expect(html).toContain('0%')
+    expect(html).toContain('aproveitamento histórico')
   })
 
   it('monta o periodo mensal de arquivamento a partir do mes alvo', () => {
