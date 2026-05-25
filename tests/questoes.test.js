@@ -410,6 +410,21 @@ describe('prompt de flashcards da questao', () => {
     expect(prompt).toContain('\nALERTA DE BANCA:\n')
   })
 
+  it('orienta flashcards autocontidos e independentes da questao original', () => {
+    const prompt = montarPromptFlashcardsQuestao(dadosCompletos)
+
+    expect(prompt).toContain('AUTONOMIA TOTAL DO CARD')
+    expect(prompt).toContain('Cada flashcard deve funcionar sozinho')
+    expect(prompt).toContain('sem exigir que o estudante veja a questão original')
+    expect(prompt).toContain('letras de alternativas')
+    expect(prompt).toContain('alternativa correta')
+    expect(prompt).toContain('alternativa marcada')
+    expect(prompt).toContain('conforme o enunciado')
+    expect(prompt).toContain('Transforme alternativa, erro ou pegadinha em conceito universal')
+    expect(prompt).toContain('padrão de cobrança generalizado')
+    expect(prompt).toContain('armadilha genérica e reutilizável')
+  })
+
   it('inclui os dados herdados do Caderno de Erros', () => {
     const prompt = montarPromptFlashcardsQuestao(dadosCompletos)
 
