@@ -1553,6 +1553,7 @@ AUTONOMIA TOTAL DO CARD:
 - Cada flashcard deve funcionar sozinho, sem exigir que o estudante veja a questão original, o texto original, o enunciado ou as alternativas.
 - Aplique este teste mental: "Se eu lesse apenas este card, sem a questão, sem o texto original e sem as alternativas, conseguiria entender completamente a frente e o verso?"
 - Evite dois tipos de dependência: dependência de alternativa (letras de alternativas A/B/C/D/E, "alternativa correta", "alternativa marcada" ou gabarito) e dependência de texto específico ("no trecho sobre X", "no texto apresentado", "conforme o trecho", "a frase da questão", nomes ou exemplos que só existem naquela questão).
+- ATENÇÃO: o comentário e as pegadinhas abaixo podem mencionar alternativas por letra (A, B, C, D, E). Ignore as letras; extraia apenas conceitos, regras e armadilhas e transforme-os em cards universais.
 - Não use referências como "nesta questão", "conforme o enunciado", "questão original" ou "a pegadinha da alternativa X".
 - Transforme alternativa, erro, trecho ou exemplo da questão em conceito universal, regra, exceção ou armadilha geral.
 - Suba um nível de abstração: em vez de perguntar sobre o caso específico da questão, pergunte sobre a regra geral, conceito ou armadilha universal que o caso exemplifica.
