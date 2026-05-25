@@ -1560,6 +1560,12 @@ AUTONOMIA TOTAL DO CARD:
 - O VERSO deve ser resposta completa e autoexplicativa; pode usar exemplo da questão apenas como ilustração, mas precisa fazer sentido sem ele.
 - O CONTEXTO deve descrever um padrão de cobrança generalizado; o ALERTA DE BANCA deve registrar uma armadilha genérica e reutilizável.
 
+QUESTÕES SEM COMENTÁRIO EM MATEMÁTICA E RACIOCÍNIO LÓGICO:
+- Quando o comentário estiver ausente e a matéria for Matemática, Raciocínio Lógico ou área quantitativa, resolva a questão antes de criar os cards.
+- Identifique o método de resolução correto e crie cards com base no método específico, não apenas no tema genérico.
+- A FRENTE continua universal e autocontida: descreva o padrão do problema sem depender dos números, nomes ou enunciado original.
+- No VERSO, mostre o passo a passo resumido da resolução como parte da resposta; não apenas nomeie o método.
+
 Tipos possíveis de card:
 - CONCEITO
 - DISTINÇÃO

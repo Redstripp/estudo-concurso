@@ -432,6 +432,22 @@ describe('prompt de flashcards da questao', () => {
     expect(prompt).toContain('armadilha genérica e reutilizável')
   })
 
+  it('orienta matematica e raciocinio logico sem comentario pelo metodo especifico', () => {
+    const prompt = montarPromptFlashcardsQuestao({
+      ...dadosCompletos,
+      materia: 'Matemática',
+      comentario: ''
+    })
+
+    expect(prompt).toContain('QUESTÕES SEM COMENTÁRIO EM MATEMÁTICA E RACIOCÍNIO LÓGICO')
+    expect(prompt).toContain('resolva a questão antes de criar os cards')
+    expect(prompt).toContain('Identifique o método de resolução correto')
+    expect(prompt).toContain('método específico, não apenas no tema genérico')
+    expect(prompt).toContain('A FRENTE continua universal e autocontida')
+    expect(prompt).toContain('passo a passo resumido da resolução')
+    expect(prompt).toContain('não apenas nomeie o método')
+  })
+
   it('inclui os dados herdados do Caderno de Erros', () => {
     const prompt = montarPromptFlashcardsQuestao(dadosCompletos)
 
