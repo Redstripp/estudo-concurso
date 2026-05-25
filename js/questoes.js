@@ -1550,11 +1550,14 @@ Princípios obrigatórios:
 - Se faltar informação, escreva exatamente: "Material insuficiente para preencher este campo."
 
 AUTONOMIA TOTAL DO CARD:
-- Cada flashcard deve funcionar sozinho, sem exigir que o estudante veja a questão original, o enunciado ou as alternativas.
-- Aplique este teste mental: "Se eu lesse apenas este card, sem saber qual foi a questão, conseguiria entender completamente a frente e o verso?"
-- Não use referências como letras de alternativas, "alternativa correta", "alternativa marcada", "nesta questão", "conforme o enunciado", "questão original" ou "a pegadinha da alternativa X".
-- Transforme alternativa, erro ou pegadinha em conceito universal, regra, exceção ou armadilha geral.
-- A FRENTE deve ser pergunta direta e autocontida; o VERSO deve ser resposta completa e autoexplicativa.
+- Cada flashcard deve funcionar sozinho, sem exigir que o estudante veja a questão original, o texto original, o enunciado ou as alternativas.
+- Aplique este teste mental: "Se eu lesse apenas este card, sem a questão, sem o texto original e sem as alternativas, conseguiria entender completamente a frente e o verso?"
+- Evite dois tipos de dependência: dependência de alternativa (letras de alternativas A/B/C/D/E, "alternativa correta", "alternativa marcada" ou gabarito) e dependência de texto específico ("no trecho sobre X", "no texto apresentado", "conforme o trecho", "a frase da questão", nomes ou exemplos que só existem naquela questão).
+- Não use referências como "nesta questão", "conforme o enunciado", "questão original" ou "a pegadinha da alternativa X".
+- Transforme alternativa, erro, trecho ou exemplo da questão em conceito universal, regra, exceção ou armadilha geral.
+- Suba um nível de abstração: em vez de perguntar sobre o caso específico da questão, pergunte sobre a regra geral, conceito ou armadilha universal que o caso exemplifica.
+- A FRENTE deve ser universal, pergunta direta e autocontida, sem depender do caso específico.
+- O VERSO deve ser resposta completa e autoexplicativa; pode usar exemplo da questão apenas como ilustração, mas precisa fazer sentido sem ele.
 - O CONTEXTO deve descrever um padrão de cobrança generalizado; o ALERTA DE BANCA deve registrar uma armadilha genérica e reutilizável.
 
 Tipos possíveis de card:
