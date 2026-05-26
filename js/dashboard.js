@@ -2085,22 +2085,39 @@ async function carregarGrafico(userId) {
     labels.push(formatarDiaSemanaGrafico(iso))
   }
 
-  const inicio = `${dias[0]}T00:00:00`
-  const fim = `${dias[6]}T23:59:59`
-  const [erradasResp, certasResp] = await Promise.all([
-    db
-      .from('questoes')
-      .select('criado_em')
-      .eq('user_id', userId)
-      .gte('criado_em', inicio)
-      .lte('criado_em', fim),
-    db
-      .from('questoes_certas')
-      .select('criado_em, quantidade')
-      .eq('user_id', userId)
-      .gte('criado_em', inicio)
-      .lte('criado_em', fim)
-  ])
+  const sessoesResp = await db
+    .from('sessoes_estudo')
+    .select('id, data')
+    .eq('user_id', userId)
+    .gte('data', dias[0])
+    .lte('data', dias[6])
+
+  if (sessoesResp.error) {
+    throw criarErroConsultaDashboard('Nao foi possivel carregar as sessoes do grafico.', sessoesResp.error)
+  }
+
+  const sessaoParaData = {}
+  ;(sessoesResp.data || []).forEach(sessao => {
+    const data = String(sessao.data || '').substring(0, 10)
+    if (!sessao.id || !dias.includes(data)) return
+    sessaoParaData[sessao.id] = data
+  })
+
+  const sessaoIds = Object.keys(sessaoParaData)
+  const [erradasResp, certasResp] = sessaoIds.length > 0
+    ? await Promise.all([
+      db
+        .from('questoes')
+        .select('sessao_id')
+        .eq('user_id', userId)
+        .in('sessao_id', sessaoIds),
+      db
+        .from('questoes_certas')
+        .select('sessao_id, quantidade')
+        .eq('user_id', userId)
+        .in('sessao_id', sessaoIds)
+    ])
+    : [{ data: [], error: null }, { data: [], error: null }]
 
   if (erradasResp.error) {
     throw criarErroConsultaDashboard('Não foi possível carregar as questões para revisão do gráfico.', erradasResp.error)
@@ -2112,11 +2129,11 @@ async function carregarGrafico(userId) {
 
   const mapaValores = Object.fromEntries(dias.map(data => [data, 0]))
   ;(erradasResp.data || []).forEach(q => {
-    const data = String(q.criado_em || '').substring(0, 10)
+    const data = sessaoParaData[q.sessao_id]
     if (Object.prototype.hasOwnProperty.call(mapaValores, data)) mapaValores[data] += 1
   })
   ;(certasResp.data || []).forEach(q => {
-    const data = String(q.criado_em || '').substring(0, 10)
+    const data = sessaoParaData[q.sessao_id]
     if (Object.prototype.hasOwnProperty.call(mapaValores, data)) mapaValores[data] += Number(q.quantidade) || 0
   })
 

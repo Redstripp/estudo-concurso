@@ -21,7 +21,7 @@ const {
 const dashboardSource = readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8')
 
 function extrairFuncaoDashboard(nome) {
-  const inicio = dashboardSource.indexOf(`async function ${nome}`)
+  const inicio = dashboardSource.indexOf(`async function ${nome}(`)
   if (inicio === -1) throw new Error(`Funcao ${nome} nao encontrada.`)
 
   const abertura = dashboardSource.indexOf('{', inicio)
@@ -98,6 +98,24 @@ function criarGerarPdfArquivamentoMensalParaTeste(dependencias) {
   )
 }
 
+function criarCarregarGraficoParaTeste(db) {
+  const fonte = extrairFuncaoDashboard('carregarGrafico')
+  return Function(
+    'db',
+    'document',
+    'criarErroConsultaDashboard',
+    'formatarDiaSemanaGrafico',
+    'criarSvgAtividadeSemanalDashboard',
+    `${fonte}; return carregarGrafico;`
+  )(
+    db,
+    document,
+    (mensagem, erro) => new Error(`${mensagem} ${erro?.message || ''}`.trim()),
+    data => data,
+    (dias, labels, valores) => `<div data-dias="${dias.join(',')}" data-valores="${valores.join(',')}"></div>`
+  )
+}
+
 function criarPeriodoArquivamentoTeste() {
   return {
     inicio: '2026-05-01',
@@ -113,6 +131,7 @@ function montarMensagemArquivamento() {
 }
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.restoreAllMocks()
   document.body.innerHTML = ''
   sessionStorage.clear()
@@ -380,6 +399,63 @@ describe('dashboard helpers', () => {
       totalChutadas: 1
     })
     expect(totais.porMateria.m1).toMatchObject({ acertos: 4, erradas: 2, chutadas: 1 })
+  })
+
+  it('conta atividade semanal pela data da sessao, nao pelo criado_em das questoes', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-25T12:00:00'))
+    document.body.innerHTML = '<div id="dashboard-grafico"></div>'
+    const sessoesChain = {
+      select: vi.fn(function () { return this }),
+      eq: vi.fn(function () { return this }),
+      gte: vi.fn(function () { return this }),
+      lte: vi.fn(async function () {
+        return { data: [{ id: 'sessao-hoje', data: '2026-05-25' }], error: null }
+      })
+    }
+    const questoesChain = {
+      select: vi.fn(function () { return this }),
+      eq: vi.fn(function () { return this }),
+      in: vi.fn(async function () {
+        return {
+          data: Array.from({ length: 31 }, () => ({
+            sessao_id: 'sessao-hoje',
+            criado_em: '2026-05-24T23:30:00Z'
+          })),
+          error: null
+        }
+      })
+    }
+    const certasChain = {
+      select: vi.fn(function () { return this }),
+      eq: vi.fn(function () { return this }),
+      in: vi.fn(async function () {
+        return {
+          data: [{ sessao_id: 'sessao-hoje', quantidade: 64, criado_em: '2026-05-24T23:30:00Z' }],
+          error: null
+        }
+      })
+    }
+    const from = vi.fn(tabela => ({
+      sessoes_estudo: sessoesChain,
+      questoes: questoesChain,
+      questoes_certas: certasChain
+    })[tabela])
+    const carregarGrafico = criarCarregarGraficoParaTeste({ from })
+
+    try {
+      await carregarGrafico('user-1')
+    } finally {
+      vi.useRealTimers()
+    }
+
+    expect(sessoesChain.gte).toHaveBeenCalledWith('data', '2026-05-19')
+    expect(sessoesChain.lte).toHaveBeenCalledWith('data', '2026-05-25')
+    expect(questoesChain.select).toHaveBeenCalledWith('sessao_id')
+    expect(certasChain.select).toHaveBeenCalledWith('sessao_id, quantidade')
+    expect(questoesChain.in).toHaveBeenCalledWith('sessao_id', ['sessao-hoje'])
+    expect(certasChain.in).toHaveBeenCalledWith('sessao_id', ['sessao-hoje'])
+    expect(document.getElementById('dashboard-grafico').innerHTML).toContain('data-valores="0,0,0,0,0,0,95"')
   })
 
   it('nao arquiva sem relatorio mensal marcado como gerado', async () => {
