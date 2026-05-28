@@ -229,11 +229,13 @@ async function carregarCentralHoje(userId) {
 
   // Busca paginada para o relatorio usar todas as pendentes, nao uma amostra.
   const questoesPromessa = buscarQuestoesPendentesCentralHoje(userId)
+  const resumoHojePromessa = buscarResumoSessaoHojeDashboard(userId, hoje)
 
   // Executa tudo em paralelo junto com as outras consultas originais
-  const [config, questoes, planoResp, editalResp, planejamentoResp] = await Promise.all([
+  const [config, questoes, resumoHoje, planoResp, editalResp, planejamentoResp] = await Promise.all([
     configPromessa,
     questoesPromessa,
+    resumoHojePromessa,
     db.from('plano_dia_materias').select('id, data, meta_questoes, materias(nome)').eq('user_id', userId).eq('data', hoje).order('criado_em', { ascending: true }),
     db.from('edital_config').select('data_prova, concurso_alvo').eq('user_id', userId).maybeSingle(),
     db.from('planejamento_semanal').select('id, dia_semana, materia_id, meta_questoes, tipo_estudo, materias(nome)').eq('user_id', userId).eq('dia_semana', diaSemanaHoje).order('ordem', { ascending: true })
@@ -264,9 +266,6 @@ async function carregarCentralHoje(userId) {
 
   const ehRevisao = typeof ehDiaDeRevisaoHoje === 'function' ? ehDiaDeRevisaoHoje(config) : false
   const proxima = typeof calcularProximaDataRevisao === 'function' ? calcularProximaDataRevisao(config.dias_revisao) : hoje
-  
-  const questoesHoje = questoes.filter(q => String(q.criado_em || '').substring(0, 10) === hoje).length
-  const errosHoje = questoes.filter(q => String(q.criado_em || '').substring(0, 10) === hoje && normalizarTipoArquivamento(q) !== 'Chutada').length
 
   container.innerHTML = criarPainelCentralHoje({
     hoje,
@@ -274,8 +273,8 @@ async function carregarCentralHoje(userId) {
     relatorio,
     ehRevisao,
     proxima,
-    questoesHoje,
-    errosHoje,
+    questoesHoje: resumoHoje.questoesHoje,
+    errosHoje: resumoHoje.errosHoje,
     plano,
     planoOrigem,
     editalConfig
@@ -306,6 +305,56 @@ async function carregarCentralHoje(userId) {
         })()
       }
     })
+  }
+}
+
+async function buscarResumoSessaoHojeDashboard(userId, hoje) {
+  const sessoesResp = await db
+    .from('sessoes_estudo')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('data', hoje)
+
+  if (sessoesResp.error) {
+    throw criarErroConsultaDashboard('Nao foi possivel carregar a sessao de hoje.', sessoesResp.error)
+  }
+
+  const sessaoIds = (sessoesResp.data || [])
+    .map(sessao => sessao.id)
+    .filter(Boolean)
+
+  if (sessaoIds.length === 0) {
+    return { questoesHoje: 0, errosHoje: 0 }
+  }
+
+  const [questoesResp, certasResp] = await Promise.all([
+    db
+      .from('questoes')
+      .select('tipo_questao, motivo_erro')
+      .eq('user_id', userId)
+      .in('sessao_id', sessaoIds),
+    db
+      .from('questoes_certas')
+      .select('quantidade')
+      .eq('user_id', userId)
+      .in('sessao_id', sessaoIds)
+  ])
+
+  if (questoesResp.error) {
+    throw criarErroConsultaDashboard('Nao foi possivel carregar as questoes de hoje.', questoesResp.error)
+  }
+
+  if (certasResp.error) {
+    throw criarErroConsultaDashboard('Nao foi possivel carregar os acertos de hoje.', certasResp.error)
+  }
+
+  const questoes = questoesResp.data || []
+  const totalCertas = (certasResp.data || []).reduce((acc, registro) => acc + (Number(registro.quantidade) || 0), 0)
+  const errosHoje = questoes.filter(q => normalizarTipoArquivamento(q) !== 'Chutada').length
+
+  return {
+    questoesHoje: questoes.length + totalCertas,
+    errosHoje
   }
 }
 

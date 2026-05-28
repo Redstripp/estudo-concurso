@@ -116,6 +116,20 @@ function criarCarregarGraficoParaTeste(db) {
   )
 }
 
+function criarBuscarResumoSessaoHojeDashboardParaTeste(db) {
+  const fonte = extrairFuncaoDashboard('buscarResumoSessaoHojeDashboard')
+  return Function(
+    'db',
+    'normalizarTipoArquivamento',
+    'criarErroConsultaDashboard',
+    `${fonte}; return buscarResumoSessaoHojeDashboard;`
+  )(
+    db,
+    normalizarTipoArquivamento,
+    (mensagem, erro) => new Error(`${mensagem} ${erro?.message || ''}`.trim())
+  )
+}
+
 function criarPeriodoArquivamentoTeste() {
   return {
     inicio: '2026-05-01',
@@ -399,6 +413,99 @@ describe('dashboard helpers', () => {
       totalChutadas: 1
     })
     expect(totais.porMateria.m1).toMatchObject({ acertos: 4, erradas: 2, chutadas: 1 })
+  })
+
+  it('calcula os registros de hoje pela sessao do dia na Central de Hoje', async () => {
+    const sessoesChain = {
+      select: vi.fn(function () { return this }),
+      eq: vi.fn(function () {
+        if (this.eq.mock.calls.length === 2) {
+          return Promise.resolve({ data: [{ id: 'sessao-hoje' }], error: null })
+        }
+        return this
+      })
+    }
+    const questoesChain = {
+      select: vi.fn(function () { return this }),
+      eq: vi.fn(function () { return this }),
+      in: vi.fn(async function () {
+        return {
+          data: Array.from({ length: 31 }, () => ({
+            tipo_questao: 'Errada',
+            criado_em: '2026-05-24T23:30:00Z'
+          })),
+          error: null
+        }
+      })
+    }
+    const certasChain = {
+      select: vi.fn(function () { return this }),
+      eq: vi.fn(function () { return this }),
+      in: vi.fn(async function () {
+        return {
+          data: [{ quantidade: 74, criado_em: '2026-05-24T23:30:00Z' }],
+          error: null
+        }
+      })
+    }
+    const from = vi.fn(tabela => ({
+      sessoes_estudo: sessoesChain,
+      questoes: questoesChain,
+      questoes_certas: certasChain
+    })[tabela])
+    const buscarResumo = criarBuscarResumoSessaoHojeDashboardParaTeste({ from })
+
+    const resumo = await buscarResumo('user-1', '2026-05-25')
+
+    expect(sessoesChain.eq).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(sessoesChain.eq).toHaveBeenCalledWith('data', '2026-05-25')
+    expect(questoesChain.select).toHaveBeenCalledWith('tipo_questao, motivo_erro')
+    expect(certasChain.select).toHaveBeenCalledWith('quantidade')
+    expect(questoesChain.in).toHaveBeenCalledWith('sessao_id', ['sessao-hoje'])
+    expect(certasChain.in).toHaveBeenCalledWith('sessao_id', ['sessao-hoje'])
+    expect(resumo).toEqual({ questoesHoje: 105, errosHoje: 31 })
+  })
+
+  it('nao conta questoes chutadas como erros reais de hoje', async () => {
+    const sessoesChain = {
+      select: vi.fn(function () { return this }),
+      eq: vi.fn(function () {
+        if (this.eq.mock.calls.length === 2) {
+          return Promise.resolve({ data: [{ id: 'sessao-hoje' }], error: null })
+        }
+        return this
+      })
+    }
+    const questoesChain = {
+      select: vi.fn(function () { return this }),
+      eq: vi.fn(function () { return this }),
+      in: vi.fn(async function () {
+        return {
+          data: [
+            { tipo_questao: 'Errada', criado_em: '2026-05-25T10:00:00Z' },
+            { tipo_questao: 'Chutada', criado_em: '2026-05-25T10:05:00Z' }
+          ],
+          error: null
+        }
+      })
+    }
+    const certasChain = {
+      select: vi.fn(function () { return this }),
+      eq: vi.fn(function () { return this }),
+      in: vi.fn(async function () {
+        return { data: [], error: null }
+      })
+    }
+    const from = vi.fn(tabela => ({
+      sessoes_estudo: sessoesChain,
+      questoes: questoesChain,
+      questoes_certas: certasChain
+    })[tabela])
+    const buscarResumo = criarBuscarResumoSessaoHojeDashboardParaTeste({ from })
+
+    const resumo = await buscarResumo('user-1', '2026-05-25')
+
+    expect(resumo).toEqual({ questoesHoje: 2, errosHoje: 1 })
   })
 
   it('conta atividade semanal pela data da sessao, nao pelo criado_em das questoes', async () => {
