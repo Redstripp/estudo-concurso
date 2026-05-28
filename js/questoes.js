@@ -9,10 +9,12 @@ let questoesInicializado = false
 let filtroCadernoErrosAtual = 'todos'
 let questoesEmMemoria = []
 let questaoRecemSalvaId = null
+let paginaAtualQuestoes = 1
 let timeoutBusca
 
 const LETRAS = ['A', 'B', 'C', 'D', 'E']
 const TIPOS_QUESTAO = ['Errada', 'Chutada']
+const ITENS_POR_PAGINA_QUESTOES = 20
 const CONFIG_TIPO_QUESTAO = {
   Errada: {
     rotulo: 'Errada realmente',
@@ -2928,7 +2930,7 @@ function renderizarAcoesCadernoErros(questoes) {
       if (btn) {
         filtroCadernoErrosAtual = btn.dataset.filtroCaderno || 'todos'
         renderizarAcoesCadernoErros(questoesEmMemoria)
-        atualizarListaQuestoesCaderno()
+        atualizarListaQuestoesCaderno({ resetarPagina: true })
       }
     })
     listenerDelegacaoAdicionado = true
@@ -2950,6 +2952,7 @@ function filtrarQuestoesCadernoErros(questoes) {
 
 function prepararCadernoParaQuestaoNova() {
   filtroCadernoErrosAtual = 'todos'
+  paginaAtualQuestoes = 1
 
   const busca = document.getElementById('busca-caderno')
   if (busca) busca.value = ''
@@ -2982,6 +2985,72 @@ function renderizarListaQuestoes(listaParaExibir, opcoes = {}) {
     }
     container.appendChild(card);
   });
+
+  renderizarPaginacaoQuestoes(container, opcoes.paginacao);
+}
+
+function calcularPaginacaoQuestoes(totalItens, paginaSolicitada, itensPorPagina = ITENS_POR_PAGINA_QUESTOES) {
+  const total = Math.max(0, Number(totalItens) || 0)
+  const tamanhoPagina = Math.max(1, Number(itensPorPagina) || ITENS_POR_PAGINA_QUESTOES)
+  const totalPaginas = Math.max(1, Math.ceil(total / tamanhoPagina))
+  const pagina = Math.min(Math.max(1, Number(paginaSolicitada) || 1), totalPaginas)
+  const inicio = (pagina - 1) * tamanhoPagina
+  const fim = Math.min(inicio + tamanhoPagina, total)
+
+  return {
+    paginaAtual: pagina,
+    totalPaginas,
+    totalItens: total,
+    itensPorPagina: tamanhoPagina,
+    inicio,
+    fim,
+    temAnterior: pagina > 1,
+    temProxima: pagina < totalPaginas
+  }
+}
+
+function paginarQuestoes(lista, paginaSolicitada, opcoes = {}) {
+  const itens = Array.isArray(lista) ? lista : []
+  const paginaBase = opcoes.resetarPagina ? 1 : paginaSolicitada
+  const paginacao = calcularPaginacaoQuestoes(itens.length, paginaBase, opcoes.itensPorPagina)
+
+  return {
+    ...paginacao,
+    itens: itens.slice(paginacao.inicio, paginacao.fim)
+  }
+}
+
+function renderizarPaginacaoQuestoes(container, paginacao) {
+  if (!container || !paginacao || paginacao.totalItens === 0) return
+
+  const primeiroItem = paginacao.inicio + 1
+  const ultimoItem = paginacao.fim
+  const controles = document.createElement('div')
+  controles.className = 'paginacao-caderno'
+  controles.innerHTML = `
+    <div class="paginacao-caderno-info">
+      <strong>Pagina ${paginacao.paginaAtual} de ${paginacao.totalPaginas}</strong>
+      <span>Mostrando ${primeiroItem}-${ultimoItem} de ${paginacao.totalItens} questao${paginacao.totalItens !== 1 ? 'es' : ''}</span>
+    </div>
+    <div class="paginacao-caderno-acoes">
+      <button class="btn-secundario" type="button" data-pagina-caderno="anterior" ${!paginacao.temAnterior ? 'disabled' : ''}>Anterior</button>
+      <button class="btn-secundario" type="button" data-pagina-caderno="proxima" ${!paginacao.temProxima ? 'disabled' : ''}>Proxima</button>
+    </div>
+  `
+
+  controles.querySelector('[data-pagina-caderno="anterior"]')?.addEventListener('click', () => {
+    if (!paginacao.temAnterior) return
+    paginaAtualQuestoes = paginacao.paginaAtual - 1
+    atualizarListaQuestoesCaderno()
+  })
+
+  controles.querySelector('[data-pagina-caderno="proxima"]')?.addEventListener('click', () => {
+    if (!paginacao.temProxima) return
+    paginaAtualQuestoes = paginacao.paginaAtual + 1
+    atualizarListaQuestoesCaderno()
+  })
+
+  container.appendChild(controles)
 }
 
 function obterMensagemFiltroCadernoErros() {
@@ -3005,9 +3074,15 @@ function atualizarListaQuestoesCaderno(opcoes = {}) {
     ordenadas = colocarQuestaoNoInicio(ordenadas, questaoRecemSalvaId)
   }
 
-  renderizarListaQuestoes(ordenadas, {
+  const paginacao = paginarQuestoes(ordenadas, paginaAtualQuestoes, {
+    resetarPagina: Boolean(opcoes.resetarPagina || opcoes.marcarPrimeiroComoNovo)
+  })
+  paginaAtualQuestoes = paginacao.paginaAtual
+
+  renderizarListaQuestoes(paginacao.itens, {
     marcarPrimeiroComoNovo: Boolean(opcoes.marcarPrimeiroComoNovo),
-    mensagemVazia: obterMensagemListaQuestoesVazia(listaBase.length, filtradasPorAtalho.length, termoBusca)
+    mensagemVazia: obterMensagemListaQuestoesVazia(listaBase.length, filtradasPorAtalho.length, termoBusca),
+    paginacao
   })
   atualizarResultadoBuscaCaderno(termoBusca, filtradasPorBusca.length, filtradasPorAtalho.length)
 
@@ -3063,7 +3138,7 @@ function atualizarResultadoBuscaCaderno(termoBusca, totalBusca, totalFiltro) {
 }
 
 function filtrarQuestoesBusca() {
-  atualizarListaQuestoesCaderno()
+  atualizarListaQuestoesCaderno({ resetarPagina: true })
 }
 
 function ordenarQuestoes(lista, criterio) {
@@ -3788,6 +3863,8 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     normalizarTextoDuplicidade,
     alterarQuantidadeAlternativas,
     ordenarQuestoes,
+    calcularPaginacaoQuestoes,
+    paginarQuestoes,
     carregarQuestoesEmMemoria,
     montarPromptDiagnosticoChatGPT,
     montarPromptFlashcardsQuestao,
@@ -3825,6 +3902,8 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.normalizarTextoDuplicidade = normalizarTextoDuplicidade
   globalThis.alterarQuantidadeAlternativas = alterarQuantidadeAlternativas
   globalThis.ordenarQuestoes = ordenarQuestoes
+  globalThis.calcularPaginacaoQuestoes = calcularPaginacaoQuestoes
+  globalThis.paginarQuestoes = paginarQuestoes
   globalThis.carregarQuestoesEmMemoria = carregarQuestoesEmMemoria
   globalThis.montarPromptDiagnosticoChatGPT = montarPromptDiagnosticoChatGPT
   globalThis.montarPromptFlashcardsQuestao = montarPromptFlashcardsQuestao

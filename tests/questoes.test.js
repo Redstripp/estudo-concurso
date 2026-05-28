@@ -12,6 +12,8 @@ const {
   normalizarTextoDuplicidade,
   alterarQuantidadeAlternativas,
   ordenarQuestoes,
+  calcularPaginacaoQuestoes,
+  paginarQuestoes,
   montarPromptDiagnosticoChatGPT,
   montarPromptFlashcardsQuestao,
   coletarDadosPromptFlashcardsQuestao,
@@ -1253,6 +1255,66 @@ Pergunta sem verso.</textarea>
     previsualizarFlashcardsIA(modal)
 
     expect(document.getElementById('msg-flashcards-ia').textContent).toBe('Nenhum flashcard foi identificado. Verifique se a resposta da IA seguiu o formato solicitado.')
+  })
+})
+
+describe('paginacao do caderno de erros', () => {
+  const questoes = Array.from({ length: 45 }, (_, indice) => ({
+    id: `q-${indice + 1}`
+  }))
+
+  it('mostra 20 questoes por pagina', () => {
+    const pagina = paginarQuestoes(questoes, 1)
+
+    expect(pagina.itens).toHaveLength(20)
+    expect(pagina.itens.map(q => q.id)).toEqual(Array.from({ length: 20 }, (_, indice) => `q-${indice + 1}`))
+    expect(pagina.paginaAtual).toBe(1)
+    expect(pagina.totalPaginas).toBe(3)
+    expect(pagina.temAnterior).toBe(false)
+    expect(pagina.temProxima).toBe(true)
+  })
+
+  it('navega para a proxima pagina mantendo a ordem', () => {
+    const pagina = paginarQuestoes(questoes, 2)
+
+    expect(pagina.itens).toHaveLength(20)
+    expect(pagina.itens[0].id).toBe('q-21')
+    expect(pagina.itens[19].id).toBe('q-40')
+    expect(pagina.temAnterior).toBe(true)
+    expect(pagina.temProxima).toBe(true)
+  })
+
+  it('navega para a pagina anterior sem ultrapassar os limites', () => {
+    const pagina = paginarQuestoes(questoes, 1)
+    const paginaAnterior = paginarQuestoes(questoes, pagina.paginaAtual - 1)
+
+    expect(paginaAnterior.paginaAtual).toBe(1)
+    expect(paginaAnterior.itens[0].id).toBe('q-1')
+    expect(paginaAnterior.temAnterior).toBe(false)
+  })
+
+  it('volta para a pagina 1 quando a busca ou filtro pede reset', () => {
+    const pagina = paginarQuestoes(questoes, 3, { resetarPagina: true })
+
+    expect(pagina.paginaAtual).toBe(1)
+    expect(pagina.itens[0].id).toBe('q-1')
+  })
+
+  it('ajusta a pagina atual quando a pagina fica vazia apos exclusao', () => {
+    const pagina = paginarQuestoes(questoes.slice(0, 40), 3)
+
+    expect(pagina.paginaAtual).toBe(2)
+    expect(pagina.totalPaginas).toBe(2)
+    expect(pagina.itens[0].id).toBe('q-21')
+    expect(pagina.itens[19].id).toBe('q-40')
+  })
+
+  it('calcula os limites da ultima pagina', () => {
+    const paginacao = calcularPaginacaoQuestoes(45, 3)
+
+    expect(paginacao.inicio).toBe(40)
+    expect(paginacao.fim).toBe(45)
+    expect(paginacao.temProxima).toBe(false)
   })
 })
 

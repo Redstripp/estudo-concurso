@@ -5300,6 +5300,20 @@ body.modo-foco .conteudo-principal {
     width: 100%;
   }
 
+  .paginacao-caderno {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .paginacao-caderno-acoes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .paginacao-caderno-acoes .btn-secundario {
+    width: 100%;
+  }
+
   .relatorio-barras {
     align-items: stretch;
     min-height: auto;
@@ -6222,6 +6236,45 @@ body.modo-foco .conteudo-principal {
 .caderno-busca .input-texto {
   width: 100%;
   box-sizing: border-box;
+}
+
+.paginacao-caderno {
+  align-items: center;
+  background: var(--cor-fundo-card);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-borda);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-start;
+  margin-top: 16px;
+  padding: 12px;
+}
+
+.paginacao-caderno-info {
+  color: var(--cor-texto-suave);
+  display: grid;
+  gap: 3px;
+  font-size: 0.85rem;
+}
+
+.paginacao-caderno-info strong {
+  color: var(--cor-texto);
+}
+
+.paginacao-caderno-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.paginacao-caderno-acoes .btn-secundario {
+  width: auto;
+}
+
+.paginacao-caderno-acoes .btn-secundario:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 /* =========================================
