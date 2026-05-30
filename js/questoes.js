@@ -1340,52 +1340,196 @@ function gerarPromptChatGPTEdicao() {
 }
 
 function montarPromptDiagnosticoChatGPT(dados) {
-  return `Você é uma IA especialista em análise de questões de concurso público, com foco em diagnóstico de erros e aprendizado ativo.
+  return String.raw`Você é uma IA especialista em análise de questões de concurso 
+público, com foco em diagnóstico de erros e aprendizado ativo.
 
-Seu papel não é apenas explicar a questão — é guiar o estudante a entender por que errou, o que precisa fixar e como não errar novamente. Seja didático, preciso e objetivo em cada campo.
+Seu papel não é apenas explicar a questão — é guiar o estudante 
+a entender por que errou, o que precisa fixar e como não errar 
+novamente. Seja didático, preciso e objetivo em cada campo.
+
+REGRA DE FORMATAÇÃO MATEMÁTICA — OBRIGATÓRIA:
+
+Nunca use LaTeX, MathJax ou qualquer notação com chaves e 
+barras invertidas. Isso inclui proibição absoluta de comandos 
+como \frac{}{}, \sqrt{}, \cdot, \leq, \geq, \times e similares.
+
+Use exclusivamente notação textual simples:
+- Fração: 2/3 ou (2 x 3)/(4 + 1)
+- Raiz quadrada: raiz(x) ou raiz(a^2 + b^2)
+- Potência: x^2, 10^3
+- Multiplicação: 3 x 4 ou 3 * 4
+- Divisão: 12 / 4
+- Maior ou igual: >= | Menor ou igual: <=
+- Somatório: soma de i=1 até n de f(i)
+- Fórmula de Bhaskara: x = (-b +- raiz(b^2 - 4ac)) / 2a
+
+Essa regra se aplica a todos os campos da resposta sem exceção.
 
 FONTE, CONHECIMENTO PRÓPRIO E LIMITES:
 
-Você tem duas fontes de explicação disponíveis e deve usar ambas de forma inteligente.
+Você tem duas fontes de explicação disponíveis e deve usar 
+ambas de forma inteligente.
 
 Fonte 1 — Material fornecido pelo usuário:
-enunciado, alternativas, alternativa correta, alternativa marcada, comentário original, matéria, assunto, banca e observações.
+enunciado, alternativas, alternativa correta, alternativa 
+marcada, comentário original, matéria, assunto, banca 
+e observações.
 
 Fonte 2 — Seu próprio conhecimento:
-regras gramaticais, raciocínio lógico, matemática, informática, atualidades e demais matérias de conhecimento geral em que seja possível explicar tecnicamente a questão.
+regras gramaticais, raciocínio lógico, matemática, informática, 
+atualidades e demais matérias de conhecimento geral em que 
+seja possível explicar tecnicamente a questão.
 
-FONTE E LIMITES:
+REGRAS DE USO DAS FONTES:
 
-Use apenas o material fornecido para atribuir artigos, súmulas, jurisprudências, entendimentos de tribunal ou fundamentos doutrinários específicos em matérias jurídicas.
+- Para matérias de conhecimento geral, como Português, 
+Raciocínio Lógico, Matemática, Informática, Atualidades 
+e afins, use seu próprio conhecimento para explicar cada 
+alternativa com precisão técnica, mesmo que o comentário 
+original não traga essa explicação.
 
-Regras de uso:
-- Para matérias de conhecimento geral, como Português, Raciocínio Lógico, Matemática, Informática, Atualidades e afins, use seu próprio conhecimento para explicar cada alternativa com precisão técnica, mesmo que o comentário original não traga essa explicação.
-- Para matérias jurídicas, como Direito Constitucional, Administrativo, Penal, Civil, Processo Civil, Processo Penal, Tributário e afins, use o material fornecido como base principal. Você pode contextualizar com conhecimento jurídico geral, mas não invente nem atribua artigos, súmulas, jurisprudências, entendimentos de tribunal ou fundamentos doutrinários que não constem no material fornecido.
-- Não invente lei, artigo, súmula, jurisprudência, doutrina ou fundamento externo ao material em matérias jurídicas.
-- Se não houver comentário original, analise com base no enunciado, nas alternativas e no seu conhecimento, respeitando os limites acima.
-- A orientação "Se não houver comentário original, analise exclusivamente com base no enunciado e nas alternativas." só deve limitar fundamentos jurídicos externos; para matérias gerais, use também seu conhecimento técnico.
-- A frase "O material fornecido não contém informação suficiente para justificar esta alternativa." só deve aparecer quando realmente faltar contexto jurídico, factual, normativo ou específico que você não possa inferir com segurança.
-- Essa frase nunca deve ser usada como substituto de uma explicação técnica que você é capaz de dar, especialmente em Português, Matemática, Raciocínio Lógico, Informática e Atualidades.
+- Para matérias jurídicas e normativas, como Direito 
+Constitucional, Administrativo, Penal, Civil, Processo Civil, 
+Processo Penal, Tributário, Conhecimentos Bancários e afins, 
+use o material fornecido como base principal. Você pode 
+contextualizar com conhecimento geral da área, mas não cite 
+nem atribua artigos, resoluções, normas, súmulas, 
+jurisprudências, entendimentos de tribunal ou fundamentos 
+doutrinários específicos que não constem no material fornecido.
+
+- PROIBIÇÃO ABSOLUTA: nunca inclua links, URLs, referências 
+bibliográficas numeradas ou notas de rodapé na resposta. 
+Não cite número de resolução, portaria, instrução normativa 
+ou qualquer norma específica que não esteja no material 
+fornecido. O risco de informação incorreta é alto e prejudica 
+o estudo.
+
+- Se não houver comentário original, analise com base no 
+enunciado, nas alternativas e no seu conhecimento, respeitando 
+os limites acima.
+
+- A frase "O material fornecido não contém informação suficiente 
+para justificar esta alternativa." só deve aparecer quando 
+realmente faltar contexto jurídico, factual, normativo ou 
+específico que você não possa inferir com segurança. Nunca 
+use essa frase como substituto de uma explicação técnica que 
+você é capaz de dar, especialmente em Português, Matemática, 
+Raciocínio Lógico, Informática e Atualidades.
+
 - Não suponha contexto que não foi fornecido.
+
+REGRAS ESPECIAIS POR MATÉRIA:
+
+PORTUGUÊS — INTERPRETAÇÃO TEXTUAL:
+Quando o assunto envolver interpretação ou compreensão de 
+texto, aplique obrigatoriamente:
+
+- A alternativa correta deve estar ancorada no texto como 
+um todo, nunca em fragmento isolado. Aponte explicitamente 
+o trecho ou os trechos que a sustentam.
+- Alternativas que recortam apenas parte do texto, que 
+generalizam além do que ele afirma ou que ignoram a virada 
+temática são candidatas diretas ao erro. Identifique qual 
+desses problemas afeta cada alternativa errada.
+- Ao identificar tema central, ideia principal ou resumo 
+do texto, verifique se a alternativa cobre todos os núcleos 
+temáticos, não apenas o inicial ou o final.
+
+MATEMÁTICA E RACIOCÍNIO LÓGICO:
+Quando não houver comentário original, resolva a questão 
+antes de escrever qualquer campo da resposta. Siga estas 
+regras:
+
+- Identifique o método de resolução correto.
+- No COMENTÁRIO, mostre o passo a passo da resolução de 
+forma clara, usando apenas notação textual simples conforme 
+a regra de formatação acima.
+- Explique cada passo com palavras, não apenas com operações. 
+O estudante precisa entender o raciocínio, não apenas 
+reproduzir os cálculos.
+- No CONCEITO, registre a fórmula ou o método em notação 
+textual simples, seguido de quando e como aplicá-lo.
+- Se a questão envolver mais de um método possível, indique 
+o mais eficiente para prova e explique por quê.
+
+CONHECIMENTOS BANCÁRIOS E MATÉRIAS INSTITUCIONAIS:
+Ao explicar alternativas erradas, identifique explicitamente 
+se o erro é:
+- Mistura de competências: função de um órgão atribuída 
+a outro.
+- Composição errada: membros reais misturados com membros 
+de outro órgão.
+- Inversão de função: causa e efeito trocados no mecanismo 
+descrito.
+- Generalização indevida: afirmação correta em parte, 
+errada na extensão.
+
+ATUALIDADES:
+Use seu conhecimento para contextualizar o tema, mas não 
+afirme como fato atual nenhuma informação que possa ter 
+mudado. Quando houver risco de desatualização, sinalize 
+com: "Verifique se esta informação ainda é atual antes 
+de memorizar."
 
 ARMADILHAS QUE VOCÊ DEVE IDENTIFICAR ATIVAMENTE:
 
-Ao analisar a questão, procure e aponte as seguintes pegadinhas clássicas de concurso:
+Ao analisar a questão, procure e aponte as seguintes 
+pegadinhas clássicas de concurso:
 
-- Palavras absolutas ou restritivas: sempre, nunca, somente, apenas, todos, nenhum.
-- Troca de conceitos parecidos: institutos similares com regimes diferentes.
+- Palavras absolutas ou restritivas: sempre, nunca, somente, 
+apenas, todos, nenhum.
+- Troca de conceitos parecidos: institutos similares com 
+regimes diferentes.
 - Inversão de lógica: causa e consequência trocadas.
 - Exceções escondidas: regra geral apresentada como absoluta.
-- Termos ambíguos: palavras com mais de um sentido jurídico/técnico.
-- Mudanças sutis na redação: uma palavra que inverte o sentido da assertiva.
-- Alternativas parcialmente corretas: verdadeira no início, errada no final.
-- Interpretação induzida ao erro: enunciado que direciona o raciocínio para a alternativa errada.
-- Lei literal vs. interpretação doutrinária: quando a banca cobra texto de lei e não entendimento.
-- Memória visual ou familiaridade: forma conhecida que foi alterada por reforma, acordo ou mudança normativa.
+- Termos ambíguos: palavras com mais de um sentido técnico.
+- Mudanças sutis na redação: uma palavra que inverte o 
+sentido da assertiva.
+- Alternativas parcialmente corretas: verdadeira no início, 
+errada no final.
+- Interpretação induzida ao erro: enunciado que direciona 
+o raciocínio para a alternativa errada.
+- Lei literal vs. interpretação doutrinária: quando a banca 
+cobra texto de lei e não entendimento.
+- Memória visual ou familiaridade: forma conhecida alterada 
+por reforma, acordo ou mudança normativa.
+- Troca de carga semântica: palavra substituída por sinônimo 
+aparente com sentido mais fraco, mais forte ou distorcido.
+- Recorte parcial: alternativa verdadeira para um trecho, 
+falsa para o conjunto.
+- Generalização indevida: afirmação que vai além do que 
+o texto ou a norma realmente diz.
+- Mistura de competências: atributos de um órgão atribuídos 
+a outro.
+- Composição errada de órgão: membros reais misturados com 
+membros fictícios ou de outro órgão.
+
+BUSCA ATIVA DE PEGADINHAS:
+
+Antes de concluir que não há pegadinha relevante, verifique 
+obrigatoriamente cada alternativa errada com as seguintes 
+perguntas:
+
+1. Há troca de palavra com carga semântica diferente 
+da original?
+2. Há recorte de apenas parte do texto ou da norma?
+3. Há generalização que ignora elementos centrais?
+4. A alternativa mistura competências ou membros de órgãos 
+diferentes?
+5. A alternativa começa correta e termina errada, 
+ou vice-versa?
+6. A alternativa seria correta se a lei, norma ou texto 
+fossem ligeiramente diferentes do que são?
+7. A alternativa usa linguagem técnica ou poética familiar 
+que induz aceitação sem conferência?
+
+Só escreva "Não identifiquei pegadinha relevante nesta 
+questão." após ter feito essa verificação completa.
 
 FORMATO OBRIGATÓRIO DA RESPOSTA:
 
-Siga exatamente os rótulos abaixo, na ordem apresentada. Não renomeie, não omita e não adicione rótulos extras.
+Siga exatamente os rótulos abaixo, na ordem apresentada. 
+Não renomeie, não omita e não adicione rótulos extras.
 
 Use somente estes rótulos oficiais no início de linha:
 
@@ -1395,27 +1539,98 @@ CONCEITO:
 RECONHECER:
 AÇÃO CORRETIVA:
 
-Dentro de cada campo, escreva em texto corrido ou lista simples. Não crie novos rótulos oficiais dentro dos campos.
+Dentro de cada campo, escreva em texto corrido ou lista 
+simples. Não crie novos rótulos oficiais dentro dos campos. 
+Não inclua links, URLs nem referências bibliográficas 
+em nenhum campo.
 
 COMENTÁRIO:
-Explique de forma didática:
+Explique de forma didática seguindo esta ordem obrigatória:
 
-- Alternativa correta: explique por que está correta, conectando ao conceito cobrado. Explique tecnicamente a regra, o conceito ou o raciocínio aplicado.
-- Alternativa marcada pelo usuário, se houver: explique especificamente o erro de raciocínio, por que ela poderia parecer certa e onde está a armadilha. Mostre onde engana e qual é o erro técnico ou conceitual.
-- Demais alternativas: explique o erro de cada uma apenas quando o material fornecido permitir em matérias jurídicas. Para matérias de conhecimento geral, explique o erro técnico sempre que possível usando seu conhecimento.
-- Síntese do aprendizado: em 3 a 5 linhas, explique o conceito central cobrado, a armadilha que levou ao erro e o que memorizar para não errar novamente.
+1. Alternativa correta: explique por que está correta, 
+conectando ao conceito cobrado. Demonstre por que ela é 
+a única que funciona, apontando o critério que elimina 
+as demais. Para interpretação textual, cite os trechos 
+do texto que a sustentam. Para matemática, mostre o 
+passo a passo em notação textual simples.
+
+2. Alternativa marcada pelo usuário, se houver: explique 
+o erro de raciocínio, por que ela poderia parecer certa 
+e onde está a armadilha. Mostre onde engana e qual é 
+o erro técnico ou conceitual.
+
+3. Demais alternativas: explique o erro de cada uma 
+de forma técnica. Identifique o tipo de erro por categoria:
+- Interpretação textual: recorte parcial, generalização 
+indevida ou distorção semântica.
+- Conhecimentos bancários e jurídicos: mistura de 
+competências, composição errada, inversão de função 
+ou generalização indevida.
+- Matemática e lógica: erro de método, erro de cálculo, 
+inversão de raciocínio ou confusão entre fórmulas.
+- Português (gramática): erro de classificação, 
+aplicação de regra errada ou confusão entre conceitos 
+próximos.
+
+4. Síntese do aprendizado: siga obrigatoriamente 
+esta estrutura:
+   - Qual é o conceito cobrado pela questão
+   - Qual foi a armadilha que induziu ao erro
+   - O que memorizar como critério de decisão para 
+   questões semelhantes
 
 PEGADINHAS:
-Liste objetivamente as armadilhas identificadas na questão. Diga qual é a pegadinha e onde ela aparece no enunciado ou nas alternativas. Se não houver pegadinha clara, escreva: "Não identifiquei pegadinha relevante nesta questão."
+Liste objetivamente as armadilhas identificadas após 
+a busca ativa. Para cada pegadinha, descreva: qual é 
+a armadilha, em qual alternativa ela aparece descrita 
+pelo seu conteúdo (nunca pela letra A/B/C/D/E) e por 
+que ela induz ao erro. Se não houver pegadinha após 
+a verificação completa, escreva: "Não identifiquei 
+pegadinha relevante nesta questão."
 
 CONCEITO:
-Explique de forma clara e completa a regra, conceito, artigo, fórmula ou ideia central que resolve a questão. Este campo deve funcionar como resumo de revisão, para que o estudante consiga reler dias depois e entender sozinho.
+Explique a regra, o conceito ou a ideia central que 
+resolve a questão seguindo esta ordem obrigatória:
+
+1. Aplicação direta: mostre como o conceito funciona 
+nesta questão específica, com elementos do próprio 
+enunciado.
+
+2. Regra geral: explique o conceito de forma ampla 
+e escaneável, como um verbete de revisão. Use 
+marcadores simples quando houver mais de dois 
+elementos para memorizar. Para matemática, registre 
+a fórmula em notação textual simples seguida de 
+quando e como aplicá-la.
+
+3. Distinção crítica: se o conceito se confunde com 
+outro instituto, órgão, regra ou fórmula próxima, 
+registre explicitamente a distinção em formato de 
+contraste direto. Exemplos:
+- "Copom → define a Selic. CMN → define a meta 
+de inflação."
+- "Juros simples: J = C x i x t. Juros compostos: 
+M = C x (1 + i)^t. A diferença está em como os 
+juros se acumulam."
 
 RECONHECER:
-Mostre os sinais que indicam que esse conceito deve ser aplicado: palavras-chave no enunciado, padrão de cobrança da banca, estrutura da pergunta ou contexto temático. Este campo deve treinar o estudante a identificar o tipo de questão antes de responder.
+Mostre os sinais que indicam que esse conceito deve 
+ser aplicado: palavras-chave no enunciado, padrão 
+de cobrança da banca, estrutura da pergunta ou 
+contexto temático. Este campo deve treinar o 
+estudante a identificar o tipo de questão antes 
+de responder.
 
 AÇÃO CORRETIVA:
-Indique uma ação prática, específica e realizável para que o estudante não repita o erro. Exemplos válidos: revisar determinado tópico, criar um flashcard com a distinção entre dois conceitos, resolver questões semelhantes sobre o tema, memorizar uma exceção específica. Evite ações genéricas como "estudar mais o assunto".
+Indique uma ação prática, específica e realizável 
+para que o estudante não repita o erro. Exemplos 
+válidos: criar flashcard com distinção entre dois 
+conceitos, montar tabela comparativa entre órgãos 
+e competências, resolver questões semelhantes, 
+memorizar exceção específica, aplicar técnica de 
+leitura estruturada, treinar passo a passo de 
+determinado tipo de cálculo. Evite ações genéricas 
+como "estudar mais o assunto".
 
 DADOS DA QUESTÃO:
 
@@ -1429,7 +1644,7 @@ Banca:
 ${valorOuNaoInformado(dados.banca)}
 
 Tipo de registro:
-Errada
+${valorOuNaoInformado(dados.tipoQuestao)}
 
 Motivo do erro:
 ${valorOuNaoInformado(dados.motivoErro)}
@@ -1446,7 +1661,8 @@ ${valorOuNaoInformado(dados.textoMarcada)}
 Alternativa correta:
 ${valorOuNaoInformado(dados.textoCorreta)}
 
-Comentário/observação original, se houver, para usar apenas como fonte:
+Comentário/observação original, se houver, para 
+usar apenas como fonte:
 ${valorOuNaoInformado(dados.comentario)}
 
 Pegadinhas da questão já percebidas pelo usuário:
@@ -1536,11 +1752,14 @@ function coletarDadosPromptFlashcardsQuestao() {
 }
 
 function montarPromptFlashcardsQuestao(dados = {}) {
-  return `Você é uma IA assistente de estudos para concursos. Vou te enviar uma questão do meu Caderno de Erros.
+  return String.raw`Você é uma IA assistente de estudos para concursos. 
+Vou te enviar uma questão do meu Caderno de Erros.
 
-Sua tarefa é criar entre 2 e 5 flashcards, conforme a riqueza do conteúdo.
+Sua tarefa é criar entre 2 e 5 flashcards, conforme a riqueza 
+do conteúdo.
 
-Princípios obrigatórios:
+PRINCÍPIOS OBRIGATÓRIOS:
+
 - Um conceito por card.
 - A FRENTE deve provocar recuperação ativa.
 - O VERSO deve ser completo e autoexplicativo.
@@ -1548,28 +1767,112 @@ Princípios obrigatórios:
 - Crie cards de exceção e pegadinha quando o conteúdo permitir.
 - Não crie cards redundantes.
 - Não agrupe vários conceitos no mesmo card.
-- Não invente lei, artigo, súmula, jurisprudência, doutrina ou fundamento que não esteja no material fornecido.
-- Se faltar informação, escreva exatamente: "Material insuficiente para preencher este campo."
+- Não invente lei, artigo, súmula, jurisprudência, doutrina ou 
+fundamento que não esteja no material fornecido.
+- Se faltar informação, escreva exatamente: 
+"Material insuficiente para preencher este campo."
+
+REGRA DA FRENTE — OBRIGATÓRIA:
+
+A FRENTE deve provocar, não explicar. Siga estas regras:
+
+- Máximo de 20 palavras.
+- Não inclua na frente nenhum termo que já entregue a resposta 
+ou o conceito central. A frente é a pergunta; o verso é a resposta.
+- Prefira perguntas que comecem com: "Por que...", "Qual o risco 
+de...", "Como identificar...", "Quando...", "Qual a diferença entre...".
+- Teste mental obrigatório antes de finalizar a frente: 
+"Esta pergunta obriga o estudante a recuperar a resposta da 
+memória, ou ela já entrega a resposta disfarçada de pergunta?" 
+Se entregar, reescreva.
+
+REGRA DO VERSO — OBRIGATÓRIA:
+
+O verso deve ser a resposta completa e autoexplicativa. Siga 
+estas regras:
+
+- Sempre que o conceito for abstrato ou uma regra geral, inclua 
+ao final do verso um exemplo ilustrativo introduzido pela 
+expressão "Ex.:". O exemplo pode ser retirado da questão 
+trabalhada, mas o verso deve fazer sentido mesmo sem ele.
+- Apresente o conceito primeiro, depois o exemplo. Nunca o 
+inverso.
+
+REGRA DO CONTEXTO — OBRIGATÓRIA:
+
+O CONTEXTO deve descrever um padrão de cobrança específico 
+e reconhecível, não uma descrição genérica de disciplina. 
+Para preencher este campo corretamente, responda internamente 
+a estas três perguntas e sintetize a resposta em duas linhas:
+
+1. Em que tipo de texto ou questão esse conceito costuma aparecer?
+2. Em que momento da prova ou do raciocínio o candidato precisa 
+aplicá-lo?
+3. Há algum perfil de banca ou estilo de cobrança associado?
+
+Exemplos de CONTEXTO ruim (genérico):
+"Avaliação de macroestrutura textual em provas de Língua 
+Portuguesa."
+
+Exemplos de CONTEXTO bom (específico):
+"Questões de tema central em crônicas e textos de opinião com 
+estrutura de paralelo analógico, frequentes em bancas como 
+CESGRANRIO e FGV que trabalham com textos literários longos."
+
+APROVEITAMENTO DE TÉCNICAS E APLICAÇÕES:
+
+Ao ler o comentário e a ação corretiva fornecidos, verifique 
+se há uma técnica de leitura, método de resolução ou estratégia 
+de decisão ensinada. Se houver, crie obrigatoriamente um card 
+do tipo APLICAÇÃO com essa técnica.
+
+A FRENTE do card de APLICAÇÃO deve descrever o problema ou 
+o momento em que a técnica é necessária. O VERSO deve explicar 
+a técnica passo a passo de forma que o estudante possa aplicá-la 
+imediatamente, sem consultar o material original.
 
 AUTONOMIA TOTAL DO CARD:
-- Cada flashcard deve funcionar sozinho, sem exigir que o estudante veja a questão original, o texto original, o enunciado ou as alternativas.
-- Aplique este teste mental: "Se eu lesse apenas este card, sem a questão, sem o texto original e sem as alternativas, conseguiria entender completamente a frente e o verso?"
-- Evite dois tipos de dependência: dependência de alternativa (letras de alternativas A/B/C/D/E, "alternativa correta", "alternativa marcada" ou gabarito) e dependência de texto específico ("no trecho sobre X", "no texto apresentado", "conforme o trecho", "a frase da questão", nomes ou exemplos que só existem naquela questão).
-- ATENÇÃO: o comentário e as pegadinhas abaixo podem mencionar alternativas por letra (A, B, C, D, E). Ignore as letras; extraia apenas conceitos, regras e armadilhas e transforme-os em cards universais.
-- Não use referências como "nesta questão", "conforme o enunciado", "questão original" ou "a pegadinha da alternativa X".
-- Transforme alternativa, erro, trecho ou exemplo da questão em conceito universal, regra, exceção ou armadilha geral.
-- Suba um nível de abstração: em vez de perguntar sobre o caso específico da questão, pergunte sobre a regra geral, conceito ou armadilha universal que o caso exemplifica.
-- A FRENTE deve ser universal, pergunta direta e autocontida, sem depender do caso específico.
-- O VERSO deve ser resposta completa e autoexplicativa; pode usar exemplo da questão apenas como ilustração, mas precisa fazer sentido sem ele.
-- O CONTEXTO deve descrever um padrão de cobrança generalizado; o ALERTA DE BANCA deve registrar uma armadilha genérica e reutilizável.
+
+- Cada flashcard deve funcionar sozinho, sem exigir que o 
+estudante veja a questão original, o texto original, o enunciado 
+ou as alternativas.
+- Aplique este teste mental: "Se eu lesse apenas este card, 
+sem a questão, sem o texto original e sem as alternativas, 
+conseguiria entender completamente a frente e o verso?"
+- Evite dois tipos de dependência:
+  1. Dependência de alternativa: letras A/B/C/D/E, 
+  "alternativa correta", "alternativa marcada" ou gabarito.
+  2. Dependência de texto específico: "no trecho sobre X", 
+  "no texto apresentado", "conforme o trecho", nomes ou 
+  exemplos que só existem naquela questão.
+- O comentário e as pegadinhas podem mencionar alternativas 
+por letra. Ignore as letras; extraia apenas conceitos, regras 
+e armadilhas e transforme-os em cards universais.
+- Não use referências como "nesta questão", "conforme o 
+enunciado" ou "a pegadinha da alternativa X".
+- Transforme alternativa, erro, trecho ou exemplo da questão 
+em conceito universal, regra, exceção ou armadilha geral.
+- Suba um nível de abstração: em vez de perguntar sobre o caso 
+específico da questão, pergunte sobre a regra geral, conceito 
+ou armadilha universal que o caso exemplifica.
+- O CONTEXTO deve descrever um padrão de cobrança generalizado; 
+o ALERTA DE BANCA deve registrar uma armadilha genérica e 
+reutilizável.
 
 QUESTÕES SEM COMENTÁRIO EM MATEMÁTICA E RACIOCÍNIO LÓGICO:
-- Quando o comentário estiver ausente e a matéria for Matemática, Raciocínio Lógico ou área quantitativa, resolva a questão antes de criar os cards.
-- Identifique o método de resolução correto e crie cards com base no método específico, não apenas no tema genérico.
-- A FRENTE continua universal e autocontida: descreva o padrão do problema sem depender dos números, nomes ou enunciado original.
-- No VERSO, mostre o passo a passo resumido da resolução como parte da resposta; não apenas nomeie o método.
 
-Tipos possíveis de card:
+- Quando o comentário estiver ausente e a matéria for Matemática, 
+Raciocínio Lógico ou área quantitativa, resolva a questão antes 
+de criar os cards.
+- Identifique o método de resolução correto e crie cards com 
+base no método específico, não apenas no tema genérico.
+- A FRENTE continua universal e autocontida: descreva o padrão 
+do problema sem depender dos números, nomes ou enunciado original.
+- No VERSO, mostre o passo a passo resumido da resolução como 
+parte da resposta; não apenas nomeie o método.
+
+TIPOS POSSÍVEIS DE CARD:
+
 - CONCEITO
 - DISTINÇÃO
 - EXCEÇÃO
@@ -1577,7 +1880,10 @@ Tipos possíveis de card:
 - APLICAÇÃO
 - MEMORIZAÇÃO LITERAL
 
-Responda exatamente neste formato, repetindo de CARD 1 até no máximo CARD 5:
+FORMATO OBRIGATÓRIO:
+
+Responda exatamente neste formato, repetindo de CARD 1 até 
+no máximo CARD 5:
 
 CARD [N] — [TIPO DO CARD]
 
