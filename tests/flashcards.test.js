@@ -208,8 +208,6 @@ function criarCardsFiltroFlashcards() {
 afterEach(() => {
   globalThis.db = dbOriginal
   globalThis.window = windowOriginal
-  delete globalThis.calcularDueDateEncaixeFlashcard
-  delete globalThis.encaixarCardNovo
   document.body.innerHTML = ''
   vi.useRealTimers()
   vi.restoreAllMocks()
@@ -220,7 +218,6 @@ describe('esqueleto visual dos flashcards', () => {
     expect(appHtml).toContain('data-secao="flashcards"')
     expect(appHtml).toContain('id="secao-flashcards"')
     expect(appHtml).toContain('Flashcards')
-    expect(appHtml).toContain('utils/encaixarCardNovo.js')
   })
 
   it('mantem as quatro abas internas esperadas', () => {
@@ -1371,25 +1368,6 @@ describe('camada de dados dos flashcards', () => {
     expect(insert.mock.calls[0][0].user_id).toBe('user-real')
   })
 
-  it('criarFlashcard usa encaixe temporario quando disponivel', async () => {
-    globalThis.calcularDueDateEncaixeFlashcard = vi.fn(async () => '2026-05-22')
-
-    const single = vi.fn(async () => ({ data: { id: 'card-1' }, error: null }))
-    const select = vi.fn(() => ({ single }))
-    const insert = vi.fn(() => ({ select }))
-    const from = vi.fn(() => ({ insert }))
-    globalThis.db = { auth: criarAuthMock('user-1'), from }
-
-    const resultado = await criarFlashcard({
-      frente: 'Frente',
-      verso: 'Verso'
-    })
-
-    expect(resultado.error).toBeNull()
-    expect(globalThis.calcularDueDateEncaixeFlashcard).toHaveBeenCalledWith('user-1')
-    expect(insert.mock.calls[0][0].due_date).toBe('2026-05-22')
-  })
-
   it('criarFlashcard rejeita frente vazia', async () => {
     const from = vi.fn()
     globalThis.db = { auth: criarAuthMock('user-1'), from }
@@ -1626,84 +1604,5 @@ describe('camada de dados dos flashcards', () => {
 
     expect(resultado.error.message).toBe('E necessario estar logado para usar flashcards.')
     expect(from).not.toHaveBeenCalled()
-  })
-})
-
-describe('encaixe temporario de flashcards novos', () => {
-  function carregarUtilEncaixe() {
-    const codigo = readFileSync(new URL('../utils/encaixarCardNovo.js', import.meta.url), 'utf8')
-    Function(codigo)()
-  }
-
-  function criarQueryEncaixe(resposta) {
-    return {
-      ...resposta,
-      select: vi.fn(function () { return this }),
-      eq: vi.fn(function () { return this }),
-      gte: vi.fn(function () { return this }),
-      lte: vi.fn(function () { return this })
-    }
-  }
-
-  it('calcula a primeira data dos proximos 14 dias com menos de 50 cards', async () => {
-    carregarUtilEncaixe()
-
-    const query = criarQueryEncaixe({
-      data: [
-        ...Array.from({ length: 50 }, () => ({ due_date: '2026-05-20' })),
-        ...Array.from({ length: 49 }, () => ({ due_date: '2026-05-21' }))
-      ],
-      error: null
-    })
-    const cliente = { from: vi.fn(() => query) }
-
-    const data = await globalThis.calcularDueDateEncaixeFlashcard('user-1', {
-      cliente,
-      hoje: '2026-05-20'
-    })
-
-    expect(data).toBe('2026-05-21')
-    expect(cliente.from).toHaveBeenCalledWith('flashcards')
-    expect(query.select).toHaveBeenCalledWith('due_date')
-    expect(query.eq).toHaveBeenCalledWith('user_id', 'user-1')
-    expect(query.eq).toHaveBeenCalledWith('ativo', true)
-    expect(query.gte).toHaveBeenCalledWith('due_date', '2026-05-20')
-    expect(query.lte).toHaveBeenCalledWith('due_date', '2026-06-02')
-  })
-
-  it('usa o decimo quinto dia quando os proximos 14 dias estao cheios', async () => {
-    carregarUtilEncaixe()
-
-    const cards = []
-    for (let dia = 0; dia < 14; dia += 1) {
-      const data = new Date('2026-05-20T12:00:00')
-      data.setDate(data.getDate() + dia)
-      const dataISO = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
-      cards.push(...Array.from({ length: 50 }, () => ({ due_date: dataISO })))
-    }
-
-    const query = criarQueryEncaixe({ data: cards, error: null })
-    const cliente = { from: vi.fn(() => query) }
-
-    const data = await globalThis.calcularDueDateEncaixeFlashcard('user-1', {
-      cliente,
-      hoje: '2026-05-20'
-    })
-
-    expect(data).toBe('2026-06-03')
-  })
-})
-
-describe('script temporario de redistribuicao de flashcards', () => {
-  it('exige confirmacao explicita antes de aplicar updates reais', () => {
-    const codigo = readFileSync(new URL('../redistribuir_flashcards.js', import.meta.url), 'utf8')
-
-    expect(codigo).toContain('process.env.SUPABASE_SERVICE_KEY')
-    expect(codigo).toContain('process.env.CONFIRMAR_REDISTRIBUICAO')
-    expect(codigo).toContain("CONFIRMACAO_REDISTRIBUICAO === 'SIM'")
-    expect(codigo).toContain('PREVIA CONCLUIDA: nenhum card foi atualizado.')
-    expect(codigo).toContain("parametros.set('ativo', 'eq.true')")
-    expect(codigo).toContain("parametros.set('due_date', `lte.${hoje}`)")
-    expect(codigo).toContain("metodo: 'PATCH'")
   })
 })
