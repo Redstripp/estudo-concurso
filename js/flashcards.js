@@ -69,6 +69,15 @@ function dataHojeFlashcards() {
   return dataISOFlashcards(new Date())
 }
 
+async function calcularDueDateInicialFlashcard(userId) {
+  const calcularEncaixe = globalThis.calcularDueDateEncaixeFlashcard
+  if (typeof calcularEncaixe === 'function') {
+    // TEMPORÁRIO — remover após redistribuição resolvida
+    return calcularEncaixe(userId)
+  }
+  return dataHojeFlashcards()
+}
+
 function converterDiaSemanaFlashcards(dataISO) {
   const dia = new Date(`${dataISO}T12:00:00`).getDay()
   return dia === 0 ? 7 : dia
@@ -1475,6 +1484,14 @@ async function criarFlashcard(dados = {}) {
     return respostaErroFlashcards('Informe o verso do flashcard.')
   }
 
+  let dueDateInicial
+  try {
+    // TEMPORÁRIO — remover após redistribuição resolvida
+    dueDateInicial = await calcularDueDateInicialFlashcard(usuario.id)
+  } catch (erro) {
+    return respostaErroFlashcards('Nao foi possivel calcular a data inicial do flashcard.', erro)
+  }
+
   const payload = {
     user_id: usuario.id,
     frente,
@@ -1484,7 +1501,7 @@ async function criarFlashcard(dados = {}) {
     ease_factor: 2.5,
     repetitions: 0,
     interval_days: 1,
-    due_date: dataHojeFlashcards()
+    due_date: dueDateInicial
   }
 
   const materiaId = normalizarMateriaIdFlashcards(dados.materia_id)
