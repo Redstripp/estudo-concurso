@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
 
 // Importa as funções reais de js/questoes.js via globalThis
 const {
@@ -293,7 +294,8 @@ describe('prompt manual da IA', () => {
     expect(prompt).toContain('REGRA DE FORMATAÇÃO MATEMÁTICA — OBRIGATÓRIA')
     expect(prompt).toContain('Nunca use LaTeX, MathJax ou qualquer notação com chaves')
     expect(prompt).toContain('\\frac{}{}')
-    expect(prompt).toContain('REGRAS DE USO DAS FONTES:')
+    expect(prompt).toContain('FONTES E LIMITES')
+    expect(prompt).toContain('REGRAS DE USO:')
     expect(prompt).toContain('PROIBIÇÃO ABSOLUTA: nunca inclua links, URLs')
     expect(prompt).toContain('Comentário do professor já existente')
     expect(prompt).toContain('Motivo do erro:\nInterpretação incorreta')
@@ -321,13 +323,15 @@ describe('prompt manual da IA', () => {
       pegadinha: ''
     })
 
-    expect(prompt).toContain('Explique de forma didática seguindo esta ordem obrigatória')
+    expect(prompt).toContain('Siga esta ordem obrigatória')
     expect(prompt).toContain('Alternativa correta: explique por que está correta')
     expect(prompt).toContain('Alternativa marcada pelo usuário, se houver: explique')
     expect(prompt).toContain('Demais alternativas: explique o erro de cada uma')
+    expect(prompt).toContain('nomeando o tipo de erro por categoria')
     expect(prompt).toContain('Síntese do aprendizado: siga obrigatoriamente')
     expect(prompt).toContain('nem atribua artigos, resoluções, normas, súmulas')
-    expect(prompt).toContain('O material fornecido não contém informação suficiente')
+    expect(prompt).toContain('O material fornecido não contém informação')
+    expect(prompt).toContain('suficiente para justificar esta alternativa')
     expect(prompt).toContain('Se não houver comentário original, analise com base no')
     expect(prompt).toContain('Alternativa que marquei:\nA) Alternativa marcada')
     expect(prompt).toContain('Alternativa correta:\nB) Alternativa correta')
@@ -357,11 +361,12 @@ describe('prompt manual da IA', () => {
     expect(prompt).toContain('Alternativas parcialmente corretas: verdadeira no início')
     expect(prompt).toContain('errada no final.')
     expect(prompt).toContain('Lei literal vs. interpretação doutrinária')
-    expect(prompt).toContain('BUSCA ATIVA DE PEGADINHAS:')
+    expect(prompt).toContain('ARMADILHAS — IDENTIFICAÇÃO ATIVA')
+    expect(prompt).toContain('BUSCA ATIVA OBRIGATÓRIA:')
     expect(prompt).toContain('Só escreva "Não identifiquei pegadinha relevante nesta')
     expect(prompt).toContain('Indique uma ação prática, específica e realizável')
     expect(prompt).toContain('Evite ações genéricas')
-    expect(prompt).toContain('"estudar mais o assunto".')
+    expect(prompt).toContain('"estudar mais o assunto"')
   })
 
   it('mantem o formato rigido dos rotulos na ordem esperada', () => {
@@ -385,6 +390,30 @@ describe('prompt manual da IA', () => {
     expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b))
     expect(prompt).not.toContain('\nACAO:\n')
     expect(prompt).not.toContain('\nEXPLICAÇÃO:\n')
+  })
+})
+
+describe('prompt system da Edge Function', () => {
+  it('mantem instrucao JSON compatível com response_format', () => {
+    const codigo = readFileSync(
+      new URL('../supabase/functions/assistente-ia-questao/index.ts', import.meta.url),
+      'utf8'
+    )
+
+    expect(codigo).toContain("response_format: { type: 'json_object' }")
+    expect(codigo).toContain('INTEGRAÇÃO COM O SISTEMA — RESPOSTA JSON OBRIGATÓRIA')
+    expect(codigo).toContain('a resposta final deve ser somente JSON válido')
+    expect(codigo).toContain('"materia_sugerida"')
+    expect(codigo).toContain('"assunto_sugerido"')
+    expect(codigo).toContain('"tipo_questao_sugerido"')
+    expect(codigo).toContain('"motivo_erro_sugerido"')
+    expect(codigo).toContain('"nivel_confianca_sugerido"')
+    expect(codigo).toContain('"pegadinhas"')
+    expect(codigo).toContain('"conceito"')
+    expect(codigo).toContain('"reconhecer"')
+    expect(codigo).toContain('"acao"')
+    expect(codigo).toContain('O campo "acao" corresponde ao rótulo AÇÃO CORRETIVA')
+    expect(codigo).toContain('"acao_corretiva"')
   })
 })
 
