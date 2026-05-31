@@ -108,6 +108,73 @@ function normalizarTextoBuscaFlashcards(valor) {
   return String(valor || '').trim().toLowerCase()
 }
 
+function normalizarRotuloCampoRicoFlashcard(texto) {
+  return String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function identificarCampoRicoVersoFlashcard(rotulo) {
+  return {
+    VERSO: 'verso',
+    CONTEXTO: 'contexto',
+    RECONHECER: 'reconhecer',
+    'ALERTA DE BANCA': 'alertaBanca'
+  }[normalizarRotuloCampoRicoFlashcard(rotulo)] || null
+}
+
+function extrairCamposRicosDoVersoFlashcard(verso) {
+  const textoOriginal = String(verso || '').trim()
+  const fallback = {
+    estruturado: false,
+    verso: textoOriginal,
+    contexto: '',
+    reconhecer: '',
+    alertaBanca: ''
+  }
+
+  if (!textoOriginal) return fallback
+
+  const campos = {
+    verso: '',
+    contexto: '',
+    reconhecer: '',
+    alertaBanca: ''
+  }
+  let campoAtual = null
+  let encontrouRotulo = false
+
+  textoOriginal.split(/\r?\n/).forEach(linhaOriginal => {
+    const rotulo = linhaOriginal.match(/^\s*([^:]{2,80})\s*:\s*(.*)$/)
+    if (rotulo) {
+      const campo = identificarCampoRicoVersoFlashcard(rotulo[1])
+      if (campo) {
+        campoAtual = campo
+        encontrouRotulo = true
+        if (rotulo[2]) campos[campoAtual] += `${rotulo[2].trim()}\n`
+        return
+      }
+    }
+
+    if (campoAtual) campos[campoAtual] += `${linhaOriginal.trimEnd()}\n`
+  })
+
+  Object.keys(campos).forEach(chave => {
+    campos[chave] = campos[chave].trim()
+  })
+
+  if (!encontrouRotulo || !campos.verso) return fallback
+
+  return {
+    estruturado: true,
+    ...campos
+  }
+}
+
 function normalizarTagsFlashcards(tags) {
   if (!Array.isArray(tags)) return []
   return tags
@@ -126,6 +193,40 @@ function obterNomeMateriaFlashcard(card) {
   if (card?.materias?.nome) return card.materias.nome
   const materia = flashcardsMaterias.find(item => item.id === card?.materia_id)
   return materia?.nome || 'Sem matéria'
+}
+
+function criarParagrafoVersoFlashcard(texto) {
+  const paragrafo = document.createElement('p')
+  paragrafo.className = 'card-questao-comentario'
+  paragrafo.textContent = texto || 'Sem verso'
+  return paragrafo
+}
+
+function criarBlocoCampoRicoFlashcard(titulo, texto) {
+  const bloco = document.createElement('div')
+  bloco.className = 'flashcard-campo-rico'
+
+  const rotulo = document.createElement('span')
+  rotulo.className = 'tag-estudo'
+  rotulo.textContent = titulo
+
+  bloco.append(rotulo, criarParagrafoVersoFlashcard(texto))
+  return bloco
+}
+
+function criarElementoVersoFlashcard(verso) {
+  const campos = extrairCamposRicosDoVersoFlashcard(verso)
+  if (!campos.estruturado) return criarParagrafoVersoFlashcard(campos.verso)
+
+  const container = document.createElement('div')
+  container.className = 'flashcard-verso-rico'
+  container.appendChild(criarParagrafoVersoFlashcard(campos.verso))
+
+  if (campos.contexto) container.appendChild(criarBlocoCampoRicoFlashcard('Contexto', campos.contexto))
+  if (campos.reconhecer) container.appendChild(criarBlocoCampoRicoFlashcard('Como reconhecer', campos.reconhecer))
+  if (campos.alertaBanca) container.appendChild(criarBlocoCampoRicoFlashcard('Alerta de banca', campos.alertaBanca))
+
+  return container
 }
 
 function obterEstadoFlashcardPorResultado(resultado) {
@@ -644,9 +745,7 @@ function criarElementoFlashcardLista(card) {
   frente.className = 'card-form-titulo'
   frente.textContent = card.frente || 'Sem frente'
 
-  const verso = document.createElement('p')
-  verso.className = 'card-questao-comentario'
-  verso.textContent = card.verso || 'Sem verso'
+  const verso = criarElementoVersoFlashcard(card.verso)
 
   const meta = document.createElement('div')
   meta.className = 'revisao-tags'
@@ -1155,9 +1254,7 @@ function criarElementoRevisaoFlashcard(card) {
   tituloVerso.className = 'tag-estudo'
   tituloVerso.textContent = 'Verso'
 
-  const verso = document.createElement('p')
-  verso.className = 'card-questao-comentario'
-  verso.textContent = card.verso || 'Sem verso'
+  const verso = criarElementoVersoFlashcard(card.verso)
   versoArea.append(tituloVerso, verso)
 
   const avaliacao = document.createElement('div')
@@ -1789,6 +1886,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.contarCardsAcumuladosFlashcards = contarCardsAcumuladosFlashcards
   globalThis.navegarParaRevisaoUrgenteFlashcards = navegarParaRevisaoUrgenteFlashcards
   globalThis.selecionarCardsNovosEstudoDiaFlashcards = selecionarCardsNovosEstudoDiaFlashcards
+  globalThis.extrairCamposRicosDoVersoFlashcard = extrairCamposRicosDoVersoFlashcard
   globalThis.calcularProximaRevisaoSM2Flashcards = calcularProximaRevisaoSM2Flashcards
   globalThis.calcularEstatisticasFlashcards = calcularEstatisticasFlashcards
   globalThis.renderizarEstatisticasFlashcards = renderizarEstatisticasFlashcards

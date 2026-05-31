@@ -26,6 +26,7 @@ const {
   navegarParaRevisaoUrgenteFlashcards,
   renderizarAlertaAcumuloFlashcards,
   selecionarCardsNovosEstudoDiaFlashcards,
+  extrairCamposRicosDoVersoFlashcard,
   calcularProximaRevisaoSM2Flashcards,
   calcularEstatisticasFlashcards,
   renderizarEstatisticasFlashcards,
@@ -660,6 +661,83 @@ describe('esqueleto visual dos flashcards', () => {
     expect(document.getElementById('flashcards-lista').textContent).not.toContain('Card inativo')
   })
 
+  it('extrai campos ricos de verso estruturado', () => {
+    const campos = extrairCamposRicosDoVersoFlashcard(`VERSO:
+Resposta principal.
+
+CONTEXTO:
+Questao com padrao de cobranca.
+
+RECONHECER:
+Procure a pista central.
+
+ALERTA DE BANCA:
+Nao confundir os institutos.`)
+
+    expect(campos).toEqual({
+      estruturado: true,
+      verso: 'Resposta principal.',
+      contexto: 'Questao com padrao de cobranca.',
+      reconhecer: 'Procure a pista central.',
+      alertaBanca: 'Nao confundir os institutos.'
+    })
+  })
+
+  it('mantem fallback para verso antigo sem rotulos', () => {
+    const campos = extrairCamposRicosDoVersoFlashcard('Resposta antiga sem campos ricos.')
+
+    expect(campos).toEqual({
+      estruturado: false,
+      verso: 'Resposta antiga sem campos ricos.',
+      contexto: '',
+      reconhecer: '',
+      alertaBanca: ''
+    })
+  })
+
+  it('renderiza campos ricos na lista sem perder o verso principal', () => {
+    document.body.innerHTML = '<div id="flashcards-lista"></div>'
+
+    renderizarListaFlashcards([
+      criarCardRevisao({
+        id: 'card-rico',
+        verso: `VERSO:
+Resposta principal.
+
+CONTEXTO:
+Contexto util.
+
+RECONHECER:
+Pista de prova.
+
+ALERTA DE BANCA:
+Alerta importante.`
+      })
+    ])
+
+    const texto = document.getElementById('flashcards-lista').textContent
+    expect(texto).toContain('Resposta principal.')
+    expect(texto).toContain('Contexto')
+    expect(texto).toContain('Contexto util.')
+    expect(texto).toContain('Como reconhecer')
+    expect(texto).toContain('Pista de prova.')
+    expect(texto).toContain('Alerta de banca')
+    expect(texto).toContain('Alerta importante.')
+  })
+
+  it('renderiza verso antigo normalmente na lista', () => {
+    document.body.innerHTML = '<div id="flashcards-lista"></div>'
+
+    renderizarListaFlashcards([
+      criarCardRevisao({ id: 'card-antigo', verso: 'Verso antigo simples.' })
+    ])
+
+    const texto = document.getElementById('flashcards-lista').textContent
+    expect(texto).toContain('Verso antigo simples.')
+    expect(texto).not.toContain('Como reconhecer')
+    expect(texto).not.toContain('Alerta de banca')
+  })
+
   it('busca encontra card pela frente', () => {
     const resultado = aplicarFiltrosFlashcards(criarCardsFiltroFlashcards(), {
       busca: 'controle',
@@ -1042,6 +1120,40 @@ describe('esqueleto visual dos flashcards', () => {
     expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('0 cards vencidos/devidos')
     expect(document.getElementById('flashcards-progresso-sessao').textContent).toBe('Progresso: 1/1')
     expect(document.getElementById('flashcards-revisar-vazio').textContent).toBe('Nenhuma revisão pendente. Ótimo trabalho!')
+  })
+
+  it('renderiza campos ricos na revisao sem quebrar os botoes de nota', async () => {
+    montarSecaoRevisaoFlashcards()
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+      data: [
+        criarCardRevisao({
+          id: 'card-rico',
+          verso: `VERSO:
+Resposta principal.
+
+CONTEXTO:
+Contexto util.
+
+RECONHECER:
+Pista de prova.
+
+ALERTA DE BANCA:
+Alerta importante.`
+        })
+      ],
+      error: null
+    })
+
+    await carregarFlashcardsRevisarHoje()
+    iniciarSessaoRevisaoFlashcards()
+    mostrarRespostaFlashcardAtual()
+
+    const area = document.getElementById('flashcards-revisao-card')
+    expect(area.textContent).toContain('Resposta principal.')
+    expect(area.textContent).toContain('Contexto util.')
+    expect(area.textContent).toContain('Pista de prova.')
+    expect(area.textContent).toContain('Alerta importante.')
+    expect(area.querySelectorAll('[data-flashcard-quality]')).toHaveLength(6)
   })
 
   it('mostra mensagem de sessao vazia quando nao ha cards pendentes', async () => {
