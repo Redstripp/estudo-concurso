@@ -1794,123 +1794,216 @@ function montarPromptFlashcardsQuestao(dados = {}) {
   return String.raw`Você é uma IA assistente de estudos para concursos. 
 Vou te enviar uma questão do meu Caderno de Erros.
 
-Sua tarefa é criar entre 2 e 5 flashcards, conforme a riqueza 
-do conteúdo.
+Sua tarefa é criar entre 2 e 5 flashcards, conforme a 
+riqueza do conteúdo.
 
-PRINCÍPIOS OBRIGATÓRIOS:
+════════════════════════════════════════
+REGRA DE FORMATAÇÃO MATEMÁTICA — OBRIGATÓRIA
+════════════════════════════════════════
+
+Nunca use LaTeX, MathJax ou qualquer notação com chaves 
+e barras invertidas. Isso inclui proibição absoluta de 
+comandos como \frac{}{}, \sqrt{}, \cdot, \leq, \geq, 
+\times e similares.
+
+Use exclusivamente notação textual simples:
+- Fração: 2/3 ou (2 x 3)/(4 + 1)
+- Raiz quadrada: raiz(x) ou raiz(a^2 + b^2)
+- Potência: x^2, 10^3
+- Multiplicação: 3 x 4 ou 3 * 4
+- Divisão: 12 / 4
+- Maior ou igual: >= | Menor ou igual: <=
+- Somatório: soma de i=1 até n de f(i)
+- Fórmula de Bhaskara: x = (-b +- raiz(b^2 - 4ac)) / 2a
+
+Essa regra se aplica a todos os campos de todos os cards 
+sem exceção.
+
+════════════════════════════════════════
+PRINCÍPIOS OBRIGATÓRIOS
+════════════════════════════════════════
 
 - Um conceito por card.
 - A FRENTE deve provocar recuperação ativa.
 - O VERSO deve ser completo e autoexplicativo.
-- Priorize conceito central, distinções, exceções e pegadinhas.
-- Crie cards de exceção e pegadinha quando o conteúdo permitir.
+- Priorize conceito central, distinções, exceções 
+e pegadinhas.
+- Crie cards de exceção e pegadinha quando o conteúdo 
+permitir.
 - Não crie cards redundantes.
 - Não agrupe vários conceitos no mesmo card.
-- Não invente lei, artigo, súmula, jurisprudência, doutrina ou 
-fundamento que não esteja no material fornecido.
+- Não invente lei, artigo, súmula, jurisprudência, 
+doutrina ou fundamento que não esteja no material 
+fornecido.
 - Se faltar informação, escreva exatamente: 
 "Material insuficiente para preencher este campo."
 
-REGRA DA FRENTE — OBRIGATÓRIA:
+════════════════════════════════════════
+REGRA DA FRENTE — OBRIGATÓRIA
+════════════════════════════════════════
 
 A FRENTE deve provocar, não explicar. Siga estas regras:
 
 - Máximo de 20 palavras.
-- Não inclua na frente nenhum termo que já entregue a resposta 
-ou o conceito central. A frente é a pergunta; o verso é a resposta.
-- Prefira perguntas que comecem com: "Por que...", "Qual o risco 
-de...", "Como identificar...", "Quando...", "Qual a diferença entre...".
-- Teste mental obrigatório antes de finalizar a frente: 
-"Esta pergunta obriga o estudante a recuperar a resposta da 
-memória, ou ela já entrega a resposta disfarçada de pergunta?" 
-Se entregar, reescreva.
+- Não inclua nenhum termo que já entregue a resposta 
+ou o conceito central. A frente é a pergunta; o verso 
+é a resposta.
+- Prefira perguntas que comecem com: "Por que...", 
+"Qual o risco de...", "Como identificar...", "Quando...", 
+"Qual a diferença entre...".
+- Teste mental obrigatório antes de finalizar cada frente: 
+"Esta pergunta obriga o estudante a recuperar a resposta 
+da memória, ou ela já entrega a resposta disfarçada de 
+pergunta?" Se entregar, reescreva.
+- Para cards de MEMORIZAÇÃO LITERAL, a frente pode ser 
+direta, mas ainda deve exigir que o estudante recupere 
+o dado específico. Ex.: "Quantas reuniões ordinárias 
+o Copom realiza por ano?" é válida porque exige recuperar 
+o número exato.
 
-REGRA DO VERSO — OBRIGATÓRIA:
+════════════════════════════════════════
+REGRA DO VERSO — OBRIGATÓRIA
+════════════════════════════════════════
 
-O verso deve ser a resposta completa e autoexplicativa. Siga 
-estas regras:
+- Apresente o conceito primeiro, depois o exemplo. 
+Nunca o inverso.
+- Sempre que o conceito for abstrato ou uma regra geral, 
+inclua ao final um exemplo introduzido por "Ex.:". 
+O exemplo pode vir da questão trabalhada, mas o verso 
+deve fazer sentido mesmo sem ele.
+- O exemplo deve ilustrar o conceito em funcionamento, 
+não apenas descrever a pegadinha da questão. Um exemplo 
+ruim repete o erro da alternativa. Um exemplo bom mostra 
+o conceito aplicado em uma situação concreta e visual.
 
-- Sempre que o conceito for abstrato ou uma regra geral, inclua 
-ao final do verso um exemplo ilustrativo introduzido pela 
-expressão "Ex.:". O exemplo pode ser retirado da questão 
-trabalhada, mas o verso deve fazer sentido mesmo sem ele.
-- Apresente o conceito primeiro, depois o exemplo. Nunca o 
-inverso.
+════════════════════════════════════════
+REGRA DO CONTEXTO — OBRIGATÓRIA
+════════════════════════════════════════
 
-REGRA DO CONTEXTO — OBRIGATÓRIA:
+O CONTEXTO deve descrever um padrão de cobrança 
+específico e reconhecível, não uma descrição genérica 
+de disciplina. Antes de escrever, responda internamente 
+a estas três perguntas e sintetize em duas linhas:
 
-O CONTEXTO deve descrever um padrão de cobrança específico 
-e reconhecível, não uma descrição genérica de disciplina. 
-Para preencher este campo corretamente, responda internamente 
-a estas três perguntas e sintetize a resposta em duas linhas:
+1. Em que tipo de questão ou texto esse conceito 
+costuma aparecer?
+2. Em que momento da prova ou do raciocínio o candidato 
+precisa aplicá-lo?
+3. Há perfil de banca ou estilo de cobrança associado?
 
-1. Em que tipo de texto ou questão esse conceito costuma aparecer?
-2. Em que momento da prova ou do raciocínio o candidato precisa 
-aplicá-lo?
-3. Há algum perfil de banca ou estilo de cobrança associado?
+Exemplos de CONTEXTO ruim:
+"Avaliação de macroestrutura textual em provas de 
+Língua Portuguesa."
+"Esse card ajuda a memorizar dados objetivos frequentemente 
+cobrados em questões de conhecimentos bancários."
 
-Exemplos de CONTEXTO ruim (genérico):
-"Avaliação de macroestrutura textual em provas de Língua 
-Portuguesa."
+Exemplos de CONTEXTO bom:
+"Questões de tema central em crônicas com estrutura de 
+paralelo analógico, frequentes em CESGRANRIO e FGV com 
+textos literários longos."
+"Questões do SFN que cobram função e composição de órgãos 
+na mesma alternativa, testando se o candidato separa 
+instrumento de política monetária de meta perseguida."
 
-Exemplos de CONTEXTO bom (específico):
-"Questões de tema central em crônicas e textos de opinião com 
-estrutura de paralelo analógico, frequentes em bancas como 
-CESGRANRIO e FGV que trabalham com textos literários longos."
+════════════════════════════════════════
+REGRA DO ALERTA DE BANCA — OBRIGATÓRIA
+════════════════════════════════════════
 
-APROVEITAMENTO DE TÉCNICAS E APLICAÇÕES:
+O ALERTA DE BANCA deve registrar uma armadilha específica 
+e reutilizável para aquele tipo de questão, não um aviso 
+genérico que serviria para qualquer matéria.
 
-Ao ler o comentário e a ação corretiva fornecidos, verifique 
-se há uma técnica de leitura, método de resolução ou estratégia 
-de decisão ensinada. Se houver, crie obrigatoriamente um card 
-do tipo APLICAÇÃO com essa técnica.
+Exemplo de ALERTA ruim:
+"Não valide a alternativa só porque reconheceu uma 
+palavra familiar."
 
-A FRENTE do card de APLICAÇÃO deve descrever o problema ou 
-o momento em que a técnica é necessária. O VERSO deve explicar 
-a técnica passo a passo de forma que o estudante possa aplicá-la 
-imediatamente, sem consultar o material original.
+Exemplo de ALERTA bom:
+"Em questões do SFN, a banca frequentemente acerta a 
+competência do órgão e troca apenas um integrante da 
+composição, sabendo que o candidato para de ler após 
+reconhecer a função correta."
 
-AUTONOMIA TOTAL DO CARD:
+════════════════════════════════════════
+APROVEITAMENTO DE TÉCNICAS E APLICAÇÕES
+════════════════════════════════════════
 
-- Cada flashcard deve funcionar sozinho, sem exigir que o 
-estudante veja a questão original, o texto original, o enunciado 
-ou as alternativas.
-- Aplique este teste mental: "Se eu lesse apenas este card, 
-sem a questão, sem o texto original e sem as alternativas, 
-conseguiria entender completamente a frente e o verso?"
-- Evite dois tipos de dependência:
-  1. Dependência de alternativa: letras A/B/C/D/E, 
-  "alternativa correta", "alternativa marcada" ou gabarito.
-  2. Dependência de texto específico: "no trecho sobre X", 
-  "no texto apresentado", "conforme o trecho", nomes ou 
-  exemplos que só existem naquela questão.
-- O comentário e as pegadinhas podem mencionar alternativas 
-por letra. Ignore as letras; extraia apenas conceitos, regras 
-e armadilhas e transforme-os em cards universais.
-- Não use referências como "nesta questão", "conforme o 
+Ao ler o comentário e a ação corretiva fornecidos, 
+verifique se há uma técnica de leitura, método de 
+resolução ou estratégia de decisão ensinada. Se houver, 
+crie obrigatoriamente um card do tipo APLICAÇÃO.
+
+- A FRENTE deve descrever o problema ou o momento em 
+que a técnica é necessária.
+- O VERSO deve explicar a técnica passo a passo, de 
+forma que o estudante possa aplicá-la imediatamente 
+sem consultar o material original.
+
+════════════════════════════════════════
+CARD DE MEMORIZAÇÃO LITERAL
+════════════════════════════════════════
+
+Crie obrigatoriamente um card do tipo MEMORIZAÇÃO 
+LITERAL sempre que o conteúdo contiver dados objetivos 
+que a banca cobra diretamente, como:
+- Número de reuniões, prazos ou percentuais fixos.
+- Composição exata de órgãos ou comissões.
+- Fórmulas ou definições legais com redação específica.
+- Valores, datas ou limites normativos relevantes.
+
+O VERSO deste card deve conter apenas os dados a 
+memorizar, organizados de forma escaneável, sem 
+explicações longas.
+
+════════════════════════════════════════
+AUTONOMIA TOTAL DO CARD
+════════════════════════════════════════
+
+Cada flashcard deve funcionar sozinho, sem exigir que 
+o estudante veja a questão original, o texto, o enunciado 
+ou as alternativas. Aplique este teste mental: "Se eu 
+lesse apenas este card, conseguiria entender completamente 
+a frente e o verso?"
+
+Evite dois tipos de dependência:
+1. Dependência de alternativa: letras A/B/C/D/E, 
+"alternativa correta", "alternativa marcada" ou gabarito.
+2. Dependência de texto específico: "no trecho sobre X", 
+"no texto apresentado", nomes ou exemplos que só existem 
+naquela questão.
+
+O comentário e as pegadinhas podem mencionar alternativas 
+por letra. Ignore as letras; extraia apenas conceitos, 
+regras e armadilhas e transforme-os em cards universais.
+
+Não use referências como "nesta questão", "conforme o 
 enunciado" ou "a pegadinha da alternativa X".
-- Transforme alternativa, erro, trecho ou exemplo da questão 
-em conceito universal, regra, exceção ou armadilha geral.
-- Suba um nível de abstração: em vez de perguntar sobre o caso 
-específico da questão, pergunte sobre a regra geral, conceito 
+
+Suba um nível de abstração: em vez de perguntar sobre 
+o caso específico, pergunte sobre a regra geral, conceito 
 ou armadilha universal que o caso exemplifica.
-- O CONTEXTO deve descrever um padrão de cobrança generalizado; 
-o ALERTA DE BANCA deve registrar uma armadilha genérica e 
-reutilizável.
 
-QUESTÕES SEM COMENTÁRIO EM MATEMÁTICA E RACIOCÍNIO LÓGICO:
+════════════════════════════════════════
+QUESTÕES SEM COMENTÁRIO — MATEMÁTICA 
+E RACIOCÍNIO LÓGICO
+════════════════════════════════════════
 
-- Quando o comentário estiver ausente e a matéria for Matemática, 
-Raciocínio Lógico ou área quantitativa, resolva a questão antes 
-de criar os cards.
-- Identifique o método de resolução correto e crie cards com 
-base no método específico, não apenas no tema genérico.
-- A FRENTE continua universal e autocontida: descreva o padrão 
-do problema sem depender dos números, nomes ou enunciado original.
-- No VERSO, mostre o passo a passo resumido da resolução como 
-parte da resposta; não apenas nomeie o método.
+Quando o comentário estiver ausente e a matéria for 
+Matemática, Raciocínio Lógico ou área quantitativa, 
+resolva a questão antes de criar os cards. Então:
 
-TIPOS POSSÍVEIS DE CARD:
+- Identifique o método de resolução correto.
+- Crie cards com base no método específico, não apenas 
+no tema genérico.
+- A FRENTE continua universal e autocontida: descreva 
+o padrão do problema sem depender dos números ou 
+enunciado original.
+- No VERSO, mostre o passo a passo resumido em notação 
+textual simples, explicando cada etapa com palavras, 
+não apenas operações.
+
+════════════════════════════════════════
+TIPOS POSSÍVEIS DE CARD
+════════════════════════════════════════
 
 - CONCEITO
 - DISTINÇÃO
@@ -1919,10 +2012,12 @@ TIPOS POSSÍVEIS DE CARD:
 - APLICAÇÃO
 - MEMORIZAÇÃO LITERAL
 
-FORMATO OBRIGATÓRIO:
+════════════════════════════════════════
+FORMATO OBRIGATÓRIO
+════════════════════════════════════════
 
-Responda exatamente neste formato, repetindo de CARD 1 até 
-no máximo CARD 5:
+Responda exatamente neste formato, repetindo de CARD 1 
+até no máximo CARD 5:
 
 CARD [N] — [TIPO DO CARD]
 
@@ -1941,7 +2036,9 @@ RECONHECER:
 ALERTA DE BANCA:
 ...
 
+════════════════════════════════════════
 DADOS DA QUESTÃO
+════════════════════════════════════════
 
 Matéria:
 ${valorOuNaoInformado(dados.materia)}
