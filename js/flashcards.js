@@ -357,6 +357,10 @@ function selecionarAbaFlashcards(aba, raiz = document) {
   })
 }
 
+function listaFlashcardsJaCarregada() {
+  return document.getElementById('flashcards-lista')?.dataset.flashcardsListaCarregada === 'true'
+}
+
 function atualizarIndicadoresFlashcardsVazios(raiz = document) {
   const pendentesHoje = raiz.getElementById?.('flashcards-pendentes-hoje')
   const resumoVencimento = raiz.getElementById?.('flashcards-resumo-vencimento')
@@ -910,7 +914,7 @@ function renderizarAlertaAcumuloFlashcards(quantidade = 0) {
 }
 
 async function carregarAlertaAcumuloFlashcards() {
-  const listar = globalThis.listarFlashcards || listarFlashcards
+  const listar = globalThis.listarFlashcardsDevidosHoje || listarFlashcardsDevidosHoje
   const resultado = await listar()
 
   if (resultado.error) {
@@ -1224,7 +1228,7 @@ async function carregarMateriasFlashcards() {
 
   flashcardsMaterias = resultado.data || []
   atualizarSelectsMateriaFlashcards(flashcardsMaterias)
-  renderizarListaFlashcardsFiltrada()
+  if (listaFlashcardsJaCarregada()) renderizarListaFlashcardsFiltrada()
   return resultado
 }
 
@@ -1447,13 +1451,23 @@ async function carregarListaFlashcards() {
   const resultado = await listar()
 
   if (resultado.error) {
+    delete lista.dataset.flashcardsListaCarregada
     lista.innerHTML = '<p class="texto-placeholder">Nao foi possivel carregar seus flashcards. Verifique sua conexao e tente novamente.</p>'
     return resultado
   }
 
   flashcardsListaTodos = resultado.data || []
+  lista.dataset.flashcardsListaCarregada = 'true'
   renderizarListaFlashcardsFiltrada()
   return resultado
+}
+
+async function carregarListaFlashcardsSeNecessario() {
+  if (listaFlashcardsJaCarregada()) {
+    renderizarListaFlashcardsFiltrada()
+    return { data: flashcardsListaTodos, error: null }
+  }
+  return carregarListaFlashcards()
 }
 
 async function salvarFlashcardTela() {
@@ -1530,7 +1544,7 @@ function inicializarFlashcards() {
     secao.querySelectorAll('[data-flashcards-aba]').forEach(botao => {
       botao.addEventListener('click', () => {
         selecionarAbaFlashcards(botao.dataset.flashcardsAba, secao)
-        if (botao.dataset.flashcardsAba === 'todos') carregarListaFlashcards()
+        if (botao.dataset.flashcardsAba === 'todos') carregarListaFlashcardsSeNecessario()
         if (botao.dataset.flashcardsAba === 'revisar-hoje') {
           carregarFlashcardsRevisarHoje()
           carregarEstudoDiaFlashcards()
@@ -1550,7 +1564,6 @@ function inicializarFlashcards() {
   carregarMateriasFlashcards()
   carregarFlashcardsRevisarHoje()
   carregarEstudoDiaFlashcards()
-  carregarListaFlashcards()
   carregarAlertaAcumuloFlashcards()
 }
 

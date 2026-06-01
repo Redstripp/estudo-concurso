@@ -296,14 +296,54 @@ describe('esqueleto visual dos flashcards', () => {
     expect(appHtml).toContain('data-secao="revisao"')
   })
 
-  it('inicializador nao quebra e alterna abas internas', () => {
+  it('inicializador mantem Revisar Hoje e carrega Todos os Cards apenas ao abrir a aba', async () => {
+    const cardRico = criarCardRevisao({
+      id: 'card-rico',
+      frente: 'Frente lazy',
+      verso: `VERSO:
+Resposta principal.
+
+CONTEXTO:
+Contexto util.
+
+RECONHECER:
+Pista de prova.
+
+ALERTA DE BANCA:
+Alerta importante.`
+    })
+    const listarCards = vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: [cardRico],
+      error: null
+    })
+    const listarDevidosHoje = vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+      data: [criarCardRevisao({ id: 'revisao-hoje' })],
+      error: null
+    })
+    vi.spyOn(globalThis, 'listarMateriasPlanejadasHojeFlashcards').mockResolvedValue({ data: [], error: null })
+    vi.spyOn(globalThis, 'listarMateriasFlashcards').mockResolvedValue({ data: [], error: null })
+
     document.body.innerHTML = `
       <section id="secao-flashcards">
         <button class="flashcards-aba" data-flashcards-aba="revisar-hoje" aria-selected="false"></button>
         <button class="flashcards-aba" data-flashcards-aba="todos" aria-selected="false"></button>
-        <div class="flashcards-painel" id="flashcards-painel-revisar-hoje" hidden></div>
-        <div class="flashcards-painel" id="flashcards-painel-todos" hidden></div>
-        <span id="flashcards-pendentes-hoje"></span>
+        <div class="flashcards-painel" id="flashcards-painel-revisar-hoje" hidden>
+          <span id="flashcards-pendentes-hoje"></span>
+          <p id="flashcards-progresso-sessao"></p>
+          <p id="flashcards-resumo-vencimento"></p>
+          <p id="flashcards-revisar-vazio"></p>
+          <div id="flashcards-revisao-card"></div>
+          <button id="btn-iniciar-revisao-flashcards" type="button" disabled>Iniciar revisao</button>
+          <span id="flashcards-estudo-dia-status"></span>
+          <p id="flashcards-estudo-dia-vazio"></p>
+          <div id="flashcards-estudo-dia-lista"></div>
+        </div>
+        <div class="flashcards-painel" id="flashcards-painel-todos" hidden>
+          <div id="flashcards-lista"></div>
+        </div>
+        <div id="flashcards-alerta-acumulo" hidden>
+          <p id="flashcards-alerta-acumulo-texto"></p>
+        </div>
         <strong id="flashcards-total-cards"></strong>
         <strong id="flashcards-cards-hoje"></strong>
         <strong id="flashcards-taxa-acerto"></strong>
@@ -312,15 +352,29 @@ describe('esqueleto visual dos flashcards', () => {
     `
 
     expect(() => inicializarFlashcards()).not.toThrow()
+    await Promise.resolve()
+    await Promise.resolve()
+
     expect(document.getElementById('flashcards-painel-revisar-hoje').hidden).toBe(false)
     expect(document.querySelector('[data-flashcards-aba="revisar-hoje"]').getAttribute('aria-selected')).toBe('true')
-    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('0 cards vencidos/devidos')
+    expect(listarDevidosHoje).toHaveBeenCalled()
+    expect(document.getElementById('flashcards-lista').textContent).toBe('')
 
-    selecionarAbaFlashcards('todos', document.getElementById('secao-flashcards'))
+    expect(listarCards).not.toHaveBeenCalled()
+    document.querySelector('[data-flashcards-aba="todos"]').click()
 
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Carregando flashcards...')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(listarCards).toHaveBeenCalledTimes(1)
     expect(document.getElementById('flashcards-painel-revisar-hoje').hidden).toBe(true)
     expect(document.getElementById('flashcards-painel-todos').hidden).toBe(false)
     expect(document.querySelector('[data-flashcards-aba="todos"]').getAttribute('aria-selected')).toBe('true')
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Frente lazy')
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Contexto util.')
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Pista de prova.')
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Alerta importante.')
   })
 
   it('continua expondo as funcoes de dados existentes', () => {
@@ -1243,7 +1297,7 @@ Alerta importante.`
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-20T12:00:00'))
     montarSecaoRevisaoFlashcards()
-    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
       data: [
         criarCardRevisao({ id: 'hoje', due_date: '2026-05-20' }),
         criarCardRevisao({ id: 'um-dia', due_date: '2026-05-19' }),
@@ -1263,7 +1317,7 @@ Alerta importante.`
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-20T12:00:00'))
     montarSecaoRevisaoFlashcards()
-    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
       data: [criarCardRevisao({ id: 'antigo', due_date: '2026-05-18' })],
       error: null
     })
@@ -1287,7 +1341,7 @@ Alerta importante.`
       criarCardRevisao({ id: 'inativo', due_date: '2026-05-16', ativo: false })
     ]
     const antes = JSON.stringify(cards)
-    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({ data: cards, error: null })
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({ data: cards, error: null })
 
     const resultado = await carregarAlertaAcumuloFlashcards()
 
