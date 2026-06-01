@@ -1480,6 +1480,13 @@ function mostrarRespostaFlashcardAtual() {
   return { data: flashcardAtualSessao, error: null }
 }
 
+function rolarParaTopoDoFlashcardAtual() {
+  const alvo = document.getElementById('flashcards-revisao-card') ||
+    document.getElementById('flashcards-revisao-urgente')
+
+  alvo?.scrollIntoView?.({ block: 'start' })
+}
+
 function obterFlashcardAtualizadoAposRevisao(card, resultadoSM2, resposta) {
   const cardAtualizado = resposta?.data?.flashcard
   if (cardAtualizado) return cardAtualizado
@@ -1525,6 +1532,7 @@ async function avaliarFlashcardAtual(quality) {
 
   flashcardAtualSessao = flashcardsSessaoHoje[0] || null
   renderizarRevisaoFlashcardsHoje()
+  if (flashcardAtualSessao) rolarParaTopoDoFlashcardAtual()
 
   return {
     ...resposta,

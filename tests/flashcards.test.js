@@ -225,6 +225,19 @@ function obterBotaoListaFlashcards(texto) {
     .find(botao => botao.textContent === texto)
 }
 
+async function executarComScrollIntoViewMockado(teste) {
+  const originalScrollIntoView = Element.prototype.scrollIntoView
+  const scrollIntoView = vi.fn()
+  Element.prototype.scrollIntoView = scrollIntoView
+
+  try {
+    await teste(scrollIntoView)
+  } finally {
+    if (originalScrollIntoView) Element.prototype.scrollIntoView = originalScrollIntoView
+    else delete Element.prototype.scrollIntoView
+  }
+}
+
 afterEach(() => {
   globalThis.db = dbOriginal
   globalThis.window = windowOriginal
@@ -1241,6 +1254,53 @@ Alerta da pagina 2.`
       expect(document.getElementById('flashcards-revisao-card').textContent).toContain('Frente do card')
     }
   )
+
+  it('rola para o topo do card ao avancar para o proximo flashcard', async () => {
+    await executarComScrollIntoViewMockado(async (scrollIntoView) => {
+      montarSecaoRevisaoFlashcards()
+      const primeiro = criarCardRevisao({ id: 'card-1', frente: 'Primeiro card' })
+      const segundo = criarCardRevisao({ id: 'card-2', frente: 'Segundo card' })
+      vi.spyOn(Math, 'random').mockReturnValue(0.9)
+      vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+        data: [primeiro, segundo],
+        error: null
+      })
+      vi.spyOn(globalThis, 'registrarRevisaoFlashcard').mockResolvedValue({
+        data: { flashcard: { ...primeiro, due_date: '2026-05-21' } },
+        error: null
+      })
+
+      await carregarFlashcardsRevisarHoje()
+      iniciarSessaoRevisaoFlashcards()
+      await avaliarFlashcardAtual(4)
+
+      expect(document.getElementById('flashcards-revisao-card').textContent).toContain('Segundo card')
+      expect(scrollIntoView).toHaveBeenCalledTimes(1)
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' })
+    })
+  })
+
+  it('nao forca scroll quando a sessao termina apos avaliar', async () => {
+    await executarComScrollIntoViewMockado(async (scrollIntoView) => {
+      montarSecaoRevisaoFlashcards()
+      const card = criarCardRevisao({ id: 'card-unico' })
+      vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+        data: [card],
+        error: null
+      })
+      vi.spyOn(globalThis, 'registrarRevisaoFlashcard').mockResolvedValue({
+        data: { flashcard: { ...card, due_date: '2026-05-21' } },
+        error: null
+      })
+
+      await carregarFlashcardsRevisarHoje()
+      iniciarSessaoRevisaoFlashcards()
+      await avaliarFlashcardAtual(4)
+
+      expect(document.getElementById('flashcards-revisar-vazio').textContent).toContain('Nenhuma revis')
+      expect(scrollIntoView).not.toHaveBeenCalled()
+    })
+  })
 
   it.each([3, 4, 5])('avaliacao quality %s remove o card da sessao de hoje', async (quality) => {
     montarSecaoRevisaoFlashcards()
