@@ -32,7 +32,8 @@ const {
   extrairCamposRespostaChatGPT,
   identificarCampoRespostaChatGPT,
   obterOuCriarSessaoDeHoje,
-  recalcularTotalQuestoesSessao
+  recalcularTotalQuestoesSessao,
+  atualizarTelasAposRegistro
 } = globalThis
 
 function montarFormularioAlternativas() {
@@ -1517,6 +1518,140 @@ describe('recalcularTotalQuestoesSessao', () => {
     } finally {
       globalThis.db = dbAnterior
       window.usuarioAtual = usuarioAnterior
+    }
+  })
+})
+
+describe('atualizarTelasAposRegistro', () => {
+  function criarQuestoesParaAtualizacao(total = 21) {
+    return Array.from({ length: total }, (_, indice) => ({
+      id: `q-${indice + 1}`,
+      materia_id: 'mat-1',
+      edital_topico_id: null,
+      banca: 'Cesgranrio',
+      pegadinha_banca: '',
+      enunciado: `Questao recarregada ${indice + 1}`,
+      alternativas: { A: 'Alternativa A', B: 'Alternativa B' },
+      alternativa_marcada: 'A',
+      alternativa_correta: 'B',
+      tipo_questao: 'Errada',
+      status_revisao: 'pendente',
+      revisar_novamente_em: '2026-06-02',
+      revisao_ultima_data: null,
+      revisao_ultima_resultado: null,
+      revisao_total_acertos: 0,
+      revisao_total_erros: 0,
+      revisao_etapa: 0,
+      motivo_erro: 'Interpretação incorreta',
+      nivel_confianca: 'Baixa confiança',
+      comentario: 'Comentário da questão',
+      conceito_chave: 'Conceito testado',
+      como_reconhecer: 'Reconhecer pelo comando',
+      acao_corretiva: 'Revisar regra',
+      criado_em: `2026-06-01T08:00:${String(indice).padStart(2, '0')}Z`,
+      materias: { nome: 'Direito Constitucional' },
+      edital_topicos: null
+    }))
+  }
+
+  function montarCadernoQuestoes({ visivel = true } = {}) {
+    document.body.innerHTML = `
+      <section id="secao-questoes" class="${visivel ? '' : 'escondido'}">
+        <div id="caderno-erros-acoes"></div>
+        <input id="busca-caderno" />
+        <select id="ordenacao-caderno">
+          <option value="recente">Mais recentes</option>
+        </select>
+        <p id="resultado-busca-info"></p>
+        <div id="lista-questoes">lista original</div>
+      </section>
+    `
+  }
+
+  function criarDbQuestoesMock(questoes) {
+    const chain = {
+      select: vi.fn(() => chain),
+      eq: vi.fn(() => chain),
+      order: vi.fn(async () => ({ data: questoes, error: null }))
+    }
+    return {
+      from: vi.fn(tabela => {
+        expect(tabela).toBe('questoes')
+        return chain
+      }),
+      chain
+    }
+  }
+
+  function desativarAtualizacoesGlobais() {
+    const nomes = [
+      'inicializarDashboard',
+      'carregarEstatisticas',
+      'estatisticasInicializado',
+      'carregarDesempenho',
+      'desempenhoInicializado',
+      'carregarPlanoDia',
+      'planoInicializado'
+    ]
+    const anteriores = new Map(nomes.map(nome => [nome, globalThis[nome]]))
+    nomes.forEach(nome => {
+      globalThis[nome] = undefined
+    })
+    return () => {
+      anteriores.forEach((valor, nome) => {
+        if (valor === undefined) delete globalThis[nome]
+        else globalThis[nome] = valor
+      })
+    }
+  }
+
+  it('recarrega a tela visivel sem duplicar o SELECT completo de questoes', async () => {
+    const dbAnterior = globalThis.db
+    const usuarioAnterior = window.usuarioAtual
+    const restaurarGlobais = desativarAtualizacoesGlobais()
+    const dbMock = criarDbQuestoesMock(criarQuestoesParaAtualizacao(21))
+
+    montarCadernoQuestoes({ visivel: true })
+    globalThis.db = dbMock
+    window.usuarioAtual = { id: 'user-1' }
+
+    try {
+      await atualizarTelasAposRegistro({ questaoNova: true })
+
+      expect(dbMock.from).toHaveBeenCalledTimes(1)
+      expect(dbMock.chain.select).toHaveBeenCalledTimes(1)
+      expect(document.querySelectorAll('#lista-questoes .card-questao')).toHaveLength(20)
+      expect(document.querySelector('#lista-questoes .card-questao--novo')).not.toBeNull()
+      expect(document.getElementById('lista-questoes').textContent).toContain('Questao recarregada 1')
+      expect(document.getElementById('lista-questoes').textContent).toContain('Pagina 1 de 2')
+      expect(document.getElementById('lista-questoes').textContent).toContain('Mostrando 1-20 de 21')
+    } finally {
+      globalThis.db = dbAnterior
+      window.usuarioAtual = usuarioAnterior
+      restaurarGlobais()
+    }
+  })
+
+  it('mantem atualizacao em memoria quando a secao Questões nao esta visivel', async () => {
+    const dbAnterior = globalThis.db
+    const usuarioAnterior = window.usuarioAtual
+    const restaurarGlobais = desativarAtualizacoesGlobais()
+    const dbMock = criarDbQuestoesMock(criarQuestoesParaAtualizacao(1))
+
+    montarCadernoQuestoes({ visivel: false })
+    globalThis.db = dbMock
+    window.usuarioAtual = { id: 'user-1' }
+
+    try {
+      await atualizarTelasAposRegistro({ questaoNova: true })
+
+      expect(dbMock.from).toHaveBeenCalledTimes(1)
+      expect(dbMock.chain.select).toHaveBeenCalledTimes(1)
+      expect(document.getElementById('lista-questoes').textContent).toBe('lista original')
+    } finally {
+      globalThis.db = dbAnterior
+      window.usuarioAtual = usuarioAnterior
+      restaurarGlobais()
     }
   })
 })

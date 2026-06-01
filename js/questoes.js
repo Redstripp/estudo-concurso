@@ -3234,17 +3234,16 @@ async function atualizarTelasAposRegistro(opcoes = {}) {
     tarefas.push(carregarPlanoDia())
   }
 
-  // Atualiza a memória das questões (independente da tela visível)
-  if (typeof carregarQuestoesEmMemoria === 'function') {
-    tarefas.push(carregarQuestoesEmMemoria())
-  }
-
-  // Se a seção de questões estiver visível, recarrega a lista na tela
   const secaoQuestoes = document.getElementById('secao-questoes')
-  if (secaoQuestoes && !secaoQuestoes.classList.contains('escondido')) {
+  const secaoQuestoesVisivel = secaoQuestoes && !secaoQuestoes.classList.contains('escondido')
+
+  // Se a seção está visível, carregarQuestoes já atualiza memória e lista.
+  if (secaoQuestoesVisivel) {
     if (typeof carregarQuestoes === 'function') {
       tarefas.push(carregarQuestoes(Boolean(opcoes.questaoNova)))
     }
+  } else if (typeof carregarQuestoesEmMemoria === 'function') {
+    tarefas.push(carregarQuestoesEmMemoria())
   }
 
   const resultados = await Promise.allSettled(tarefas)
@@ -4326,7 +4325,8 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     extrairCamposRespostaChatGPT,
     identificarCampoRespostaChatGPT,
     obterOuCriarSessaoDeHoje,
-    recalcularTotalQuestoesSessao
+    recalcularTotalQuestoesSessao,
+    atualizarTelasAposRegistro
   }
   
   // Compatibilidade com ES modules no Vitest
@@ -4366,4 +4366,5 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.identificarCampoRespostaChatGPT = identificarCampoRespostaChatGPT
   globalThis.obterOuCriarSessaoDeHoje = obterOuCriarSessaoDeHoje
   globalThis.recalcularTotalQuestoesSessao = recalcularTotalQuestoesSessao
+  globalThis.atualizarTelasAposRegistro = atualizarTelasAposRegistro
 }
