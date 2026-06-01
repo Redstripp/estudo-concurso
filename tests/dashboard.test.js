@@ -19,6 +19,8 @@ const {
 } = globalThis
 
 const dashboardSource = readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8')
+const appSource = readFileSync(new URL('../js/app.js', import.meta.url), 'utf8')
+const estiloSource = readFileSync(new URL('../css/estilo.css', import.meta.url), 'utf8')
 
 function extrairFuncaoDashboard(nome) {
   const inicio = dashboardSource.indexOf(`async function ${nome}(`)
@@ -152,6 +154,12 @@ afterEach(() => {
 })
 
 describe('dashboard helpers', () => {
+  it('marca o body enquanto o aviso de arquivamento esta visivel', () => {
+    expect(appSource).toContain("document.body.classList.add('aviso-arquivamento-visivel')")
+    expect(appSource).toContain("document.body.classList.remove('aviso-arquivamento-visivel')")
+    expect(estiloSource).toContain('body.aviso-arquivamento-visivel .aviso-arquivamento-pendente')
+  })
+
   it('cria estado vazio escapando HTML recebido', () => {
     const html = criarEstadoVazioDashboard('<b>Titulo</b>', 'A & B')
 

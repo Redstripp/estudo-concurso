@@ -1317,6 +1317,7 @@ function mostrarAvisoArquivamento(pendente) {
     aviso.className = 'aviso-arquivamento-pendente'
     document.body.appendChild(aviso)
   }
+  document.body.classList.add('aviso-arquivamento-visivel')
 
   aviso.innerHTML = `
     <div class="aviso-arquivamento-texto">
@@ -1342,6 +1343,7 @@ function mostrarAvisoArquivamento(pendente) {
 
 function ocultarAvisoArquivamento() {
   document.getElementById('aviso-arquivamento-pendente')?.remove()
+  document.body.classList.remove('aviso-arquivamento-visivel')
 }
 
 // ============================================

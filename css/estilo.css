@@ -1861,6 +1861,28 @@ button.dash-card.dash-card--principal {
   transform: translateY(-1px);
 }
 
+body.aviso-arquivamento-visivel .aviso-arquivamento-pendente {
+  right: 168px;
+  width: min(calc(100vw - 188px), 720px);
+}
+
+body.aviso-arquivamento-visivel .conteudo-principal {
+  padding-bottom: 9rem;
+}
+
+@media (max-width: 768px) {
+  body.aviso-arquivamento-visivel .aviso-arquivamento-pendente {
+    bottom: 82px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+
+  body.aviso-arquivamento-visivel .conteudo-principal {
+    padding-bottom: 15rem;
+  }
+}
+
 .dashboard-grafico-container {
   background: var(--cor-fundo-card);
   border: 1px solid var(--cor-borda);
