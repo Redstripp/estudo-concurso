@@ -16,11 +16,14 @@ const QUALIDADES_FLASHCARD = [0, 1, 2, 3, 4, 5]
 const EASE_FACTOR_PADRAO_FLASHCARD = 2.5
 const EASE_FACTOR_MINIMO_FLASHCARD = 1.3
 const DIAS_ALERTA_ACUMULO_FLASHCARD = 2
+const FLASHCARDS_CARDS_POR_PAGINA = 20
 let flashcardsInicializado = false
 let flashcardsSessaoHoje = []
 let flashcardAtualSessao = null
 let flashcardsTotalSessaoHoje = 0
 let flashcardsListaTodos = []
+let flashcardsListaPaginaAtual = 1
+let flashcardsListaFiltrosAssinatura = ''
 let flashcardsMaterias = []
 
 function obterClienteSupabaseFlashcards() {
@@ -359,6 +362,30 @@ function selecionarAbaFlashcards(aba, raiz = document) {
 
 function listaFlashcardsJaCarregada() {
   return document.getElementById('flashcards-lista')?.dataset.flashcardsListaCarregada === 'true'
+}
+
+function resetarPaginacaoListaFlashcards() {
+  flashcardsListaPaginaAtual = 1
+}
+
+function totalPaginasListaFlashcards(totalCards = 0) {
+  return Math.max(1, Math.ceil(totalCards / FLASHCARDS_CARDS_POR_PAGINA))
+}
+
+function ajustarPaginaListaFlashcards(totalCards = 0) {
+  const totalPaginas = totalPaginasListaFlashcards(totalCards)
+  flashcardsListaPaginaAtual = Math.min(Math.max(flashcardsListaPaginaAtual, 1), totalPaginas)
+  return totalPaginas
+}
+
+function obterAssinaturaFiltrosFlashcards(filtros = {}) {
+  return [
+    filtros.busca || '',
+    filtros.estado || '',
+    filtros.vencimento || '',
+    filtros.tag || '',
+    filtros.materia || ''
+  ].join('|')
 }
 
 function atualizarIndicadoresFlashcardsVazios(raiz = document) {
@@ -798,6 +825,53 @@ function criarElementoFlashcardLista(card) {
   return item
 }
 
+function criarBotaoPaginacaoFlashcards(texto, paginaDestino, desabilitado = false) {
+  const botao = document.createElement('button')
+  botao.className = 'btn-secundario'
+  botao.type = 'button'
+  botao.textContent = texto
+  botao.disabled = desabilitado
+  botao.addEventListener('click', () => {
+    flashcardsListaPaginaAtual = paginaDestino
+    renderizarListaFlashcardsFiltrada()
+  })
+  return botao
+}
+
+function criarControlesPaginacaoFlashcards(totalCards, totalPaginas) {
+  const inicio = (flashcardsListaPaginaAtual - 1) * FLASHCARDS_CARDS_POR_PAGINA + 1
+  const fim = Math.min(flashcardsListaPaginaAtual * FLASHCARDS_CARDS_POR_PAGINA, totalCards)
+
+  const container = document.createElement('div')
+  container.className = 'flashcards-paginacao'
+
+  const resumo = document.createElement('p')
+  resumo.className = 'texto-apoio'
+  resumo.textContent = `Mostrando ${inicio}-${fim} de ${totalCards} cards`
+
+  const navegacao = document.createElement('div')
+  navegacao.className = 'flashcard-lista-acoes'
+
+  const pagina = document.createElement('span')
+  pagina.className = 'tag-estudo'
+  pagina.textContent = `Pagina ${flashcardsListaPaginaAtual} de ${totalPaginas}`
+
+  const anterior = criarBotaoPaginacaoFlashcards(
+    'Anterior',
+    flashcardsListaPaginaAtual - 1,
+    flashcardsListaPaginaAtual <= 1
+  )
+  const proxima = criarBotaoPaginacaoFlashcards(
+    'Proxima',
+    flashcardsListaPaginaAtual + 1,
+    flashcardsListaPaginaAtual >= totalPaginas
+  )
+
+  navegacao.append(anterior, pagina, proxima)
+  container.append(resumo, navegacao)
+  return container
+}
+
 function renderizarListaFlashcards(cards = [], opcoes = {}) {
   const lista = document.getElementById('flashcards-lista')
   if (!lista) return
@@ -813,20 +887,36 @@ function renderizarListaFlashcards(cards = [], opcoes = {}) {
     vazio.className = 'texto-placeholder'
     vazio.textContent = opcoes.mensagemVazia || 'Nenhum flashcard cadastrado ainda.'
     lista.appendChild(vazio)
+    resetarPaginacaoListaFlashcards()
     return
   }
 
-  cardsAtivos.forEach(card => lista.appendChild(criarElementoFlashcardLista(card)))
+  const totalPaginas = opcoes.paginar ? ajustarPaginaListaFlashcards(cardsAtivos.length) : 1
+  const indiceInicial = opcoes.paginar
+    ? (flashcardsListaPaginaAtual - 1) * FLASHCARDS_CARDS_POR_PAGINA
+    : 0
+  const indiceFinal = opcoes.paginar
+    ? indiceInicial + FLASHCARDS_CARDS_POR_PAGINA
+    : cardsAtivos.length
+  const cardsPagina = cardsAtivos.slice(indiceInicial, indiceFinal)
+
+  cardsPagina.forEach(card => lista.appendChild(criarElementoFlashcardLista(card)))
+  if (opcoes.paginar) lista.appendChild(criarControlesPaginacaoFlashcards(cardsAtivos.length, totalPaginas))
 }
 
 function renderizarListaFlashcardsFiltrada() {
   const filtros = obterFiltrosFlashcards()
+  const assinaturaFiltros = obterAssinaturaFiltrosFlashcards(filtros)
+  if (assinaturaFiltros !== flashcardsListaFiltrosAssinatura) {
+    flashcardsListaFiltrosAssinatura = assinaturaFiltros
+    resetarPaginacaoListaFlashcards()
+  }
   const cardsFiltrados = aplicarFiltrosFlashcards(flashcardsListaTodos, filtros)
   const mensagemVazia = filtrosFlashcardsAtivos(filtros)
     ? 'Nenhum flashcard encontrado com os filtros atuais.'
     : 'Nenhum flashcard cadastrado ainda.'
 
-  renderizarListaFlashcards(cardsFiltrados, { mensagemVazia })
+  renderizarListaFlashcards(cardsFiltrados, { mensagemVazia, paginar: true })
 }
 
 function limparFiltrosFlashcards() {
@@ -842,6 +932,7 @@ function limparFiltrosFlashcards() {
   if (tag) tag.value = ''
   if (materia) materia.value = 'todos'
 
+  resetarPaginacaoListaFlashcards()
   renderizarListaFlashcardsFiltrada()
 }
 
@@ -1445,6 +1536,7 @@ async function carregarListaFlashcards() {
   const lista = document.getElementById('flashcards-lista')
   if (!lista) return { data: [], error: null }
 
+  const primeiraCarga = !listaFlashcardsJaCarregada()
   lista.innerHTML = '<p class="texto-placeholder">Carregando flashcards...</p>'
 
   const listar = globalThis.listarFlashcards || listarFlashcards
@@ -1457,6 +1549,7 @@ async function carregarListaFlashcards() {
   }
 
   flashcardsListaTodos = resultado.data || []
+  if (primeiraCarga) resetarPaginacaoListaFlashcards()
   lista.dataset.flashcardsListaCarregada = 'true'
   renderizarListaFlashcardsFiltrada()
   return resultado

@@ -206,6 +206,25 @@ function criarCardsFiltroFlashcards() {
   ]
 }
 
+function criarCardsPaginacaoFlashcards(total = 25, sobrescritas = {}) {
+  return Array.from({ length: total }, (_, indice) => {
+    const numero = String(indice + 1).padStart(2, '0')
+    return criarCardRevisao({
+      id: `card-${numero}`,
+      frente: `Card ${numero}`,
+      verso: `Verso ${numero}`,
+      estado: 'novo',
+      due_date: '2026-05-20',
+      ...(sobrescritas[indice + 1] || {})
+    })
+  })
+}
+
+function obterBotaoListaFlashcards(texto) {
+  return [...document.querySelectorAll('#flashcards-lista button')]
+    .find(botao => botao.textContent === texto)
+}
+
 afterEach(() => {
   globalThis.db = dbOriginal
   globalThis.window = windowOriginal
@@ -960,6 +979,79 @@ Alerta importante.`
     expect(document.getElementById('flashcards-lista').textContent).toContain('Controle difuso')
     expect(document.getElementById('flashcards-lista').textContent).toContain('Prazo administrativo')
     expect(document.getElementById('flashcards-lista').textContent).toContain('Recurso ordinario')
+  })
+
+  it('pagina Todos os Cards em grupos de 20 e navega entre paginas', async () => {
+    montarListaFlashcardsComFiltros()
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: criarCardsPaginacaoFlashcards(25, {
+        21: {
+          verso: `VERSO:
+Resposta da pagina 2.
+
+CONTEXTO:
+Contexto da pagina 2.
+
+RECONHECER:
+Pista da pagina 2.
+
+ALERTA DE BANCA:
+Alerta da pagina 2.`
+        }
+      }),
+      error: null
+    })
+
+    await carregarListaFlashcards()
+
+    let texto = document.getElementById('flashcards-lista').textContent
+    expect(texto).toContain('Card 01')
+    expect(texto).toContain('Card 20')
+    expect(texto).not.toContain('Card 21')
+    expect(texto).toContain('Pagina 1 de 2')
+    expect(texto).toContain('Mostrando 1-20 de 25 cards')
+    expect(obterBotaoListaFlashcards('Anterior').disabled).toBe(true)
+
+    obterBotaoListaFlashcards('Proxima').click()
+
+    texto = document.getElementById('flashcards-lista').textContent
+    expect(texto).not.toContain('Card 20')
+    expect(texto).toContain('Card 21')
+    expect(texto).toContain('Card 25')
+    expect(texto).toContain('Pagina 2 de 2')
+    expect(texto).toContain('Mostrando 21-25 de 25 cards')
+    expect(texto).toContain('Contexto da pagina 2.')
+    expect(texto).toContain('Pista da pagina 2.')
+    expect(texto).toContain('Alerta da pagina 2.')
+    expect(obterBotaoListaFlashcards('Proxima').disabled).toBe(true)
+
+    obterBotaoListaFlashcards('Anterior').click()
+
+    texto = document.getElementById('flashcards-lista').textContent
+    expect(texto).toContain('Card 01')
+    expect(texto).toContain('Pagina 1 de 2')
+  })
+
+  it('reseta para a primeira pagina ao buscar ou filtrar', async () => {
+    montarListaFlashcardsComFiltros()
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: criarCardsPaginacaoFlashcards(25),
+      error: null
+    })
+
+    await carregarListaFlashcards()
+    obterBotaoListaFlashcards('Proxima').click()
+
+    expect(document.getElementById('flashcards-lista').textContent).toContain('Pagina 2 de 2')
+
+    document.getElementById('flashcards-busca').value = 'Card 01'
+    renderizarListaFlashcardsFiltrada()
+
+    const texto = document.getElementById('flashcards-lista').textContent
+    expect(texto).toContain('Card 01')
+    expect(texto).not.toContain('Card 21')
+    expect(texto).toContain('Pagina 1 de 1')
+    expect(texto).toContain('Mostrando 1-1 de 1 cards')
   })
 
   it('carrega lista de materias nos selects de flashcards', async () => {
