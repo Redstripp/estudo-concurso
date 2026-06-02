@@ -84,6 +84,15 @@ function adicionarDiasFlashcards(dataISO, dias) {
   return dataISOFlashcards(data)
 }
 
+function obterIntervaloDiaLocalFlashcards(dataISO = dataHojeFlashcards()) {
+  const inicio = new Date(`${dataISO}T00:00:00`)
+  const fim = new Date(`${adicionarDiasFlashcards(dataISO, 1)}T00:00:00`)
+  return {
+    inicio: inicio.toISOString(),
+    fim: fim.toISOString()
+  }
+}
+
 function formatarProximaRevisaoFlashcard(data) {
   const dueDate = obterDataComparacaoFlashcard(data)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return 'sem data definida'
@@ -1083,12 +1092,35 @@ function contarFlashcardsConcluidosSessao() {
   return Math.max(0, flashcardsTotalSessaoHoje - flashcardsSessaoHoje.length)
 }
 
+function obterIdsFlashcardsRevisadosConcluidosHoje(idsRevisadosHoje = [], cardsDevidos = []) {
+  const idsPendentes = new Set(
+    (Array.isArray(cardsDevidos) ? cardsDevidos : [])
+      .map(card => String(card?.id || '').trim())
+      .filter(Boolean)
+  )
+
+  return [
+    ...new Set(
+      (Array.isArray(idsRevisadosHoje) ? idsRevisadosHoje : [])
+        .map(id => String(id || '').trim())
+        .filter(Boolean)
+    )
+  ].filter(id => !idsPendentes.has(id))
+}
+
+function contarFlashcardsConcluidosPersistidosHoje(idsRevisadosHoje = [], cardsDevidos = []) {
+  return obterIdsFlashcardsRevisadosConcluidosHoje(idsRevisadosHoje, cardsDevidos).length
+}
+
 function atualizarTotalSessaoFlashcards(concluidos) {
   flashcardsTotalSessaoHoje = concluidos + flashcardsSessaoHoje.length
 }
 
-function sincronizarSessaoRevisaoFlashcards(cardsDevidos = []) {
-  const concluidos = contarFlashcardsConcluidosSessao()
+function sincronizarSessaoRevisaoFlashcards(cardsDevidos = [], idsRevisadosHoje = []) {
+  const concluidos = Math.max(
+    contarFlashcardsConcluidosSessao(),
+    contarFlashcardsConcluidosPersistidosHoje(idsRevisadosHoje, cardsDevidos)
+  )
   const cardsPorId = new Map(cardsDevidos.map(card => [card.id, card]))
   const idsFilaAtual = new Set(flashcardsSessaoHoje.map(card => card?.id).filter(Boolean))
   const filaPreservada = flashcardsSessaoHoje
@@ -1578,13 +1610,16 @@ async function carregarFlashcardsRevisarHoje() {
   const cardsDevidos = Array.isArray(resultado.data)
     ? resultado.data.filter(flashcardDevidoHoje)
     : []
+  const listarRevisadosHoje = globalThis.listarIdsFlashcardsRevisadosHoje || listarIdsFlashcardsRevisadosHoje
+  const resultadoRevisadosHoje = await listarRevisadosHoje()
+  const idsRevisadosHoje = resultadoRevisadosHoje.error ? [] : (resultadoRevisadosHoje.data || [])
 
   if (preservarSessaoAtual) {
-    sincronizarSessaoRevisaoFlashcards(cardsDevidos)
+    sincronizarSessaoRevisaoFlashcards(cardsDevidos, idsRevisadosHoje)
   } else {
     flashcardsSessaoHoje = embaralharFlashcardsSessao(cardsDevidos)
     flashcardAtualSessao = null
-    flashcardsTotalSessaoHoje = flashcardsSessaoHoje.length
+    atualizarTotalSessaoFlashcards(contarFlashcardsConcluidosPersistidosHoje(idsRevisadosHoje, cardsDevidos))
     flashcardsSessaoRevisaoAtiva = false
   }
 
@@ -1935,6 +1970,54 @@ async function listarRevisoesFlashcards() {
   )
 }
 
+async function listarIdsFlashcardsRevisadosHoje() {
+  let usuario
+  try {
+    usuario = await obterUsuarioAutenticadoFlashcards()
+  } catch (erro) {
+    return respostaErroFlashcards(erro.message, erro.detalhes)
+  }
+
+  const cliente = obterClienteSupabaseFlashcards()
+  const intervaloHoje = obterIntervaloDiaLocalFlashcards()
+  const [respostaHistorico, respostaCards] = await Promise.all([
+    cliente
+      .from('flashcard_reviews')
+      .select('flashcard_id, reviewed_at')
+      .eq('user_id', usuario.id)
+      .gte('reviewed_at', intervaloHoje.inicio)
+      .lt('reviewed_at', intervaloHoje.fim),
+    cliente
+      .from('flashcards')
+      .select('id, last_reviewed_at')
+      .eq('user_id', usuario.id)
+      .eq('ativo', true)
+      .gte('last_reviewed_at', intervaloHoje.inicio)
+      .lt('last_reviewed_at', intervaloHoje.fim)
+  ])
+
+  if (respostaHistorico.error && respostaCards.error) {
+    return respostaErroFlashcards(
+      'Nao foi possivel listar os flashcards revisados hoje. Verifique sua conexao e tente novamente.',
+      respostaHistorico.error || respostaCards.error
+    )
+  }
+
+  const ids = new Set()
+  if (!respostaHistorico.error) {
+    ;(respostaHistorico.data || []).forEach(revisao => {
+      if (revisao?.flashcard_id) ids.add(String(revisao.flashcard_id))
+    })
+  }
+  if (!respostaCards.error) {
+    ;(respostaCards.data || []).forEach(card => {
+      if (card?.id) ids.add(String(card.id))
+    })
+  }
+
+  return { data: [...ids], error: null }
+}
+
 async function listarMateriasFlashcards() {
   let usuario
   try {
@@ -2149,6 +2232,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.listarMateriasPlanejadasHojeFlashcards = listarMateriasPlanejadasHojeFlashcards
   globalThis.listarFlashcardsDevidosHoje = listarFlashcardsDevidosHoje
   globalThis.listarRevisoesFlashcards = listarRevisoesFlashcards
+  globalThis.listarIdsFlashcardsRevisadosHoje = listarIdsFlashcardsRevisadosHoje
   globalThis.listarMateriasFlashcards = listarMateriasFlashcards
   globalThis.carregarMateriasFlashcards = carregarMateriasFlashcards
   globalThis.atualizarFlashcard = atualizarFlashcard

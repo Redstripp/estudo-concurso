@@ -38,6 +38,7 @@ const {
   listarMateriasPlanejadasHojeFlashcards,
   listarFlashcardsDevidosHoje,
   listarRevisoesFlashcards,
+  listarIdsFlashcardsRevisadosHoje,
   listarMateriasFlashcards,
   atualizarFlashcard,
   desativarFlashcard,
@@ -60,6 +61,8 @@ function criarQueryLista(resposta = { data: [], error: null }) {
     ...resposta,
     select: vi.fn(function () { return this }),
     eq: vi.fn(function () { return this }),
+    gte: vi.fn(function () { return this }),
+    lt: vi.fn(function () { return this }),
     lte: vi.fn(function () { return this }),
     order: vi.fn(function () { return this })
   }
@@ -433,6 +436,7 @@ Alerta importante.`
     expect(globalThis.listarMateriasPlanejadasHojeFlashcards).toBe(listarMateriasPlanejadasHojeFlashcards)
     expect(globalThis.listarFlashcardsDevidosHoje).toBe(listarFlashcardsDevidosHoje)
     expect(globalThis.listarRevisoesFlashcards).toBe(listarRevisoesFlashcards)
+    expect(globalThis.listarIdsFlashcardsRevisadosHoje).toBe(listarIdsFlashcardsRevisadosHoje)
     expect(globalThis.listarMateriasFlashcards).toBe(listarMateriasFlashcards)
     expect(globalThis.carregarMateriasFlashcards).toBe(carregarMateriasFlashcards)
     expect(globalThis.atualizarFlashcard).toBe(atualizarFlashcard)
@@ -1181,6 +1185,26 @@ Alerta da pagina 2.`
     expect(document.getElementById('flashcards-revisao-card').textContent).not.toContain('Card inativo')
   })
 
+  it('mostra progresso inicial 0/N quando nao ha revisoes hoje', async () => {
+    montarSecaoRevisaoFlashcards()
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+      data: [
+        criarCardRevisao({ id: 'card-1' }),
+        criarCardRevisao({ id: 'card-2' })
+      ],
+      error: null
+    })
+    vi.spyOn(globalThis, 'listarIdsFlashcardsRevisadosHoje').mockResolvedValue({
+      data: [],
+      error: null
+    })
+
+    await carregarFlashcardsRevisarHoje()
+
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('2 cards vencidos/devidos')
+    expect(document.getElementById('flashcards-progresso-sessao').textContent).toBe('Progresso: 0/2')
+  })
+
   it('Revisao Urgente separa visualmente cards atrasados e para hoje', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-20T12:00:00'))
@@ -1329,7 +1353,10 @@ Alerta da pagina 2.`
     vi.spyOn(Math, 'random').mockReturnValue(0.9)
     vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje')
       .mockResolvedValueOnce({ data: [primeiro, segundo, terceiro], error: null })
-      .mockResolvedValueOnce({ data: [segundo], error: null })
+      .mockResolvedValueOnce({ data: [segundo, terceiro], error: null })
+    vi.spyOn(globalThis, 'listarIdsFlashcardsRevisadosHoje')
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [primeiro.id], error: null })
     const registrar = vi.spyOn(globalThis, 'registrarRevisaoFlashcard').mockResolvedValue({
       data: { flashcard: { ...primeiro, due_date: '2026-05-21' } },
       error: null
@@ -1344,8 +1371,8 @@ Alerta da pagina 2.`
 
     await carregarFlashcardsRevisarHoje()
 
-    expect(document.getElementById('flashcards-progresso-sessao').textContent).toBe('Progresso: 1/2')
-    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('1 cards vencidos/devidos')
+    expect(document.getElementById('flashcards-progresso-sessao').textContent).toBe('Progresso: 1/3')
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('2 cards vencidos/devidos')
     expect(document.getElementById('flashcards-revisao-card').textContent).toContain('Segundo card')
     expect(registrar).toHaveBeenCalledTimes(1)
     expect(registrar).toHaveBeenCalledWith(primeiro.id, expect.objectContaining({
@@ -1353,6 +1380,39 @@ Alerta da pagina 2.`
       dueAgainToday: false,
       wasCorrect: true
     }))
+  })
+
+  it('reconstroi progresso apos refresh com revisao persistida e pendentes restantes', async () => {
+    montarSecaoRevisaoFlashcards()
+    const pendentes = Array.from({ length: 79 }, (_, indice) =>
+      criarCardRevisao({
+        id: `card-${indice + 2}`,
+        frente: `Card pendente ${indice + 2}`
+      })
+    )
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+      data: pendentes,
+      error: null
+    })
+    vi.spyOn(globalThis, 'listarIdsFlashcardsRevisadosHoje').mockResolvedValue({
+      data: ['card-1'],
+      error: null
+    })
+    vi.spyOn(globalThis, 'registrarRevisaoFlashcard').mockResolvedValue({
+      data: { flashcard: { ...pendentes[0], due_date: '2026-05-21' } },
+      error: null
+    })
+
+    await carregarFlashcardsRevisarHoje()
+
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('79 cards vencidos/devidos')
+    expect(document.getElementById('flashcards-progresso-sessao').textContent).toBe('Progresso: 1/80')
+
+    iniciarSessaoRevisaoFlashcards()
+    await avaliarFlashcardAtual(4)
+
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('78 cards vencidos/devidos')
+    expect(document.getElementById('flashcards-progresso-sessao').textContent).toBe('Progresso: 2/80')
   })
 
   it('desativar card pendente da sessao remove da fila sem contar como revisao', async () => {
@@ -1925,6 +1985,47 @@ describe('camada de dados dos flashcards', () => {
     expect(from).toHaveBeenCalledWith('flashcard_reviews')
     expect(query.eq).toHaveBeenCalledWith('user_id', 'user-1')
     expect(query.order).toHaveBeenCalledWith('reviewed_at', { ascending: false })
+  })
+
+  it('listarIdsFlashcardsRevisadosHoje combina historico e last_reviewed_at sem duplicar', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+    const queryHistorico = criarQueryLista({
+      data: [
+        { flashcard_id: 'card-historico' },
+        { flashcard_id: 'card-duplicado' }
+      ],
+      error: null
+    })
+    const queryCards = criarQueryLista({
+      data: [
+        { id: 'card-duplicado' },
+        { id: 'card-fallback' }
+      ],
+      error: null
+    })
+    const from = vi.fn((tabela) => {
+      if (tabela === 'flashcard_reviews') return queryHistorico
+      if (tabela === 'flashcards') return queryCards
+      throw new Error(`Tabela inesperada: ${tabela}`)
+    })
+    globalThis.db = { auth: criarAuthMock('user-1'), from }
+
+    const resultado = await listarIdsFlashcardsRevisadosHoje()
+
+    expect(resultado.error).toBeNull()
+    expect(resultado.data.sort()).toEqual(['card-duplicado', 'card-fallback', 'card-historico'])
+    expect(from).toHaveBeenCalledWith('flashcard_reviews')
+    expect(from).toHaveBeenCalledWith('flashcards')
+    expect(queryHistorico.select).toHaveBeenCalledWith('flashcard_id, reviewed_at')
+    expect(queryHistorico.eq).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(queryHistorico.gte).toHaveBeenCalledWith('reviewed_at', expect.any(String))
+    expect(queryHistorico.lt).toHaveBeenCalledWith('reviewed_at', expect.any(String))
+    expect(queryCards.select).toHaveBeenCalledWith('id, last_reviewed_at')
+    expect(queryCards.eq).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(queryCards.eq).toHaveBeenCalledWith('ativo', true)
+    expect(queryCards.gte).toHaveBeenCalledWith('last_reviewed_at', expect.any(String))
+    expect(queryCards.lt).toHaveBeenCalledWith('last_reviewed_at', expect.any(String))
   })
 
   it('listarMateriasFlashcards usa materias do usuario logado', async () => {
