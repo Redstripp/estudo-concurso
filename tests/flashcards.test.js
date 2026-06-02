@@ -162,6 +162,26 @@ function montarSecaoEstatisticasFlashcards() {
   `
 }
 
+function adicionarPainelEstatisticasFlashcards() {
+  document.getElementById('secao-flashcards').insertAdjacentHTML('beforeend', `
+    <div id="flashcards-painel-estatisticas">
+      <strong id="flashcards-total-cards"></strong>
+      <strong id="flashcards-cards-hoje"></strong>
+      <strong id="flashcards-cards-atrasados"></strong>
+      <strong id="flashcards-cards-para-hoje"></strong>
+      <strong id="flashcards-cards-novos"></strong>
+      <strong id="flashcards-cards-aprendendo"></strong>
+      <strong id="flashcards-cards-revisando"></strong>
+      <strong id="flashcards-total-revisoes"></strong>
+      <strong id="flashcards-total-acertos"></strong>
+      <strong id="flashcards-taxa-acerto"></strong>
+      <strong id="flashcards-total-erros"></strong>
+      <strong id="flashcards-sequencia-estudos"></strong>
+      <p id="msg-flashcards-estatisticas"></p>
+    </div>
+  `)
+}
+
 function criarCardRevisao(sobrescritas = {}) {
   return {
     id: 'card-1',
@@ -1413,6 +1433,73 @@ Alerta da pagina 2.`
 
     expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('78 cards vencidos/devidos')
     expect(document.getElementById('flashcards-progresso-sessao').textContent).toBe('Progresso: 2/80')
+  })
+
+  it('atualiza estatisticas carregadas apos avaliar card sem depender de cache antigo', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+    montarSecaoRevisaoFlashcards()
+    adicionarPainelEstatisticasFlashcards()
+    const cardAntes = criarCardRevisao({
+      id: 'card-estatisticas',
+      estado: 'novo',
+      due_date: '2026-05-20',
+      total_reviews: 4,
+      correct_reviews: 3,
+      last_reviewed_at: '2026-05-19T09:00:00Z'
+    })
+    const cardDepois = {
+      ...cardAntes,
+      estado: 'aprendendo',
+      due_date: '2026-05-21',
+      repetitions: 1,
+      interval_days: 1,
+      total_reviews: 5,
+      correct_reviews: 4,
+      last_reviewed_at: '2026-05-20T12:00:00Z'
+    }
+    const listarCards = vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValueOnce({
+      data: [cardAntes],
+      error: null
+    })
+    vi.spyOn(globalThis, 'listarRevisoesFlashcards').mockResolvedValueOnce({
+      data: [
+        { quality: 5, was_correct: true, reviewed_at: '2026-05-19T09:00:00Z' },
+        { quality: 4, was_correct: true, reviewed_at: '2026-05-18T09:00:00Z' },
+        { quality: 3, was_correct: true, reviewed_at: '2026-05-17T09:00:00Z' },
+        { quality: 1, was_correct: false, reviewed_at: '2026-05-16T09:00:00Z' }
+      ],
+      error: null
+    })
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+      data: [cardAntes],
+      error: null
+    })
+    vi.spyOn(globalThis, 'listarIdsFlashcardsRevisadosHoje').mockResolvedValue({
+      data: [],
+      error: null
+    })
+    vi.spyOn(globalThis, 'registrarRevisaoFlashcard').mockResolvedValue({
+      data: { flashcard: cardDepois },
+      error: null
+    })
+
+    await carregarEstatisticasFlashcards()
+    await carregarFlashcardsRevisarHoje()
+    iniciarSessaoRevisaoFlashcards()
+    await avaliarFlashcardAtual(4)
+
+    expect(listarCards).toHaveBeenCalledTimes(1)
+    expect(document.getElementById('flashcards-total-revisoes').textContent).toBe('5')
+    expect(document.getElementById('flashcards-total-acertos').textContent).toBe('4')
+    expect(document.getElementById('flashcards-total-erros').textContent).toBe('1')
+    expect(document.getElementById('flashcards-taxa-acerto').textContent).toBe('80%')
+    expect(document.getElementById('flashcards-cards-hoje').textContent).toBe('0')
+    expect(document.getElementById('flashcards-cards-para-hoje').textContent).toBe('0')
+    expect(document.getElementById('flashcards-cards-novos').textContent).toBe('0')
+    expect(document.getElementById('flashcards-cards-aprendendo').textContent).toBe('1')
+    expect(document.getElementById('flashcards-cards-revisando').textContent).toBe('0')
+    expect(document.getElementById('flashcards-progresso-sessao').textContent).toBe('Progresso: 1/1')
   })
 
   it('desativar card pendente da sessao remove da fila sem contar como revisao', async () => {

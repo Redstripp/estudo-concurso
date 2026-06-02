@@ -1411,9 +1411,72 @@ function calcularEstatisticasFlashcards(cards = [], revisoes = []) {
   }
 }
 
+function estatisticasFlashcardsJaCarregadas() {
+  return document.getElementById('flashcards-painel-estatisticas')?.dataset.flashcardsEstatisticasCarregadas === 'true'
+}
+
+function marcarEstatisticasFlashcardsCarregadas() {
+  const painel = document.getElementById('flashcards-painel-estatisticas')
+  if (painel) painel.dataset.flashcardsEstatisticasCarregadas = 'true'
+}
+
 function definirTextoElementoFlashcards(id, texto) {
   const elemento = document.getElementById(id)
   if (elemento) elemento.textContent = String(texto)
+}
+
+function obterNumeroElementoFlashcards(id) {
+  const valor = Number.parseInt(document.getElementById(id)?.textContent || '0', 10)
+  return Number.isFinite(valor) ? valor : 0
+}
+
+function somarNumeroElementoFlashcards(id, delta) {
+  definirTextoElementoFlashcards(id, Math.max(0, obterNumeroElementoFlashcards(id) + delta))
+}
+
+function ajustarContadorCondicionalFlashcards(id, antes, depois) {
+  somarNumeroElementoFlashcards(id, Number(Boolean(depois)) - Number(Boolean(antes)))
+}
+
+function atualizarTaxaAcertoEstatisticasFlashcards() {
+  const totalRevisoes = obterNumeroElementoFlashcards('flashcards-total-revisoes')
+  const totalAcertos = obterNumeroElementoFlashcards('flashcards-total-acertos')
+  definirTextoElementoFlashcards('flashcards-taxa-acerto', `${calcularTaxaAcertoFlashcards(totalRevisoes, totalAcertos)}%`)
+}
+
+function atualizarEstatisticasFlashcardsAposRevisao(cardAnterior = {}, cardAtualizado = {}, resultadoSM2 = {}) {
+  if (!estatisticasFlashcardsJaCarregadas()) return
+
+  const cardDepois = cardAtualizado || {}
+  somarNumeroElementoFlashcards('flashcards-total-revisoes', 1)
+  somarNumeroElementoFlashcards('flashcards-total-acertos', resultadoSM2.wasCorrect ? 1 : 0)
+  somarNumeroElementoFlashcards('flashcards-total-erros', resultadoSM2.wasCorrect ? 0 : 1)
+  atualizarTaxaAcertoEstatisticasFlashcards()
+
+  ajustarContadorCondicionalFlashcards('flashcards-cards-hoje', flashcardDevidoHoje(cardAnterior), flashcardDevidoHoje(cardDepois))
+  ajustarContadorCondicionalFlashcards(
+    'flashcards-cards-atrasados',
+    obterDataComparacaoFlashcard(cardAnterior?.due_date) < dataHojeFlashcards(),
+    obterDataComparacaoFlashcard(cardDepois?.due_date) < dataHojeFlashcards()
+  )
+  ajustarContadorCondicionalFlashcards(
+    'flashcards-cards-para-hoje',
+    obterDataComparacaoFlashcard(cardAnterior?.due_date) === dataHojeFlashcards(),
+    obterDataComparacaoFlashcard(cardDepois?.due_date) === dataHojeFlashcards()
+  )
+
+  ;['novo', 'aprendendo', 'revisando'].forEach(estado => {
+    const id = `flashcards-cards-${estado === 'novo' ? 'novos' : estado}`
+    ajustarContadorCondicionalFlashcards(
+      id,
+      (cardAnterior?.estado || 'novo') === estado,
+      (cardDepois?.estado || 'novo') === estado
+    )
+  })
+
+  if (obterNumeroElementoFlashcards('flashcards-sequencia-estudos') === 0) {
+    definirTextoElementoFlashcards('flashcards-sequencia-estudos', 1)
+  }
 }
 
 function renderizarEstatisticasFlashcards(estatisticas = calcularEstatisticasFlashcards()) {
@@ -1462,6 +1525,7 @@ async function carregarEstatisticasFlashcards() {
 
   const estatisticas = calcularEstatisticasFlashcards(resultadoCards.data || [], resultadoRevisoes.data || [])
   renderizarEstatisticasFlashcards(estatisticas)
+  marcarEstatisticasFlashcardsCarregadas()
   return { data: estatisticas, error: null }
 }
 
@@ -1701,6 +1765,11 @@ async function avaliarFlashcardAtual(quality) {
   if (resultadoSM2.dueAgainToday) {
     flashcardsSessaoHoje.push(obterFlashcardAtualizadoAposRevisao(cardRevisado, resultadoSM2, resposta))
   }
+  atualizarEstatisticasFlashcardsAposRevisao(
+    cardRevisado,
+    obterFlashcardAtualizadoAposRevisao(cardRevisado, resultadoSM2, resposta),
+    resultadoSM2
+  )
 
   flashcardAtualSessao = flashcardsSessaoHoje[0] || null
   if (!flashcardAtualSessao) flashcardsSessaoRevisaoAtiva = false
