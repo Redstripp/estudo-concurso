@@ -1264,14 +1264,74 @@ function calcularSequenciaEstudosFlashcards(revisoes = []) {
   return sequencia
 }
 
+function calcularTaxaAcertoFlashcards(totalRevisoes, totalAcertos) {
+  return totalRevisoes > 0 ? Math.round((totalAcertos / totalRevisoes) * 100) : 0
+}
+
+function calcularTotaisHistoricoRevisoesFlashcards(revisoes = []) {
+  const totalRevisoes = revisoes.length
+  const totalAcertos = revisoes.filter(revisarFoiAcertoFlashcard).length
+  const totalErros = totalRevisoes - totalAcertos
+
+  return {
+    totalRevisoes,
+    totalAcertos,
+    totalErros,
+    taxaAcerto: calcularTaxaAcertoFlashcards(totalRevisoes, totalAcertos)
+  }
+}
+
+function calcularTotaisAgregadosRevisoesFlashcards(cards = []) {
+  const totais = cards.reduce((acumulado, card) => {
+    const totalReviews = normalizarInteiroNaoNegativoFlashcards(card?.total_reviews, 0)
+    const correctReviews = Math.min(
+      totalReviews,
+      normalizarInteiroNaoNegativoFlashcards(card?.correct_reviews, 0)
+    )
+
+    acumulado.totalRevisoes += totalReviews
+    acumulado.totalAcertos += correctReviews
+    acumulado.totalErros += Math.max(0, totalReviews - correctReviews)
+    return acumulado
+  }, { totalRevisoes: 0, totalAcertos: 0, totalErros: 0 })
+
+  return {
+    ...totais,
+    taxaAcerto: calcularTaxaAcertoFlashcards(totais.totalRevisoes, totais.totalAcertos)
+  }
+}
+
+function escolherTotaisRevisoesFlashcards(cards = [], revisoes = []) {
+  const totaisHistorico = calcularTotaisHistoricoRevisoesFlashcards(revisoes)
+  const totaisAgregados = calcularTotaisAgregadosRevisoesFlashcards(cards)
+
+  return totaisAgregados.totalRevisoes > totaisHistorico.totalRevisoes
+    ? totaisAgregados
+    : totaisHistorico
+}
+
+function obterRegistrosSequenciaFlashcards(cards = [], revisoes = []) {
+  const totaisHistorico = calcularTotaisHistoricoRevisoesFlashcards(revisoes)
+  const totaisAgregados = calcularTotaisAgregadosRevisoesFlashcards(cards)
+
+  if (totaisAgregados.totalRevisoes <= totaisHistorico.totalRevisoes) return revisoes
+
+  return cards
+    .filter(card =>
+      normalizarInteiroNaoNegativoFlashcards(card?.total_reviews, 0) > 0 &&
+      Boolean(card?.last_reviewed_at)
+    )
+    .map(card => ({ reviewed_at: card.last_reviewed_at }))
+}
+
 function calcularEstatisticasFlashcards(cards = [], revisoes = []) {
+  const cardsLista = Array.isArray(cards) ? cards : []
   const cardsAtivos = Array.isArray(cards)
     ? cards.filter(card => card?.ativo !== false)
     : []
   const revisoesLista = Array.isArray(revisoes) ? revisoes : []
-  const totalRevisoes = revisoesLista.length
-  const totalAcertos = revisoesLista.filter(revisarFoiAcertoFlashcard).length
-  const totalErros = totalRevisoes - totalAcertos
+  const totaisRevisoes = escolherTotaisRevisoesFlashcards(cardsLista, revisoesLista)
+  const registrosSequencia = obterRegistrosSequenciaFlashcards(cardsLista, revisoesLista)
   const hoje = dataHojeFlashcards()
   const cardsAtrasados = cardsAtivos.filter(card => {
     const dueDate = obterDataComparacaoFlashcard(card?.due_date)
@@ -1289,11 +1349,11 @@ function calcularEstatisticasFlashcards(cards = [], revisoes = []) {
     cardsNovos: cardsAtivos.filter(card => (card.estado || 'novo') === 'novo').length,
     cardsAprendendo: cardsAtivos.filter(card => card.estado === 'aprendendo').length,
     cardsRevisando: cardsAtivos.filter(card => card.estado === 'revisando').length,
-    totalRevisoes,
-    totalAcertos,
-    taxaAcerto: totalRevisoes > 0 ? Math.round((totalAcertos / totalRevisoes) * 100) : 0,
-    totalErros,
-    sequenciaEstudos: calcularSequenciaEstudosFlashcards(revisoesLista)
+    totalRevisoes: totaisRevisoes.totalRevisoes,
+    totalAcertos: totaisRevisoes.totalAcertos,
+    taxaAcerto: totaisRevisoes.taxaAcerto,
+    totalErros: totaisRevisoes.totalErros,
+    sequenciaEstudos: calcularSequenciaEstudosFlashcards(registrosSequencia)
   }
 }
 

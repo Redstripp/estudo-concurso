@@ -1659,6 +1659,72 @@ Alerta importante.`
     expect(estatisticas.sequenciaEstudos).toBe(3)
   })
 
+  it('usa agregados dos cards quando o historico de revisoes esta incompleto', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-20T12:00:00'))
+
+    const estatisticas = calcularEstatisticasFlashcards([
+      criarCardRevisao({
+        id: 'card-ativo',
+        total_reviews: 3,
+        correct_reviews: 2,
+        last_reviewed_at: '2026-05-20T09:00:00Z'
+      }),
+      criarCardRevisao({
+        id: 'card-inativo',
+        ativo: false,
+        total_reviews: 2,
+        correct_reviews: 1,
+        last_reviewed_at: '2026-05-19T09:00:00Z'
+      })
+    ], [
+      { quality: 5, was_correct: true, reviewed_at: '2026-05-20T09:00:00Z' }
+    ])
+
+    expect(estatisticas.totalCards).toBe(1)
+    expect(estatisticas.totalRevisoes).toBe(5)
+    expect(estatisticas.totalAcertos).toBe(3)
+    expect(estatisticas.totalErros).toBe(2)
+    expect(estatisticas.taxaAcerto).toBe(60)
+    expect(estatisticas.sequenciaEstudos).toBe(2)
+  })
+
+  it('mantem historico quando flashcard_reviews esta consistente com os agregados', () => {
+    const estatisticas = calcularEstatisticasFlashcards([
+      criarCardRevisao({
+        id: 'card-1',
+        total_reviews: 2,
+        correct_reviews: 2
+      })
+    ], [
+      { quality: 5, was_correct: true, reviewed_at: '2026-05-20T09:00:00Z' },
+      { quality: 1, was_correct: false, reviewed_at: '2026-05-20T10:00:00Z' }
+    ])
+
+    expect(estatisticas.totalRevisoes).toBe(2)
+    expect(estatisticas.totalAcertos).toBe(1)
+    expect(estatisticas.totalErros).toBe(1)
+    expect(estatisticas.taxaAcerto).toBe(50)
+  })
+
+  it('nao soma historico e agregados para evitar dupla contagem', () => {
+    const estatisticas = calcularEstatisticasFlashcards([
+      criarCardRevisao({
+        id: 'card-1',
+        total_reviews: 4,
+        correct_reviews: 3
+      })
+    ], [
+      { quality: 5, was_correct: true, reviewed_at: '2026-05-20T09:00:00Z' },
+      { quality: 4, was_correct: true, reviewed_at: '2026-05-20T10:00:00Z' }
+    ])
+
+    expect(estatisticas.totalRevisoes).toBe(4)
+    expect(estatisticas.totalRevisoes).not.toBe(6)
+    expect(estatisticas.totalAcertos).toBe(3)
+    expect(estatisticas.totalErros).toBe(1)
+  })
+
   it('renderiza estatisticas na aba sem quebrar', () => {
     montarSecaoEstatisticasFlashcards()
 
