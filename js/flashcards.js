@@ -21,6 +21,7 @@ let flashcardsInicializado = false
 let flashcardsSessaoHoje = []
 let flashcardAtualSessao = null
 let flashcardsTotalSessaoHoje = 0
+let flashcardsSessaoRevisaoAtiva = false
 let flashcardsListaTodos = []
 let flashcardsListaPaginaAtual = 1
 let flashcardsListaFiltrosAssinatura = ''
@@ -761,6 +762,7 @@ async function confirmarDesativacaoFlashcardLista(id, item) {
     return resultado
   }
 
+  removerFlashcardDaSessaoAtual(id)
   item?.remove()
   await carregarListaFlashcards()
   mostrarMensagemListaFlashcards('Flashcard desativado com sucesso.', 'sucesso')
@@ -1048,6 +1050,48 @@ function atualizarIndicadoresRevisaoFlashcards() {
   if (pendentesHoje) pendentesHoje.textContent = `${restantes} cards vencidos/devidos`
   if (progresso) progresso.textContent = `Progresso: ${concluidos}/${flashcardsTotalSessaoHoje}`
   if (resumoVencimento) resumoVencimento.textContent = `${vencimentos.atrasados} atrasado(s) · ${vencimentos.paraHoje} para hoje`
+}
+
+function sessaoRevisaoFlashcardsEmAndamento() {
+  const areaCard = document.getElementById('flashcards-revisao-card')
+  return Boolean(flashcardsSessaoRevisaoAtiva && flashcardAtualSessao && areaCard?.children.length)
+}
+
+function contarFlashcardsConcluidosSessao() {
+  return Math.max(0, flashcardsTotalSessaoHoje - flashcardsSessaoHoje.length)
+}
+
+function atualizarTotalSessaoFlashcards(concluidos) {
+  flashcardsTotalSessaoHoje = concluidos + flashcardsSessaoHoje.length
+}
+
+function sincronizarSessaoRevisaoFlashcards(cardsDevidos = []) {
+  const concluidos = contarFlashcardsConcluidosSessao()
+  const cardsPorId = new Map(cardsDevidos.map(card => [card.id, card]))
+  const idsFilaAtual = new Set(flashcardsSessaoHoje.map(card => card?.id).filter(Boolean))
+  const filaPreservada = flashcardsSessaoHoje
+    .map(card => cardsPorId.get(card?.id))
+    .filter(Boolean)
+  const novosCardsDevidos = cardsDevidos.filter(card => card?.id && !idsFilaAtual.has(card.id))
+
+  flashcardsSessaoHoje = [...filaPreservada, ...novosCardsDevidos]
+  flashcardAtualSessao = flashcardsSessaoHoje[0] || null
+  atualizarTotalSessaoFlashcards(concluidos)
+  if (!flashcardAtualSessao) flashcardsSessaoRevisaoAtiva = false
+}
+
+function removerFlashcardDaSessaoAtual(id) {
+  if (!id || !sessaoRevisaoFlashcardsEmAndamento()) return
+
+  const estavaNaFila = flashcardsSessaoHoje.some(card => card?.id === id)
+  if (!estavaNaFila) return
+
+  const concluidos = contarFlashcardsConcluidosSessao()
+  flashcardsSessaoHoje = flashcardsSessaoHoje.filter(card => card?.id !== id)
+  flashcardAtualSessao = flashcardsSessaoHoje[0] || null
+  atualizarTotalSessaoFlashcards(concluidos)
+  if (!flashcardAtualSessao) flashcardsSessaoRevisaoAtiva = false
+  renderizarRevisaoFlashcardsHoje()
 }
 
 function renderizarEstudoDiaFlashcards() {
@@ -1424,12 +1468,13 @@ async function carregarFlashcardsRevisarHoje() {
   const vazio = document.getElementById('flashcards-revisar-vazio')
   const areaCard = document.getElementById('flashcards-revisao-card')
   const botaoIniciar = document.getElementById('btn-iniciar-revisao-flashcards')
+  const preservarSessaoAtual = sessaoRevisaoFlashcardsEmAndamento()
 
   if (vazio) {
     vazio.hidden = false
     vazio.textContent = 'Carregando revisão urgente...'
   }
-  if (areaCard) areaCard.replaceChildren()
+  if (areaCard && !preservarSessaoAtual) areaCard.replaceChildren()
   if (botaoIniciar) botaoIniciar.disabled = true
 
   const listar = globalThis.listarFlashcardsDevidosHoje || listarFlashcardsDevidosHoje
@@ -1439,6 +1484,8 @@ async function carregarFlashcardsRevisarHoje() {
     flashcardsSessaoHoje = []
     flashcardAtualSessao = null
     flashcardsTotalSessaoHoje = 0
+    flashcardsSessaoRevisaoAtiva = false
+    if (areaCard) areaCard.replaceChildren()
     atualizarIndicadoresRevisaoFlashcards()
     mostrarMensagemRevisaoFlashcards(
       resultado.error.message || 'Nao foi possivel carregar seus flashcards de hoje. Verifique sua conexao e tente novamente.'
@@ -1449,9 +1496,16 @@ async function carregarFlashcardsRevisarHoje() {
   const cardsDevidos = Array.isArray(resultado.data)
     ? resultado.data.filter(flashcardDevidoHoje)
     : []
-  flashcardsSessaoHoje = embaralharFlashcardsSessao(cardsDevidos)
-  flashcardAtualSessao = null
-  flashcardsTotalSessaoHoje = flashcardsSessaoHoje.length
+
+  if (preservarSessaoAtual) {
+    sincronizarSessaoRevisaoFlashcards(cardsDevidos)
+  } else {
+    flashcardsSessaoHoje = embaralharFlashcardsSessao(cardsDevidos)
+    flashcardAtualSessao = null
+    flashcardsTotalSessaoHoje = flashcardsSessaoHoje.length
+    flashcardsSessaoRevisaoAtiva = false
+  }
+
   renderizarRevisaoFlashcardsHoje()
 
   return { ...resultado, data: cardsDevidos }
@@ -1463,6 +1517,7 @@ function iniciarSessaoRevisaoFlashcards() {
     return { data: null, error: null }
   }
 
+  flashcardsSessaoRevisaoAtiva = true
   flashcardAtualSessao = flashcardsSessaoHoje[0]
   renderizarRevisaoFlashcardsHoje()
   return { data: flashcardAtualSessao, error: null }
@@ -1531,6 +1586,7 @@ async function avaliarFlashcardAtual(quality) {
   }
 
   flashcardAtualSessao = flashcardsSessaoHoje[0] || null
+  if (!flashcardAtualSessao) flashcardsSessaoRevisaoAtiva = false
   renderizarRevisaoFlashcardsHoje()
   if (flashcardAtualSessao) rolarParaTopoDoFlashcardAtual()
 

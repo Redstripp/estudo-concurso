@@ -1302,6 +1302,80 @@ Alerta da pagina 2.`
     })
   })
 
+  it('preserva progresso acumulado ao recarregar a fila durante a sessao', async () => {
+    montarSecaoRevisaoFlashcards()
+    const primeiro = criarCardRevisao({ id: 'card-1', frente: 'Primeiro card' })
+    const segundo = criarCardRevisao({ id: 'card-2', frente: 'Segundo card' })
+    const terceiro = criarCardRevisao({ id: 'card-3', frente: 'Terceiro card' })
+    vi.spyOn(Math, 'random').mockReturnValue(0.9)
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje')
+      .mockResolvedValueOnce({ data: [primeiro, segundo, terceiro], error: null })
+      .mockResolvedValueOnce({ data: [segundo], error: null })
+    const registrar = vi.spyOn(globalThis, 'registrarRevisaoFlashcard').mockResolvedValue({
+      data: { flashcard: { ...primeiro, due_date: '2026-05-21' } },
+      error: null
+    })
+
+    await carregarFlashcardsRevisarHoje()
+    iniciarSessaoRevisaoFlashcards()
+    await avaliarFlashcardAtual(4)
+
+    expect(document.getElementById('flashcards-progresso-sessao').textContent).toBe('Progresso: 1/3')
+    expect(document.getElementById('flashcards-revisao-card').textContent).toContain('Segundo card')
+
+    await carregarFlashcardsRevisarHoje()
+
+    expect(document.getElementById('flashcards-progresso-sessao').textContent).toBe('Progresso: 1/2')
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('1 cards vencidos/devidos')
+    expect(document.getElementById('flashcards-revisao-card').textContent).toContain('Segundo card')
+    expect(registrar).toHaveBeenCalledTimes(1)
+    expect(registrar).toHaveBeenCalledWith(primeiro.id, expect.objectContaining({
+      quality: 4,
+      dueAgainToday: false,
+      wasCorrect: true
+    }))
+  })
+
+  it('desativar card pendente da sessao remove da fila sem contar como revisao', async () => {
+    montarSecaoRevisaoFlashcards()
+    document.getElementById('secao-flashcards').insertAdjacentHTML('beforeend', '<div id="flashcards-lista"></div>')
+    const primeiro = criarCardRevisao({ id: 'card-1', frente: 'Primeiro card' })
+    const segundo = criarCardRevisao({ id: 'card-2', frente: 'Segundo card' })
+    const terceiro = criarCardRevisao({ id: 'card-3', frente: 'Terceiro card' })
+    vi.spyOn(Math, 'random').mockReturnValue(0.9)
+    vi.spyOn(globalThis, 'listarFlashcardsDevidosHoje').mockResolvedValue({
+      data: [primeiro, segundo, terceiro],
+      error: null
+    })
+    const registrar = vi.spyOn(globalThis, 'registrarRevisaoFlashcard').mockResolvedValue({
+      data: { flashcard: { ...primeiro, due_date: '2026-05-21' } },
+      error: null
+    })
+    const desativar = vi.spyOn(globalThis, 'desativarFlashcard').mockResolvedValue({
+      data: { id: terceiro.id, ativo: false },
+      error: null
+    })
+    vi.spyOn(globalThis, 'listarFlashcards').mockResolvedValue({
+      data: [segundo],
+      error: null
+    })
+
+    await carregarFlashcardsRevisarHoje()
+    iniciarSessaoRevisaoFlashcards()
+    await avaliarFlashcardAtual(4)
+    renderizarListaFlashcards([terceiro])
+    const item = document.querySelector('[data-flashcard-id="card-3"]')
+
+    await confirmarDesativacaoFlashcardLista(terceiro.id, item)
+
+    expect(desativar).toHaveBeenCalledWith(terceiro.id)
+    expect(registrar).toHaveBeenCalledTimes(1)
+    expect(document.getElementById('flashcards-progresso-sessao').textContent).toBe('Progresso: 1/2')
+    expect(document.getElementById('flashcards-pendentes-hoje').textContent).toBe('1 cards vencidos/devidos')
+    expect(document.getElementById('flashcards-revisao-card').textContent).toContain('Segundo card')
+    expect(document.getElementById('flashcards-revisao-card').textContent).not.toContain('Terceiro card')
+  })
+
   it.each([3, 4, 5])('avaliacao quality %s remove o card da sessao de hoje', async (quality) => {
     montarSecaoRevisaoFlashcards()
     const card = criarCardRevisao({ id: `card-${quality}` })
