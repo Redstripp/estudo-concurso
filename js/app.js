@@ -1278,7 +1278,8 @@ async function verificarAvisoArquivamentoPendente() {
 
 async function buscarArquivamentoPendenteAviso(userId) {
   const hoje = new Date()
-  const inicioMesAtual = dataISO(new Date(hoje.getFullYear(), hoje.getMonth(), 1))
+  const mesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+  const inicioMesAtual = dataISO(mesAtual)
 
   const { data, count, error } = await db
     .from('questoes')
@@ -1290,19 +1291,68 @@ async function buscarArquivamentoPendenteAviso(userId) {
 
   if (error || !count) return null
 
-  const periodo = criarPeriodoAvisoArquivamento(data?.[0]?.criado_em)
-  return {
-    total: count,
-    rotulo: periodo.rotulo
+  let mesVerificado = criarDataInicioMesAvisoArquivamento(data?.[0]?.criado_em)
+
+  while (mesVerificado < mesAtual) {
+    const periodo = criarPeriodoAvisoArquivamento(dataISO(mesVerificado))
+    const totalPeriodo = await contarQuestoesPeriodoArquivamentoAviso(userId, periodo)
+
+    if (totalPeriodo > 0) {
+      const arquivado = await periodoArquivadoAviso(userId, periodo.periodoMes)
+      if (!arquivado) {
+        return {
+          total: totalPeriodo,
+          rotulo: periodo.rotulo,
+          periodoMes: periodo.periodoMes
+        }
+      }
+    }
+
+    mesVerificado = new Date(mesVerificado.getFullYear(), mesVerificado.getMonth() + 1, 1)
   }
+
+  return null
+}
+
+function criarDataInicioMesAvisoArquivamento(criadoEm) {
+  const dataBase = criadoEm ? criadoEm.substring(0, 10) : dataISO(new Date())
+  const [ano, mes] = dataBase.split('-').map(Number)
+  return new Date(ano, mes - 1, 1)
+}
+
+async function contarQuestoesPeriodoArquivamentoAviso(userId, periodo) {
+  const { count, error } = await db
+    .from('questoes')
+    .select('id', { count: 'exact' })
+    .eq('user_id', userId)
+    .gte('criado_em', `${periodo.inicio}T00:00:00`)
+    .lte('criado_em', periodo.fimDataHora)
+    .limit(1)
+
+  if (error) return 0
+  return count || 0
+}
+
+async function periodoArquivadoAviso(userId, periodoMes) {
+  const { data, error } = await db
+    .from('estatisticas_mensais')
+    .select('arquivado_em')
+    .eq('user_id', userId)
+    .eq('periodo_mes', periodoMes)
+    .maybeSingle()
+
+  if (error) return false
+  return Boolean(data?.arquivado_em)
 }
 
 function criarPeriodoAvisoArquivamento(criadoEm) {
-  const dataBase = criadoEm ? criadoEm.substring(0, 10) : dataISO(new Date())
-  const [ano, mes] = dataBase.split('-').map(Number)
-  const data = new Date(ano, mes - 1, 1)
+  const data = criarDataInicioMesAvisoArquivamento(criadoEm)
+  const fim = new Date(data.getFullYear(), data.getMonth() + 1, 0)
 
   return {
+    inicio: dataISO(data),
+    fimDataHora: `${dataISO(fim)}T23:59:59.999`,
+    periodoMes: dataISO(data),
     rotulo: data.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
   }
 }

@@ -38,6 +38,92 @@ function extrairFuncaoDashboard(nome) {
   throw new Error(`Nao foi possivel extrair ${nome}.`)
 }
 
+function extrairFuncaoApp(nome) {
+  const assinaturas = [`async function ${nome}(`, `function ${nome}(`]
+  const inicio = assinaturas
+    .map(assinatura => appSource.indexOf(assinatura))
+    .filter(indice => indice >= 0)
+    .sort((a, b) => a - b)[0]
+  if (inicio === undefined) throw new Error(`Funcao ${nome} nao encontrada.`)
+
+  const abertura = appSource.indexOf('{', inicio)
+  let profundidade = 0
+
+  for (let indice = abertura; indice < appSource.length; indice += 1) {
+    if (appSource[indice] === '{') profundidade += 1
+    if (appSource[indice] === '}') profundidade -= 1
+    if (profundidade === 0) return appSource.slice(inicio, indice + 1)
+  }
+
+  throw new Error(`Nao foi possivel extrair ${nome}.`)
+}
+
+function dataISOTeste(data) {
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
+}
+
+function criarBuscarArquivamentoPendenteAvisoParaTeste(db) {
+  const fonte = [
+    'criarDataInicioMesAvisoArquivamento',
+    'contarQuestoesPeriodoArquivamentoAviso',
+    'periodoArquivadoAviso',
+    'criarPeriodoAvisoArquivamento',
+    'buscarArquivamentoPendenteAviso'
+  ].map(extrairFuncaoApp).join('\n')
+
+  return Function('db', 'dataISO', `${fonte}; return buscarArquivamentoPendenteAviso;`)(db, dataISOTeste)
+}
+
+function criarVerificarAvisoArquivamentoPendenteParaTeste(dependencias) {
+  const fonte = [
+    'ocultarAvisoArquivamento',
+    'verificarAvisoArquivamentoPendente'
+  ].map(extrairFuncaoApp).join('\n')
+
+  return Function(
+    'window',
+    'buscarArquivamentoPendenteAviso',
+    'mostrarAvisoArquivamento',
+    'console',
+    `let avisoArquivamentoToken = 0; ${fonte}; return verificarAvisoArquivamentoPendente;`
+  )(
+    dependencias.window,
+    dependencias.buscarArquivamentoPendenteAviso,
+    dependencias.mostrarAvisoArquivamento,
+    console
+  )
+}
+
+function criarDbAvisoArquivamento(respostasPorTabela) {
+  const filas = Object.fromEntries(
+    Object.entries(respostasPorTabela).map(([tabela, respostas]) => [tabela, [...respostas]])
+  )
+  const chamadas = []
+  const from = vi.fn((tabela) => {
+    const resposta = filas[tabela]?.shift()
+    if (!resposta) throw new Error(`Resposta nao configurada para ${tabela}`)
+
+    const chain = {}
+    ;['select', 'eq', 'lt', 'gte', 'lte', 'order'].forEach(metodo => {
+      chain[metodo] = vi.fn(function (...args) {
+        chamadas.push({ tabela, metodo, args })
+        return this
+      })
+    })
+    chain.limit = vi.fn(async function (...args) {
+      chamadas.push({ tabela, metodo: 'limit', args })
+      return resposta
+    })
+    chain.maybeSingle = vi.fn(async function (...args) {
+      chamadas.push({ tabela, metodo: 'maybeSingle', args })
+      return resposta
+    })
+    return chain
+  })
+
+  return { db: { from }, from, chamadas }
+}
+
 function criarArquivarELimparMesParaTeste(dependencias) {
   const fonte = extrairFuncaoDashboard('arquivarELimparMes')
   return Function(
@@ -158,6 +244,91 @@ describe('dashboard helpers', () => {
     expect(appSource).toContain("document.body.classList.add('aviso-arquivamento-visivel')")
     expect(appSource).toContain("document.body.classList.remove('aviso-arquivamento-visivel')")
     expect(estiloSource).toContain('body.aviso-arquivamento-visivel .aviso-arquivamento-pendente')
+  })
+
+  it('mostra aviso quando ha questao antiga sem resumo mensal arquivado', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-02T12:00:00'))
+    const { db, chamadas } = criarDbAvisoArquivamento({
+      questoes: [
+        { data: [{ criado_em: '2026-05-12T10:00:00Z' }], count: 5, error: null },
+        { data: [{ id: 'q1' }], count: 5, error: null }
+      ],
+      estatisticas_mensais: [
+        { data: null, error: null }
+      ]
+    })
+    const buscarArquivamentoPendenteAviso = criarBuscarArquivamentoPendenteAvisoParaTeste(db)
+
+    const pendente = await buscarArquivamentoPendenteAviso('user-1')
+
+    expect(pendente).toMatchObject({
+      total: 5,
+      periodoMes: '2026-05-01'
+    })
+    expect(chamadas).toContainEqual({
+      tabela: 'estatisticas_mensais',
+      metodo: 'eq',
+      args: ['periodo_mes', '2026-05-01']
+    })
+  })
+
+  it('nao mostra aviso quando o mes antigo ja foi arquivado', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-02T12:00:00'))
+    const { db } = criarDbAvisoArquivamento({
+      questoes: [
+        { data: [{ criado_em: '2026-05-12T10:00:00Z' }], count: 5, error: null },
+        { data: [{ id: 'q1' }], count: 5, error: null }
+      ],
+      estatisticas_mensais: [
+        { data: { arquivado_em: '2026-06-01T10:00:00Z' }, error: null }
+      ]
+    })
+    const buscarArquivamentoPendenteAviso = criarBuscarArquivamentoPendenteAvisoParaTeste(db)
+
+    const pendente = await buscarArquivamentoPendenteAviso('user-1')
+
+    expect(pendente).toBeNull()
+  })
+
+  it('nao esconde outro mes antigo pendente quando o primeiro ja foi arquivado', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-02T12:00:00'))
+    const { db } = criarDbAvisoArquivamento({
+      questoes: [
+        { data: [{ criado_em: '2026-05-12T10:00:00Z' }], count: 9, error: null },
+        { data: [{ id: 'q1' }], count: 5, error: null },
+        { data: [{ id: 'q6' }], count: 4, error: null }
+      ],
+      estatisticas_mensais: [
+        { data: { arquivado_em: '2026-06-01T10:00:00Z' }, error: null },
+        { data: null, error: null }
+      ]
+    })
+    const buscarArquivamentoPendenteAviso = criarBuscarArquivamentoPendenteAvisoParaTeste(db)
+
+    const pendente = await buscarArquivamentoPendenteAviso('user-1')
+
+    expect(pendente).toMatchObject({
+      total: 4,
+      periodoMes: '2026-06-01'
+    })
+  })
+
+  it('remove a classe do body quando nao ha aviso pendente', async () => {
+    document.body.innerHTML = '<div id="aviso-arquivamento-pendente"></div>'
+    document.body.classList.add('aviso-arquivamento-visivel')
+    const verificarAvisoArquivamentoPendente = criarVerificarAvisoArquivamentoPendenteParaTeste({
+      window: { usuarioAtual: { id: 'user-1' } },
+      buscarArquivamentoPendenteAviso: vi.fn(async () => null),
+      mostrarAvisoArquivamento: vi.fn()
+    })
+
+    await verificarAvisoArquivamentoPendente()
+
+    expect(document.getElementById('aviso-arquivamento-pendente')).toBeNull()
+    expect(document.body.classList.contains('aviso-arquivamento-visivel')).toBe(false)
   })
 
   it('cria estado vazio escapando HTML recebido', () => {
@@ -629,6 +800,7 @@ describe('dashboard helpers', () => {
     const from = vi.fn(() => ({ delete: deleteQuestao }))
     const salvarResumoMensal = vi.fn(async () => {})
     const recalcularTotalQuestoesSessao = vi.fn(async () => {})
+    const verificarAvisoArquivamentoPendente = vi.fn()
     const arquivarELimparMes = criarArquivarELimparMesParaTeste({
       relatorioMensalGerado: vi.fn(() => true),
       db: { from },
@@ -638,7 +810,7 @@ describe('dashboard helpers', () => {
       salvarResumoMensal,
       recalcularTotalQuestoesSessao,
       inicializarDashboard: vi.fn(async () => {}),
-      verificarAvisoArquivamentoPendente: vi.fn()
+      verificarAvisoArquivamentoPendente
     })
 
     await arquivarELimparMes('user-1', periodo)
@@ -647,6 +819,7 @@ describe('dashboard helpers', () => {
     expect(from).not.toHaveBeenCalled()
     expect(deleteQuestao).not.toHaveBeenCalled()
     expect(recalcularTotalQuestoesSessao).not.toHaveBeenCalled()
+    expect(verificarAvisoArquivamentoPendente).toHaveBeenCalled()
     expect(document.getElementById('msg-arquivamento-mensal').textContent).toContain('questões detalhadas foram mantidas')
   })
 
