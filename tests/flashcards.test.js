@@ -27,6 +27,7 @@ const {
   renderizarAlertaAcumuloFlashcards,
   selecionarCardsNovosEstudoDiaFlashcards,
   extrairCamposRicosDoVersoFlashcard,
+  renderizarTextoFlashcardComMarkdownBasico,
   calcularProximaRevisaoSM2Flashcards,
   calcularEstatisticasFlashcards,
   renderizarEstatisticasFlashcards,
@@ -781,17 +782,31 @@ Nao confundir os institutos.`)
     })
   })
 
+  it('renderiza negrito markdown basico com escape HTML seguro', () => {
+    expect(renderizarTextoFlashcardComMarkdownBasico('**controle difuso**')).toBe('<strong>controle difuso</strong>')
+    expect(renderizarTextoFlashcardComMarkdownBasico('*controle difuso*')).toBe('<strong>controle difuso</strong>')
+    expect(renderizarTextoFlashcardComMarkdownBasico('texto normal')).toBe('texto normal')
+    expect(renderizarTextoFlashcardComMarkdownBasico('*sem fechamento')).toBe('*sem fechamento')
+    expect(renderizarTextoFlashcardComMarkdownBasico('**   **')).toBe('**   **')
+
+    const html = renderizarTextoFlashcardComMarkdownBasico('<script>alert(1)</script> **ok**')
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+    expect(html).toContain('<strong>ok</strong>')
+    expect(html).not.toContain('<script>')
+  })
+
   it('renderiza campos ricos na lista sem perder o verso principal', () => {
     document.body.innerHTML = '<div id="flashcards-lista"></div>'
 
     renderizarListaFlashcards([
       criarCardRevisao({
         id: 'card-rico',
+        frente: 'Frente **marcada**',
         verso: `VERSO:
-Resposta principal.
+Resposta **principal**.
 
 CONTEXTO:
-Contexto util.
+Contexto *util*.
 
 RECONHECER:
 Pista de prova.
@@ -802,6 +817,7 @@ Alerta importante.`
     ])
 
     const texto = document.getElementById('flashcards-lista').textContent
+    expect(texto).toContain('Frente marcada')
     expect(texto).toContain('Resposta principal.')
     expect(texto).toContain('Contexto')
     expect(texto).toContain('Contexto util.')
@@ -809,6 +825,9 @@ Alerta importante.`
     expect(texto).toContain('Pista de prova.')
     expect(texto).toContain('Alerta de banca')
     expect(texto).toContain('Alerta importante.')
+    expect(texto).not.toContain('**principal**')
+    expect(texto).not.toContain('*util*')
+    expect(document.querySelectorAll('#flashcards-lista strong')).toHaveLength(3)
   })
 
   it('renderiza verso antigo normalmente na lista', () => {
@@ -1408,11 +1427,12 @@ Alerta da pagina 2.`
       data: [
         criarCardRevisao({
           id: 'card-rico',
+          frente: 'Frente **marcada**',
           verso: `VERSO:
-Resposta principal.
+Resposta **principal**.
 
 CONTEXTO:
-Contexto util.
+Contexto *util*.
 
 RECONHECER:
 Pista de prova.
@@ -1429,10 +1449,14 @@ Alerta importante.`
     mostrarRespostaFlashcardAtual()
 
     const area = document.getElementById('flashcards-revisao-card')
+    expect(area.textContent).toContain('Frente marcada')
     expect(area.textContent).toContain('Resposta principal.')
     expect(area.textContent).toContain('Contexto util.')
     expect(area.textContent).toContain('Pista de prova.')
     expect(area.textContent).toContain('Alerta importante.')
+    expect(area.textContent).not.toContain('**principal**')
+    expect(area.textContent).not.toContain('*util*')
+    expect(area.querySelectorAll('strong')).toHaveLength(3)
     expect(area.querySelectorAll('[data-flashcard-quality]')).toHaveLength(6)
   })
 

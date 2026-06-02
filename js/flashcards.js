@@ -112,6 +112,28 @@ function normalizarTextoBuscaFlashcards(valor) {
   return String(valor || '').trim().toLowerCase()
 }
 
+function escaparHtmlFlashcard(valor) {
+  if (typeof escaparHtmlSeguro === 'function') return escaparHtmlSeguro(valor)
+  return String(valor ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
+}
+
+function renderizarTextoFlashcardComMarkdownBasico(texto) {
+  const escapado = escaparHtmlFlashcard(texto)
+  return escapado
+    .replace(/\*\*([^\s*](?:[\s\S]*?[^\s*])?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^\s*](?:[\s\S]*?[^\s*])?)\*/g, '$1<strong>$2</strong>')
+}
+
+function aplicarTextoFlashcardComMarkdownBasico(elemento, texto, fallback = '') {
+  if (!elemento) return
+  elemento.innerHTML = renderizarTextoFlashcardComMarkdownBasico(texto || fallback)
+}
+
 function normalizarRotuloCampoRicoFlashcard(texto) {
   return String(texto || '')
     .normalize('NFD')
@@ -202,7 +224,7 @@ function obterNomeMateriaFlashcard(card) {
 function criarParagrafoVersoFlashcard(texto) {
   const paragrafo = document.createElement('p')
   paragrafo.className = 'card-questao-comentario'
-  paragrafo.textContent = texto || 'Sem verso'
+  aplicarTextoFlashcardComMarkdownBasico(paragrafo, texto, 'Sem verso')
   return paragrafo
 }
 
@@ -776,7 +798,7 @@ function criarElementoFlashcardLista(card) {
 
   const frente = document.createElement('h4')
   frente.className = 'card-form-titulo'
-  frente.textContent = card.frente || 'Sem frente'
+  aplicarTextoFlashcardComMarkdownBasico(frente, card.frente, 'Sem frente')
 
   const verso = criarElementoVersoFlashcard(card.verso)
 
@@ -1169,7 +1191,7 @@ function criarElementoEstudoDiaFlashcard(card, materiasPlanejadas = []) {
 
   const frente = document.createElement('h4')
   frente.className = 'card-form-titulo'
-  frente.textContent = card.frente || 'Sem frente'
+  aplicarTextoFlashcardComMarkdownBasico(frente, card.frente, 'Sem frente')
 
   const materia = document.createElement('p')
   materia.className = 'texto-apoio'
@@ -1437,7 +1459,7 @@ function criarElementoRevisaoFlashcard(card) {
 
   const frente = document.createElement('h4')
   frente.className = 'card-form-titulo'
-  frente.textContent = card.frente || 'Sem frente'
+  aplicarTextoFlashcardComMarkdownBasico(frente, card.frente, 'Sem frente')
 
   const botaoMostrar = document.createElement('button')
   botaoMostrar.className = 'btn-secundario'
@@ -2117,6 +2139,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.navegarParaRevisaoUrgenteFlashcards = navegarParaRevisaoUrgenteFlashcards
   globalThis.selecionarCardsNovosEstudoDiaFlashcards = selecionarCardsNovosEstudoDiaFlashcards
   globalThis.extrairCamposRicosDoVersoFlashcard = extrairCamposRicosDoVersoFlashcard
+  globalThis.renderizarTextoFlashcardComMarkdownBasico = renderizarTextoFlashcardComMarkdownBasico
   globalThis.calcularProximaRevisaoSM2Flashcards = calcularProximaRevisaoSM2Flashcards
   globalThis.calcularEstatisticasFlashcards = calcularEstatisticasFlashcards
   globalThis.renderizarEstatisticasFlashcards = renderizarEstatisticasFlashcards
