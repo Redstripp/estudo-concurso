@@ -5,16 +5,20 @@ import { readFileSync } from 'node:fs'
 const {
   MODELO_RESPOSTA_CHATGPT,
   escaparHtmlSeguro,
+  renderizarTextoComMarkdownBasicoSeguro,
   CONFIG_TIPO_QUESTAO,
   normalizarTipoQuestao,
   normalizarStatusRevisao,
   obterTipoQuestaoPorCampos,
   questaoChutadaAcertada,
   normalizarTextoDuplicidade,
+  renderizarTextoQuestaoComMarkdownBasico,
   alterarQuantidadeAlternativas,
   ordenarQuestoes,
   calcularPaginacaoQuestoes,
   paginarQuestoes,
+  criarPainelComparacaoQuestao,
+  criarCardQuestao,
   montarPromptDiagnosticoChatGPT,
   montarPromptFlashcardsQuestao,
   coletarDadosPromptFlashcardsQuestao,
@@ -100,6 +104,35 @@ describe('escaparHtmlSeguro', () => {
 
   it('não altera texto sem caracteres especiais', () => {
     expect(escaparHtmlSeguro('texto normal')).toBe('texto normal')
+  })
+})
+
+describe('renderizarTextoComMarkdownBasicoSeguro', () => {
+  it('converte negrito com dois asteriscos', () => {
+    expect(renderizarTextoComMarkdownBasicoSeguro('Leia **controle difuso**.'))
+      .toBe('Leia <strong>controle difuso</strong>.')
+  })
+
+  it('converte negrito com um asterisco', () => {
+    expect(renderizarTextoComMarkdownBasicoSeguro('Leia *controle concentrado*.'))
+      .toBe('Leia <strong>controle concentrado</strong>.')
+  })
+
+  it('preserva texto normal', () => {
+    expect(renderizarTextoComMarkdownBasicoSeguro('texto normal')).toBe('texto normal')
+  })
+
+  it('escapa HTML perigoso antes de converter Markdown', () => {
+    const html = renderizarTextoComMarkdownBasicoSeguro('<script>alert(1)</script> **ok**')
+
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+    expect(html).toContain('<strong>ok</strong>')
+    expect(html).not.toContain('<script>')
+  })
+
+  it('nao converte marcador vazio nem asterisco sem fechamento', () => {
+    expect(renderizarTextoComMarkdownBasicoSeguro('**   **')).toBe('**   **')
+    expect(renderizarTextoComMarkdownBasicoSeguro('*sem fechamento')).toBe('*sem fechamento')
   })
 })
 
@@ -1311,6 +1344,78 @@ Pergunta sem verso.</textarea>
     previsualizarFlashcardsIA(modal)
 
     expect(document.getElementById('msg-flashcards-ia').textContent).toBe('Nenhum flashcard foi identificado. Verifique se a resposta da IA seguiu o formato solicitado.')
+  })
+})
+
+describe('Markdown basico no Caderno de Erros', () => {
+  function criarQuestaoParaRender(sobrescritas = {}) {
+    return {
+      id: 'questao-md-1',
+      enunciado: 'Pergunta sobre **controle difuso**',
+      alternativas: {
+        A: '*Alternativa* perigosa <script>alert(1)</script>',
+        B: 'Alternativa comum'
+      },
+      alternativa_marcada: 'A',
+      alternativa_correta: 'B',
+      tipo_questao: 'Errada',
+      motivo_erro: 'Falta de conteudo',
+      nivel_confianca: 'Duvida',
+      comentario: 'Comentario com **fundamento central** e <script>alert(1)</script>',
+      pegadinha_banca: 'Pegadinha com *palavra absoluta*',
+      conceito_chave: 'Conceito de **competencia**',
+      como_reconhecer: 'Reconhecer por *termo absoluto*',
+      acao_corretiva: 'Revisar **artigo seco**',
+      criado_em: '2026-05-20T12:00:00.000Z',
+      materias: { nome: 'Direito Constitucional' },
+      edital_topicos: { titulo: 'Controle de constitucionalidade' },
+      ...sobrescritas
+    }
+  }
+
+  it('renderiza negrito em comentario e diagnostico sem inserir HTML bruto', () => {
+    const card = criarCardQuestao(criarQuestaoParaRender())
+
+    expect(card.querySelector('.card-questao-enunciado').innerHTML)
+      .toContain('<strong>controle difuso</strong>')
+    expect(card.querySelector('.card-questao-comentario').innerHTML)
+      .toContain('<strong>fundamento central</strong>')
+    expect(card.innerHTML).toContain('<strong>competencia</strong>')
+    expect(card.innerHTML).toContain('<strong>termo absoluto</strong>')
+    expect(card.innerHTML).toContain('<strong>artigo seco</strong>')
+    expect(card.innerHTML).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+    expect(card.innerHTML).not.toContain('<script>')
+  })
+
+  it('mantem campos ricos do diagnostico visiveis', () => {
+    const card = criarCardQuestao(criarQuestaoParaRender())
+
+    expect(card.textContent).toContain('Conceito')
+    expect(card.textContent).toContain('Reconhecer')
+    expect(card.textContent).toContain('artigo seco')
+  })
+
+  it('aplica Markdown seguro no painel comparativo de questao duplicada', () => {
+    const html = criarPainelComparacaoQuestao('Original', {
+      materiaNome: 'Direito Constitucional',
+      topicoNome: 'Controle',
+      banca: 'CEBRASPE',
+      data: '20/05/2026',
+      tipoQuestao: 'Errada',
+      enunciado: 'Enunciado com **negrito**',
+      alternativas: { A: '*Alternativa*', B: '<script>alert(1)</script>' },
+      alternativaMarcada: 'A',
+      alternativaCorreta: 'B',
+      comentario: 'Comentario com **base**',
+      conceitoChave: 'Conceito com *regra*'
+    })
+
+    expect(html).toContain('<strong>negrito</strong>')
+    expect(html).toContain('<strong>Alternativa</strong>')
+    expect(html).toContain('<strong>base</strong>')
+    expect(html).toContain('<strong>regra</strong>')
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+    expect(html).not.toContain('<script>')
   })
 })
 

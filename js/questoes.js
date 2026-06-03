@@ -90,6 +90,12 @@ function renderizarOptionsEstudo(valores, valorAtual) {
   `).join('')
 }
 
+function renderizarTextoQuestaoComMarkdownBasico(texto) {
+  return typeof renderizarTextoComMarkdownBasicoSeguro === 'function'
+    ? renderizarTextoComMarkdownBasicoSeguro(texto)
+    : escaparHtmlSeguro(texto)
+}
+
 function normalizarTipoQuestao(q) {
   if (q?.tipo_questao === 'Chutada' || q?.tipo_questao === 'Errada') return q.tipo_questao
   if (
@@ -896,7 +902,7 @@ function criarPainelComparacaoQuestao(titulo, q) {
     ? Object.entries(q.alternativas).map(([letra, texto]) => `
         <div class="alternativa-card ${letra === q.alternativaCorreta ? 'alt-certa' : ''} ${letra === q.alternativaMarcada && letra !== q.alternativaCorreta ? 'alt-errada' : ''}">
           <span class="alt-letra">${escaparHtmlSeguro(letra)}</span>
-          <span class="alt-texto">${escaparHtmlSeguro(texto)}</span>
+          <span class="alt-texto">${renderizarTextoQuestaoComMarkdownBasico(texto)}</span>
         </div>
       `).join('')
     : '<p class="duplicada-vazio">Sem alternativas registradas.</p>'
@@ -921,7 +927,7 @@ function criarPainelComparacaoQuestao(titulo, q) {
         <span>${escaparHtmlSeguro(q.data)}</span>
         <span>${escaparHtmlSeguro(obterRotuloTipoQuestao(q.tipoQuestao))}</span>
       </div>
-      <p class="duplicada-enunciado">${escaparHtmlSeguro(q.enunciado)}</p>
+      <p class="duplicada-enunciado">${renderizarTextoQuestaoComMarkdownBasico(q.enunciado)}</p>
       <div class="lista-alternativas-card">${alternativas}</div>
       <div class="card-questao-alternativas">
         <span class="tag-errada">Marquei: ${escaparHtmlSeguro(q.alternativaMarcada)}</span>
@@ -932,7 +938,7 @@ function criarPainelComparacaoQuestao(titulo, q) {
           ${diagnosticos.map(([rotulo, texto]) => `
             <div class="diagnostico-item">
               <span class="diagnostico-rotulo">${escaparHtmlSeguro(rotulo)}</span>
-              <p>${escaparHtmlSeguro(texto)}</p>
+              <p>${renderizarTextoQuestaoComMarkdownBasico(texto)}</p>
             </div>
           `).join('')}
         </div>
@@ -2695,7 +2701,7 @@ function mostrarPreviaRespostaChatGPT(modal, destino, campos) {
     return `
       <section class="preview-resposta-ia-bloco">
         <h4>${escaparHtmlSeguro(rotulo)}</h4>
-        <p class="preview-resposta-ia-texto ${valor ? '' : 'preview-resposta-ia-vazio'}">${escaparHtmlSeguro(valor || 'Não identificado na resposta da IA.')}</p>
+        <p class="preview-resposta-ia-texto ${valor ? '' : 'preview-resposta-ia-vazio'}">${renderizarTextoQuestaoComMarkdownBasico(valor || 'Não identificado na resposta da IA.')}</p>
         ${avisoConflito}
         ${avisoAutomatico}
       </section>
@@ -3698,7 +3704,7 @@ function criarCardQuestao(q) {
         ${diagnosticos.map(([rotulo, texto]) => `
           <div class="diagnostico-item">
             <span class="diagnostico-rotulo">${escaparHtmlSeguro(rotulo)}</span>
-            <p>${escaparHtmlSeguro(texto)}</p>
+            <p>${renderizarTextoQuestaoComMarkdownBasico(texto)}</p>
           </div>
         `).join('')}
       </div>`
@@ -3713,7 +3719,7 @@ function criarCardQuestao(q) {
         return `
         <div class="alternativa-card ${classeMarcada} ${letra === q.alternativa_correta ? 'alt-certa' : ''}">
           <span class="alt-letra">${escaparHtmlSeguro(letra)}</span>
-          <span class="alt-texto">${escaparHtmlSeguro(texto)}</span>
+          <span class="alt-texto">${renderizarTextoQuestaoComMarkdownBasico(texto)}</span>
         </div>
       `
       }).join('')
@@ -3724,7 +3730,7 @@ function criarCardQuestao(q) {
       <span class="tag-materia">${escaparHtmlSeguro(nomeMateria)}</span>
       <span class="card-questao-data">${data}</span>
     </div>
-    <p class="card-questao-enunciado">${escaparHtmlSeguro(enunciadoCurto)}</p>
+    <p class="card-questao-enunciado">${renderizarTextoQuestaoComMarkdownBasico(enunciadoCurto)}</p>
     <div class="lista-alternativas-card">${listaAlternativas}</div>
     <div class="card-questao-alternativas">
       <span class="${classeTagMarcada}">${escaparHtmlSeguro(textoTagMarcada)}</span>
@@ -3741,8 +3747,8 @@ function criarCardQuestao(q) {
       ${q.nivel_confianca ? `<span class="tag-estudo">Confiança: ${escaparHtmlSeguro(q.nivel_confianca)}</span>` : ''}
       <span class="diagnostico-qualidade-tag ${qualidadeDiagnostico.classe}">${escaparHtmlSeguro(qualidadeDiagnostico.rotulo)}</span>
     </div>
-    ${q.comentario ? `<p class="card-questao-comentario">💬 ${escaparHtmlSeguro(q.comentario)}</p>` : ''}
-    ${q.pegadinha_banca ? `<p class="card-questao-comentario card-questao-pegadinha"><strong>Pegadinhas da questão:</strong> ${escaparHtmlSeguro(q.pegadinha_banca)}</p>` : ''}
+    ${q.comentario ? `<p class="card-questao-comentario">💬 ${renderizarTextoQuestaoComMarkdownBasico(q.comentario)}</p>` : ''}
+    ${q.pegadinha_banca ? `<p class="card-questao-comentario card-questao-pegadinha"><strong>Pegadinhas da questão:</strong> ${renderizarTextoQuestaoComMarkdownBasico(q.pegadinha_banca)}</p>` : ''}
     ${alertaCadastro}
     ${qualidadeDiagnostico.status !== 'completo' ? `
       <div class="diagnostico-qualidade-alerta ${qualidadeDiagnostico.classe}">
@@ -4302,11 +4308,14 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
     obterTipoQuestaoPorCampos,
     questaoChutadaAcertada,
     normalizarTextoDuplicidade,
+    renderizarTextoQuestaoComMarkdownBasico,
     alterarQuantidadeAlternativas,
     ordenarQuestoes,
     calcularPaginacaoQuestoes,
     paginarQuestoes,
     carregarQuestoesEmMemoria,
+    criarPainelComparacaoQuestao,
+    criarCardQuestao,
     montarPromptDiagnosticoChatGPT,
     montarPromptFlashcardsQuestao,
     coletarDadosPromptFlashcardsQuestao,
@@ -4342,11 +4351,14 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.obterTipoQuestaoPorCampos = obterTipoQuestaoPorCampos
   globalThis.questaoChutadaAcertada = questaoChutadaAcertada
   globalThis.normalizarTextoDuplicidade = normalizarTextoDuplicidade
+  globalThis.renderizarTextoQuestaoComMarkdownBasico = renderizarTextoQuestaoComMarkdownBasico
   globalThis.alterarQuantidadeAlternativas = alterarQuantidadeAlternativas
   globalThis.ordenarQuestoes = ordenarQuestoes
   globalThis.calcularPaginacaoQuestoes = calcularPaginacaoQuestoes
   globalThis.paginarQuestoes = paginarQuestoes
   globalThis.carregarQuestoesEmMemoria = carregarQuestoesEmMemoria
+  globalThis.criarPainelComparacaoQuestao = criarPainelComparacaoQuestao
+  globalThis.criarCardQuestao = criarCardQuestao
   globalThis.montarPromptDiagnosticoChatGPT = montarPromptDiagnosticoChatGPT
   globalThis.montarPromptFlashcardsQuestao = montarPromptFlashcardsQuestao
   globalThis.coletarDadosPromptFlashcardsQuestao = coletarDadosPromptFlashcardsQuestao

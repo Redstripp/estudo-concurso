@@ -85,6 +85,12 @@ const DIAS_REVISAO_SEMANA = [
   { valor: 7, curto: 'Dom', nome: 'domingo' }
 ]
 
+function renderizarTextoRevisaoComMarkdownBasico(texto) {
+  return typeof renderizarTextoComMarkdownBasicoSeguro === 'function'
+    ? renderizarTextoComMarkdownBasicoSeguro(texto)
+    : escaparHtmlSeguro(texto)
+}
+
 // ============================================
 // INICIALIZAR
 // ============================================
@@ -1126,8 +1132,8 @@ function criarListaFilaPrioritaria(fila) {
           <span class="revisao-fila-posicao">${index + 1}</span>
           <div>
             <strong>${escaparHtmlSeguro(q.materias?.nome || 'Sem materia')}</strong>
-            <p>${escaparHtmlSeguro(q.edital_topicos?.titulo || q.motivo_erro || 'Sem assunto definido')}</p>
-            <small>${escaparHtmlSeguro((q.motivos_prioridade_revisao || []).join(' · ') || 'prioridade calculada')}</small>
+            <p>${renderizarTextoRevisaoComMarkdownBasico(q.edital_topicos?.titulo || q.motivo_erro || 'Sem assunto definido')}</p>
+            <small>${renderizarTextoRevisaoComMarkdownBasico((q.motivos_prioridade_revisao || []).join(' · ') || 'prioridade calculada')}</small>
           </div>
           <div class="revisao-fila-item-tags">
             <span class="diagnostico-qualidade-tag ${avaliarQualidadeDiagnosticoQuestao(q).classe}">${escaparHtmlSeguro(avaliarQualidadeDiagnosticoQuestao(q).rotulo)}</span>
@@ -1366,24 +1372,24 @@ function criarCardTreinoPegadinha(q) {
       <span class="revisao-numero">#${treinoPegadinhasIndice + 1}</span>
     </div>
     <p class="treino-pegadinha-pergunta">Qual era a pegadinha aqui?</p>
-    <p class="card-revisao-enunciado">${escaparHtmlSeguro(q.enunciado)}</p>
+    <p class="card-revisao-enunciado">${renderizarTextoRevisaoComMarkdownBasico(q.enunciado)}</p>
     <div class="lista-alternativas-card">${alternativas}</div>
     ${treinoPegadinhasRevelada ? `
       <div class="card-questao-diagnostico">
         <div class="diagnostico-item">
           <span class="diagnostico-rotulo">Pegadinha</span>
-          <p>${escaparHtmlSeguro(q.pegadinha_banca)}</p>
+          <p>${renderizarTextoRevisaoComMarkdownBasico(q.pegadinha_banca)}</p>
         </div>
         ${q.como_reconhecer ? `
           <div class="diagnostico-item">
             <span class="diagnostico-rotulo">Como reconhecer</span>
-            <p>${escaparHtmlSeguro(q.como_reconhecer)}</p>
+            <p>${renderizarTextoRevisaoComMarkdownBasico(q.como_reconhecer)}</p>
           </div>
         ` : ''}
         ${q.acao_corretiva ? `
           <div class="diagnostico-item">
             <span class="diagnostico-rotulo">Acao corretiva</span>
-            <p>${escaparHtmlSeguro(q.acao_corretiva)}</p>
+            <p>${renderizarTextoRevisaoComMarkdownBasico(q.acao_corretiva)}</p>
           </div>
         ` : ''}
       </div>
@@ -1408,10 +1414,16 @@ function criarCardTreinoPegadinha(q) {
 
 // Exportacoes apenas para testes (Vitest)
 if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  globalThis.renderizarTextoRevisaoComMarkdownBasico = renderizarTextoRevisaoComMarkdownBasico
+  globalThis.criarCardTreinoPegadinha = criarCardTreinoPegadinha
   globalThis.calcularProximaRevisao24730 = calcularProximaRevisao24730
   globalThis.calcularEtapaRevisao24730 = calcularEtapaRevisao24730
   globalThis.calcularIntervaloRepeticaoEtapa24730 = calcularIntervaloRepeticaoEtapa24730
   globalThis.preRespostaTreinoCompleta = preRespostaTreinoCompleta
+  globalThis.criarDiagnosticoTreino = criarDiagnosticoTreino
+  globalThis.criarCardTreinoRevisao = criarCardTreinoRevisao
+  globalThis.criarCardRevisao = criarCardRevisao
+  globalThis.criarListaFilaPrioritaria = criarListaFilaPrioritaria
 }
 
 function criarAlternativasTreinoPegadinha(q) {
@@ -1419,7 +1431,7 @@ function criarAlternativasTreinoPegadinha(q) {
   return Object.entries(q.alternativas).map(([letra, texto]) => `
     <div class="alternativa-card">
       <span class="alt-letra">${escaparHtmlSeguro(letra)}</span>
-      <span class="alt-texto">${escaparHtmlSeguro(texto)}</span>
+      <span class="alt-texto">${renderizarTextoRevisaoComMarkdownBasico(texto)}</span>
     </div>
   `).join('')
 }
@@ -1554,7 +1566,7 @@ function criarCardTreinoRevisao(q, gabaritoVisivel) {
       </div>
       <span class="revisao-numero">#${treinoRevisaoIndice + 1}</span>
     </div>
-    <p class="card-revisao-enunciado">${escaparHtmlSeguro(q.enunciado)}</p>
+    <p class="card-revisao-enunciado">${renderizarTextoRevisaoComMarkdownBasico(q.enunciado)}</p>
     ${!gabaritoVisivel ? `
       <div class="modo-pre-resposta">
         <label class="campo-label">Antes de marcar: qual conceito resolve?</label>
@@ -1638,7 +1650,7 @@ function criarAlternativasTreino(q, gabaritoVisivel, respostaSelecionada) {
     return `
       <button class="alternativa-card treino-resposta-opcao ${classe}" type="button" data-letra="${escaparHtmlSeguro(letra)}" ${gabaritoVisivel ? 'disabled' : ''}>
         <span class="alt-letra">${escaparHtmlSeguro(letra)}</span>
-        <span class="alt-texto">${escaparHtmlSeguro(texto)}</span>
+        <span class="alt-texto">${renderizarTextoRevisaoComMarkdownBasico(texto)}</span>
         ${badges}
       </button>
     `
@@ -1713,7 +1725,7 @@ function criarDiagnosticoTreino(q) {
       ${itens.map(([rotulo, texto]) => `
         <div class="diagnostico-item">
           <span class="diagnostico-rotulo">${escaparHtmlSeguro(rotulo)}</span>
-          <p>${escaparHtmlSeguro(texto)}</p>
+          <p>${renderizarTextoRevisaoComMarkdownBasico(texto)}</p>
         </div>
       `).join('')}
     </div>
@@ -1951,7 +1963,7 @@ function criarCardRevisao(q, numero) {
         ${classeMarcada}
         ${letra === q.alternativa_correta ? 'alt-certa'  : ''}">
         <span class="alt-letra">${escaparHtmlSeguro(letra)}</span>
-        <span class="alt-texto">${escaparHtmlSeguro(texto)}</span>
+        <span class="alt-texto">${renderizarTextoRevisaoComMarkdownBasico(texto)}</span>
         ${badgeMarcada}
         ${letra === q.alternativa_correta ? '<span class="alt-badge alt-badge-certa">Correta</span>'  : ''}
       </div>
@@ -1980,13 +1992,13 @@ function criarCardRevisao(q, numero) {
         <span class="diagnostico-qualidade-tag ${qualidadeDiagnostico.classe}">${escaparHtmlSeguro(qualidadeDiagnostico.rotulo)}</span>
       </div>
     </div>
-    <p class="card-revisao-enunciado">${escaparHtmlSeguro(q.enunciado)}</p>
+    <p class="card-revisao-enunciado">${renderizarTextoRevisaoComMarkdownBasico(q.enunciado)}</p>
     <div class="lista-alternativas-card">${listaAlternativas}</div>
     ${q.comentario
-      ? `<p class="card-questao-comentario">💬 ${escaparHtmlSeguro(q.comentario)}</p>`
+      ? `<p class="card-questao-comentario">💬 ${renderizarTextoRevisaoComMarkdownBasico(q.comentario)}</p>`
       : ''}
     ${q.pegadinha_banca
-      ? `<p class="card-questao-comentario card-questao-pegadinha"><strong>Pegadinhas da questão:</strong> ${escaparHtmlSeguro(q.pegadinha_banca)}</p>`
+      ? `<p class="card-questao-comentario card-questao-pegadinha"><strong>Pegadinhas da questão:</strong> ${renderizarTextoRevisaoComMarkdownBasico(q.pegadinha_banca)}</p>`
       : ''}
     ${alertaCadastro}
     ${qualidadeDiagnostico.status !== 'completo' ? `

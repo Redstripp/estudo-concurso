@@ -10,6 +10,13 @@ function escaparHtmlSeguro(valor) {
     .replaceAll("'", '&#039;')
 }
 
+function renderizarTextoComMarkdownBasicoSeguro(texto) {
+  const escapado = escaparHtmlSeguro(texto)
+  return escapado
+    .replace(/\*\*([^\s*](?:[\s\S]*?[^\s*])?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^\s*](?:[\s\S]*?[^\s*])?)\*/g, '$1<strong>$2</strong>')
+}
+
 function formatarQuantidadeQuestoes(quantidade) {
   const total = Number(quantidade) || 0
   return total === 1 ? '1 questão' : `${total} questões`
@@ -223,6 +230,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   // Ambiente Node/Vitest
   const exportsObj = {
     escaparHtmlSeguro,
+    renderizarTextoComMarkdownBasicoSeguro,
     formatarQuantidadeQuestoes,
     contarOcorrenciasValores,
     avaliarQualidadeDiagnosticoQuestao,
@@ -247,6 +255,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   
   // Para Vitest com type: module
   globalThis.escaparHtmlSeguro = escaparHtmlSeguro
+  globalThis.renderizarTextoComMarkdownBasicoSeguro = renderizarTextoComMarkdownBasicoSeguro
   globalThis.formatarQuantidadeQuestoes = formatarQuantidadeQuestoes
   globalThis.contarOcorrenciasValores = contarOcorrenciasValores
   globalThis.avaliarQualidadeDiagnosticoQuestao = avaliarQualidadeDiagnosticoQuestao
