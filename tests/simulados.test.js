@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 
 const {
+  renderizarTextoSimuladoComMarkdownBasico,
+  criarCardSimuladoRevisao,
   calcularProximaRevisaoSimulado,
   calcularEtapaRevisaoSimulado24730,
   normalizarTipoQuestaoSimulado,
@@ -12,6 +14,88 @@ const {
   embaralharQuestoes,
   formatarDataSimulado
 } = globalThis
+
+function criarQuestaoSimuladoMarkdown(sobrescritas = {}) {
+  return {
+    id: 'simulado-md-1',
+    enunciado: 'Enunciado com **controle difuso** e <script>alert(1)</script>',
+    alternativas: {
+      A: '*Alternativa* com <img src=x onerror=alert(1)>',
+      B: 'Alternativa correta'
+    },
+    alternativa_marcada: 'A',
+    alternativa_correta: 'B',
+    tipo_questao: 'Errada',
+    status_revisao: 'pendente',
+    revisar_novamente_em: '2026-06-10',
+    revisao_total_acertos: 0,
+    revisao_total_erros: 1,
+    revisao_etapa: 0,
+    motivo_erro: 'Falta de conteúdo',
+    nivel_confianca: 'Dúvida',
+    comentario: 'Comentário com **regra central**',
+    conceito_chave: 'Conceito com **competência**',
+    como_reconhecer: 'Reconhecer por *termo absoluto*',
+    acao_corretiva: 'Revisar **artigo seco**',
+    criado_em: '2026-06-04T12:00:00.000Z',
+    materias: { nome: 'Direito Constitucional' },
+    edital_topicos: { titulo: 'Controle de constitucionalidade' },
+    banca: 'CEBRASPE',
+    pegadinha_banca: 'Pegadinha com *palavra absoluta*',
+    ...sobrescritas
+  }
+}
+
+describe('Markdown basico nos cards de Simulados', () => {
+  it('renderiza negrito seguro no enunciado e nas alternativas', () => {
+    const card = criarCardSimuladoRevisao(criarQuestaoSimuladoMarkdown(), 1)
+
+    expect(card.querySelector('.card-revisao-enunciado').innerHTML)
+      .toContain('<strong>controle difuso</strong>')
+    expect(card.querySelector('.alt-texto').innerHTML)
+      .toContain('<strong>Alternativa</strong>')
+    expect(card.innerHTML).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+    expect(card.innerHTML).toContain('&lt;img src=x onerror=alert(1)&gt;')
+    expect(card.querySelector('script')).toBeNull()
+    expect(card.querySelector('img')).toBeNull()
+  })
+
+  it('renderiza negrito seguro em comentario e diagnosticos exibidos', () => {
+    const card = criarCardSimuladoRevisao(criarQuestaoSimuladoMarkdown(), 1)
+
+    expect(card.innerHTML).toContain('<strong>regra central</strong>')
+    expect(card.innerHTML).toContain('<strong>palavra absoluta</strong>')
+    expect(card.innerHTML).toContain('<strong>competência</strong>')
+    expect(card.innerHTML).toContain('<strong>termo absoluto</strong>')
+    expect(card.innerHTML).toContain('<strong>artigo seco</strong>')
+    expect(card.innerHTML).not.toContain('<script>')
+  })
+
+  it('mantem campos editaveis com Markdown literal, sem renderizar HTML', () => {
+    const campos = {
+      '.simulado-diagnostico-conceito': 'Conceito com **competência** e <script>alert(1)</script>',
+      '.simulado-diagnostico-reconhecer': 'Reconhecer por *termo absoluto*',
+      '.simulado-diagnostico-acao': 'Revisar **artigo seco**'
+    }
+    const card = criarCardSimuladoRevisao(criarQuestaoSimuladoMarkdown({
+      conceito_chave: campos['.simulado-diagnostico-conceito'],
+      como_reconhecer: campos['.simulado-diagnostico-reconhecer'],
+      acao_corretiva: campos['.simulado-diagnostico-acao']
+    }), 1)
+
+    Object.entries(campos).forEach(([seletor, valor]) => {
+      const textarea = card.querySelector(seletor)
+      expect(textarea.value).toBe(valor)
+      expect(textarea.innerHTML).not.toContain('<strong>')
+      expect(textarea.querySelector('strong')).toBeNull()
+    })
+    expect(card.querySelector('.simulado-pre-resposta').innerHTML).not.toContain('<strong>')
+  })
+
+  it('preserva Markdown incompleto', () => {
+    expect(renderizarTextoSimuladoComMarkdownBasico('*sem fechamento')).toBe('*sem fechamento')
+  })
+})
 
 describe('simulados helpers', () => {
   it('calcula proxima revisao no ciclo 24h/7d/30d', () => {

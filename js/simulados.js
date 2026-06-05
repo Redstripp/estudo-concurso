@@ -16,6 +16,12 @@ const MOTIVOS_ERRO_RESPOSTA_SIMULADO = [
   'Reconhecimento superficial do conteúdo'
 ]
 
+function renderizarTextoSimuladoComMarkdownBasico(texto) {
+  return typeof renderizarTextoComMarkdownBasicoSeguro === 'function'
+    ? renderizarTextoComMarkdownBasicoSeguro(texto)
+    : escaparHtmlSeguro(texto)
+}
+
 function inicializarSimulados() {
   if (!simuladosInicializado) {
     simuladosInicializado = true
@@ -133,7 +139,7 @@ function criarCardSimuladoRevisao(q, numero) {
     ? Object.entries(q.alternativas).map(([letra, texto]) => `
       <button class="alternativa-card simulado-revisao-alternativa simulado-resposta-opcao" type="button" data-letra="${escaparHtmlSeguro(letra)}">
         <span class="alt-letra">${escaparHtmlSeguro(letra)}</span>
-        <span class="alt-texto">${escaparHtmlSeguro(texto)}</span>
+        <span class="alt-texto">${renderizarTextoSimuladoComMarkdownBasico(texto)}</span>
       </button>
     `).join('')
     : ''
@@ -155,7 +161,7 @@ function criarCardSimuladoRevisao(q, numero) {
         ${totalAcertos > 0 ? `<span class="tag-revisao tag-revisao--acerto">${totalAcertos} acerto${totalAcertos !== 1 ? 's' : ''}</span>` : ''}
       </div>
     </div>
-    <p class="card-revisao-enunciado">${escaparHtmlSeguro(q.enunciado)}</p>
+    <p class="card-revisao-enunciado">${renderizarTextoSimuladoComMarkdownBasico(q.enunciado)}</p>
     <div class="modo-pre-resposta">
       <label class="campo-label">Antes de marcar: qual conceito resolve?</label>
       <textarea class="input-texto input-textarea simulado-pre-resposta" rows="2" placeholder="Escreva em uma frase a regra, pista ou raciocínio antes de olhar o gabarito..."></textarea>
@@ -181,11 +187,11 @@ function criarCardSimuladoRevisao(q, numero) {
       <span class="tag-estudo">Marquei agora: <span class="resposta-atual">-</span></span>
       ${q.motivo_erro ? `<span class="tag-estudo">Erro: ${escaparHtmlSeguro(q.motivo_erro)}</span>` : ''}
       ${q.nivel_confianca ? `<span class="tag-estudo">Confiança: ${escaparHtmlSeguro(q.nivel_confianca)}</span>` : ''}
-      ${q.comentario ? `<p class="simulado-revisao-comentario">${escaparHtmlSeguro(q.comentario)}</p>` : ''}
-      ${q.pegadinha_banca ? `<p class="simulado-revisao-comentario"><strong>Pegadinhas:</strong> ${escaparHtmlSeguro(q.pegadinha_banca)}</p>` : ''}
-      ${q.conceito_chave ? `<p class="simulado-revisao-comentario"><strong>Conceito:</strong> ${escaparHtmlSeguro(q.conceito_chave)}</p>` : ''}
-      ${q.como_reconhecer ? `<p class="simulado-revisao-comentario"><strong>Reconhecer:</strong> ${escaparHtmlSeguro(q.como_reconhecer)}</p>` : ''}
-      ${q.acao_corretiva ? `<p class="simulado-revisao-comentario"><strong>Ação:</strong> ${escaparHtmlSeguro(q.acao_corretiva)}</p>` : ''}
+      ${q.comentario ? `<p class="simulado-revisao-comentario">${renderizarTextoSimuladoComMarkdownBasico(q.comentario)}</p>` : ''}
+      ${q.pegadinha_banca ? `<p class="simulado-revisao-comentario"><strong>Pegadinhas:</strong> ${renderizarTextoSimuladoComMarkdownBasico(q.pegadinha_banca)}</p>` : ''}
+      ${q.conceito_chave ? `<p class="simulado-revisao-comentario"><strong>Conceito:</strong> ${renderizarTextoSimuladoComMarkdownBasico(q.conceito_chave)}</p>` : ''}
+      ${q.como_reconhecer ? `<p class="simulado-revisao-comentario"><strong>Reconhecer:</strong> ${renderizarTextoSimuladoComMarkdownBasico(q.como_reconhecer)}</p>` : ''}
+      ${q.acao_corretiva ? `<p class="simulado-revisao-comentario"><strong>Ação:</strong> ${renderizarTextoSimuladoComMarkdownBasico(q.acao_corretiva)}</p>` : ''}
     </div>
     <div class="simulado-diagnostico escondido">
       <h4 class="simulado-diagnostico-titulo">Diagnóstico da revisão</h4>
@@ -888,6 +894,8 @@ function mostrarMsgSimuladoRevisao(texto, tipo) {
 
 // Exportações apenas para testes (Vitest)
 if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  globalThis.renderizarTextoSimuladoComMarkdownBasico = renderizarTextoSimuladoComMarkdownBasico
+  globalThis.criarCardSimuladoRevisao = criarCardSimuladoRevisao
   globalThis.calcularProximaRevisaoSimulado = calcularProximaRevisaoSimulado
   globalThis.calcularEtapaRevisaoSimulado24730 = calcularEtapaRevisaoSimulado24730
   globalThis.normalizarTipoQuestaoSimulado = normalizarTipoQuestaoSimulado
