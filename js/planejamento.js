@@ -29,6 +29,12 @@ const TIPOS_ESTUDO_PLANEJAMENTO = {
   lei_seca: 'Lei Seca'
 }
 
+function renderizarTextoPlanejamentoComMarkdownBasico(texto) {
+  return typeof renderizarTextoComMarkdownBasicoSeguro === 'function'
+    ? renderizarTextoComMarkdownBasicoSeguro(texto)
+    : escaparHtmlSeguro(texto)
+}
+
 function inicializarPlanejamento() {
   if (!planejamentoInicializado) {
     planejamentoInicializado = true
@@ -833,7 +839,7 @@ function criarCardLeiSeca(item) {
         <span class="tag-estudo">${vencido ? 'Revisar hoje' : item.status}</span>
       </div>
       <p class="lei-seca-texto">${escaparHtmlSeguro(item.texto)}</p>
-      ${item.anotacoes ? `<p class="lei-seca-meta">${escaparHtmlSeguro(item.anotacoes)}</p>` : ''}
+      ${item.anotacoes ? `<p class="lei-seca-meta">${renderizarTextoPlanejamentoComMarkdownBasico(item.anotacoes)}</p>` : ''}
       <div class="questao-tags-estudo">
         <span class="tag-estudo">Importância ${item.importancia}</span>
         <span class="tag-estudo">${item.total_revisoes} revisões</span>
@@ -970,6 +976,8 @@ function mostrarErroPlanejamento(mensagem) {
 }
 
 if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  globalThis.renderizarTextoPlanejamentoComMarkdownBasico = renderizarTextoPlanejamentoComMarkdownBasico
+  globalThis.criarCardLeiSeca = criarCardLeiSeca
   globalThis.montarRelatorioProntoProva = montarRelatorioProntoProva
   globalThis.montarFilaInteligente = montarFilaInteligente
   globalThis.converterDiaSemanaPlanejamento = converterDiaSemanaPlanejamento
