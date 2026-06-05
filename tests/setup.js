@@ -17,6 +17,7 @@ const dom = new JSDOM(`
 globalThis.document = dom.window.document
 
 await import('../js/utils.js')
+await import('../js/anotacoes.js')
 await import('../js/auth.js')
 await import('../js/materias.js')
 await import('../js/gamificacao.js')
