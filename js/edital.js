@@ -19,6 +19,12 @@ const STATUS_EDITAL = {
   dificuldade: { rotulo: 'Muita dificuldade', classe: 'status-dificuldade', peso: 12 }
 }
 
+function renderizarTextoEditalComMarkdownBasico(texto) {
+  return typeof renderizarTextoComMarkdownBasicoSeguro === 'function'
+    ? renderizarTextoComMarkdownBasicoSeguro(texto)
+    : escaparHtmlSeguro(texto)
+}
+
 async function inicializarEdital() {
   if (!editalInicializado) {
     editalInicializado = true
@@ -631,7 +637,7 @@ function criarCardTopicoEdital(topico, stats) {
         </select>
       </div>
       <h4>${escaparHtmlSeguro(topico.titulo)}</h4>
-      ${topico.observacoes ? `<p class="edital-topico-observacao">${escaparHtmlSeguro(topico.observacoes)}</p>` : ''}
+      ${topico.observacoes ? `<p class="edital-topico-observacao">${renderizarTextoEditalComMarkdownBasico(topico.observacoes)}</p>` : ''}
       <div class="edital-topico-metricas">
         <span>${stats.total} ${stats.total === 1 ? 'questão' : 'questões'}</span>
         <span>${stats.pendentes} pendente${stats.pendentes !== 1 ? 's' : ''}</span>
@@ -737,7 +743,15 @@ function renderizarPegadinhasBanca() {
     return
   }
 
-  lista.innerHTML = editalEstado.pegadinhas.map(pegadinha => `
+  lista.innerHTML = editalEstado.pegadinhas.map(criarCardPegadinhaEdital).join('')
+
+  lista.querySelectorAll('.btn-excluir-pegadinha').forEach(btn => {
+    btn.addEventListener('click', () => excluirPegadinhaBanca(btn.dataset.id))
+  })
+}
+
+function criarCardPegadinhaEdital(pegadinha) {
+  return `
     <article class="pegadinha-card">
       <div class="edital-card-topo">
         <div>
@@ -747,14 +761,10 @@ function renderizarPegadinhasBanca() {
         </div>
         <button class="btn-secundario btn-excluir-pegadinha" type="button" data-id="${pegadinha.id}">Excluir</button>
       </div>
-      <p class="pegadinha-padrao">${escaparHtmlSeguro(pegadinha.padrao)}</p>
-      ${pegadinha.acao ? `<p class="pegadinha-acao">${escaparHtmlSeguro(pegadinha.acao)}</p>` : ''}
+      <p class="pegadinha-padrao">${renderizarTextoEditalComMarkdownBasico(pegadinha.padrao)}</p>
+      ${pegadinha.acao ? `<p class="pegadinha-acao">${renderizarTextoEditalComMarkdownBasico(pegadinha.acao)}</p>` : ''}
     </article>
-  `).join('')
-
-  lista.querySelectorAll('.btn-excluir-pegadinha').forEach(btn => {
-    btn.addEventListener('click', () => excluirPegadinhaBanca(btn.dataset.id))
-  })
+  `
 }
 
 async function excluirPegadinhaBanca(id) {
@@ -806,6 +816,9 @@ function mostrarErroEdital(mensagem) {
 }
 
 if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
+  globalThis.renderizarTextoEditalComMarkdownBasico = renderizarTextoEditalComMarkdownBasico
+  globalThis.criarCardTopicoEdital = criarCardTopicoEdital
+  globalThis.criarCardPegadinhaEdital = criarCardPegadinhaEdital
   globalThis.validarDataProvaEdital = validarDataProvaEdital
   globalThis.filtrarTopicosEditalPorMateria = filtrarTopicosEditalPorMateria
   globalThis.obterTextoBotaoConfigEdital = obterTextoBotaoConfigEdital
