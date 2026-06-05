@@ -37,3 +37,5 @@ globalThis.sessionStorage = dom.window.sessionStorage
 globalThis.Element = dom.window.Element
 globalThis.HTMLElement = dom.window.HTMLElement
 globalThis.Node = dom.window.Node
+
+await import('../js/anotacoes-ui.js')
