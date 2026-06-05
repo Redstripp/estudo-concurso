@@ -8,6 +8,9 @@ A prioridade atual é estabilidade: revisão, flashcards, questões, estatístic
 
 ## Estado técnico atual
 
+- Estado confiável: `9da16aa feat: render markdown bold in edital notes`.
+- Branch `main` sincronizada com `origin/main`.
+- Working tree limpo.
 - Projeto em HTML, CSS e JavaScript, com TypeScript gradual.
 - Vite configurado para validação/build.
 - CI no GitHub Actions em `.github/workflows/ci.yml`.
@@ -20,10 +23,12 @@ A prioridade atual é estabilidade: revisão, flashcards, questões, estatístic
 ## Estado de validação atual
 
 - `check:js` passando.
-- Testes passando.
+- 490 testes passando em 22 arquivos.
 - `typecheck` passando.
 - `build` passando.
-- CI verde no GitHub Actions.
+- CI verde no GitHub Actions no commit `9da16aa`.
+- GitHub Pages verde no commit `9da16aa`.
+- QA visual/manual aprovado no Google Chrome normal do Windows.
 
 ## Melhorias recentes
 
@@ -58,6 +63,17 @@ A prioridade atual é estabilidade: revisão, flashcards, questões, estatístic
 - Workflow criado em `.github/workflows/ci.yml`.
 - CI roda validações em push e pull request para `main`.
 
+### Markdown básico seguro
+
+- Flashcards: concluído anteriormente.
+- Questões/Caderno/Revisão: concluído anteriormente.
+- Simulados: concluído no commit `5976be1 feat: render markdown bold in simulados cards`.
+- Dashboard: diagnosticado; não implementar Markdown neste momento.
+- Estatísticas: diagnosticado; não implementar Markdown neste momento.
+- Planejamento/Lei Seca: concluído no commit `bf80ba7 feat: render markdown bold in lei seca notes`.
+- Edital: concluído no commit `9da16aa feat: render markdown bold in edital notes`.
+- Markdown continua proibido em inputs, textareas, atributos HTML, PDF/exportações, prompts copiáveis, botões, métricas, gráficos, SVG, filtros e labels técnicos, salvo novo diagnóstico específico.
+
 ## Regras que não devem ser quebradas
 
 - Não reintroduzir `delete` automático em `questoes` no arquivamento mensal.
@@ -85,21 +101,25 @@ A prioridade atual é estabilidade: revisão, flashcards, questões, estatístic
    - `npm.cmd run typecheck`
    - `npm.cmd run build`
 2. Fazer teste visual quando houver mudança de interface.
+   - Usar o Google Chrome normal do Windows.
+   - Não usar Microsoft Edge nem navegador embutido para QA visual.
 3. Criar commit pequeno e focado.
-4. Fazer push.
+4. Fazer push para `origin/main`.
 5. Verificar CI verde no GitHub Actions.
+6. Considerar a mudança pronta somente com CI verde.
 
 ## Próximas pendências recomendadas
 
 Ordem segura sugerida:
 
-1. Documentar ou revisar o funcionamento da seção Revisão.
-2. Melhorar estatísticas gerais do sistema.
-3. Melhorar estatísticas avançadas dos Flashcards.
-4. Avaliar unificação futura do SM-2 JavaScript e TypeScript.
-5. Avaliar retenção/arquivamento lógico com `arquivada` e `data_arquivamento`, apenas se realmente necessário.
-6. Revisar UX do Dashboard.
-7. Melhorar documentação geral do projeto.
+1. Usar o sistema em estudo real.
+2. Corrigir somente bugs específicos e reproduzíveis.
+3. Diagnosticar refresh do Dashboard após salvar questão somente se a lentidão persistir.
+4. Tratar `BUG-DASH-004` somente se incomodar.
+5. Tratar `BUG-DASH-005/006` em etapa separada e de baixa prioridade.
+6. Tratar `BUG-DASH-007` em etapa separada.
+7. Avaliar persistência estruturada dos campos ricos dos Flashcards somente com plano de banco separado.
+8. Avaliar paginação server-side somente com diagnóstico próprio.
 
 ## Coisas para não fazer agora
 
