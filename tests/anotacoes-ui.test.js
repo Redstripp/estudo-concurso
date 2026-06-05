@@ -1,11 +1,82 @@
 import { readFileSync } from 'node:fs'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   inicializarAnotacoesUi,
   definirModoAnotacoesUi,
-  obterEstadoAnotacoesUi
+  obterEstadoAnotacoesUi,
+  obterViewIdAnotacoesUi
 } = globalThis.AnotacoesLivresUi
+
+const { carregarAnotacoes } = globalThis.AnotacoesLivres
+
+let contextoCanvas
+let retangulosSecoes
+
+function criarContextoCanvas() {
+  return {
+    beginPath: vi.fn(),
+    clearRect: vi.fn(),
+    lineTo: vi.fn(),
+    moveTo: vi.fn(),
+    restore: vi.fn(),
+    save: vi.fn(),
+    setTransform: vi.fn(),
+    stroke: vi.fn()
+  }
+}
+
+function montarSecoes(ativa = 'flashcards') {
+  document.body.innerHTML = `
+    <main class="conteudo-principal">
+      <section id="secao-flashcards" class="secao ${ativa === 'flashcards' ? '' : 'escondido'}"></section>
+      <section id="secao-questoes" class="secao ${ativa === 'questoes' ? '' : 'escondido'}"></section>
+    </main>
+  `
+
+  retangulosSecoes = {
+    flashcards: { left: 200, top: 100, width: 900, height: 1200 },
+    questoes: { left: 200, top: 100, width: 900, height: 1200 }
+  }
+
+  Object.entries(retangulosSecoes).forEach(([secao, retangulo]) => {
+    const elemento = document.getElementById(`secao-${secao}`)
+    elemento.getBoundingClientRect = () => ({ ...retangulo })
+    Object.defineProperty(elemento, 'scrollWidth', { configurable: true, value: 900 })
+  })
+}
+
+function configurarCanvasTeste() {
+  contextoCanvas = criarContextoCanvas()
+  Object.defineProperty(window.HTMLCanvasElement.prototype, 'getContext', {
+    configurable: true,
+    value: vi.fn(() => contextoCanvas)
+  })
+}
+
+function dispararPointer(canvas, tipo, { x, y, pointerId = 1, button = 0, isPrimary = true } = {}) {
+  const evento = new window.Event(tipo, { bubbles: true, cancelable: true })
+  Object.defineProperties(evento, {
+    button: { value: button },
+    clientX: { value: x },
+    clientY: { value: y },
+    isPrimary: { value: isPrimary },
+    pointerId: { value: pointerId }
+  })
+  canvas.dispatchEvent(evento)
+}
+
+function desenharTraco(canvas, pontos = [[230, 140], [260, 180], [270, 190]]) {
+  dispararPointer(canvas, 'pointerdown', { x: pontos[0][0], y: pontos[0][1] })
+  pontos.slice(1, -1).forEach(([x, y]) => dispararPointer(canvas, 'pointermove', { x, y }))
+  const ultimo = pontos.at(-1)
+  dispararPointer(canvas, 'pointerup', { x: ultimo[0], y: ultimo[1] })
+}
+
+function trocarSecao(secao) {
+  document.querySelectorAll('.secao').forEach(elemento => elemento.classList.add('escondido'))
+  document.getElementById(`secao-${secao}`).classList.remove('escondido')
+}
 
 function obterElementosUi() {
   return {
@@ -24,9 +95,13 @@ function clicar(seletor) {
 
 describe('shell visual de anotacoes livres', () => {
   beforeEach(() => {
-    document.body.innerHTML = ''
+    montarSecoes()
     document.body.className = ''
     localStorage.clear()
+    configurarCanvasTeste()
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1200 })
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 700 })
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 1 })
     inicializarAnotacoesUi()
   })
 
@@ -52,11 +127,14 @@ describe('shell visual de anotacoes livres', () => {
       ativo: false,
       ferramenta: 'pen',
       cor: 'black',
-      espessura: 'medium'
+      espessura: 'medium',
+      viewId: 'secao:flashcards',
+      quantidadeTracos: 0
     })
     expect(toggle.getAttribute('aria-pressed')).toBe('false')
     expect(toolbar.hidden).toBe(true)
     expect(canvas.style.pointerEvents).toBe('none')
+    expect(canvas.style.touchAction).toBe('none')
   })
 
   it('alterna modo, aria-pressed, classes e eventos do canvas pelo botao', () => {
@@ -102,6 +180,142 @@ describe('shell visual de anotacoes livres', () => {
     expect(azul.classList.contains('is-selected')).toBe(true)
     expect(grosso.classList.contains('is-selected')).toBe(true)
     expect(localStorage.length).toBe(0)
+  })
+
+  it('detecta a secao principal ativa e usa fallback seguro sem secao visivel', () => {
+    expect(obterViewIdAnotacoesUi()).toBe('secao:flashcards')
+
+    document.querySelectorAll('.secao').forEach(secao => secao.classList.add('escondido'))
+    expect(obterViewIdAnotacoesUi()).toBe('secao:desconhecida')
+  })
+
+  it('desenha com lapis e salva pontos, cor e espessura somente na finalizacao', () => {
+    const { toggle, canvas } = obterElementosUi()
+    canvas.setPointerCapture = vi.fn()
+    canvas.releasePointerCapture = vi.fn()
+    toggle.click()
+    clicar('[data-grupo-anotacoes="cor"][data-valor-anotacoes="blue"]')
+    clicar('[data-grupo-anotacoes="espessura"][data-valor-anotacoes="thick"]')
+
+    dispararPointer(canvas, 'pointerdown', { x: 230, y: 140 })
+    dispararPointer(canvas, 'pointermove', { x: 260, y: 180 })
+    expect(localStorage.length).toBe(0)
+
+    dispararPointer(canvas, 'pointerup', { x: 270, y: 190 })
+    const salvo = carregarAnotacoes({ userId: 'anonimo', viewId: 'secao:flashcards' })
+
+    expect(salvo.strokes).toHaveLength(1)
+    expect(salvo.strokes[0]).toMatchObject({
+      tool: 'pen',
+      color: 'blue',
+      thickness: 'thick',
+      points: [{ x: 30, y: 40 }, { x: 60, y: 80 }, { x: 70, y: 90 }]
+    })
+    expect(canvas.setPointerCapture).toHaveBeenCalledWith(1)
+    expect(canvas.releasePointerCapture).toHaveBeenCalledWith(1)
+    expect(contextoCanvas.lineCap).toBe('round')
+    expect(contextoCanvas.lineJoin).toBe('round')
+    expect(contextoCanvas.strokeStyle).toBe('#2563eb')
+    expect(contextoCanvas.lineWidth).toBe(7)
+  })
+
+  it('nao desenha desativado, com marca-texto, borracha ou eventos incompletos', () => {
+    const { toggle, canvas } = obterElementosUi()
+
+    desenharTraco(canvas)
+    dispararPointer(canvas, 'pointermove', { x: 240, y: 150 })
+    dispararPointer(canvas, 'pointerup', { x: 250, y: 160 })
+    dispararPointer(canvas, 'pointerdown', { x: 230, y: 140, pointerId: NaN })
+    expect(localStorage.length).toBe(0)
+
+    toggle.click()
+    clicar('[data-grupo-anotacoes="ferramenta"][data-valor-anotacoes="highlighter"]')
+    desenharTraco(canvas)
+    clicar('[data-grupo-anotacoes="ferramenta"][data-valor-anotacoes="eraser"]')
+    desenharTraco(canvas)
+    clicar('[data-grupo-anotacoes="ferramenta"][data-valor-anotacoes="pen"]')
+    dispararPointer(canvas, 'pointerdown', { x: 230, y: 140 })
+    dispararPointer(canvas, 'pointerup', { x: 230, y: 140 })
+
+    expect(localStorage.length).toBe(0)
+    expect(obterEstadoAnotacoesUi().quantidadeTracos).toBe(0)
+  })
+
+  it('isola persistencia por secao e recarrega os tracos corretos', async () => {
+    const { toggle, canvas } = obterElementosUi()
+    toggle.click()
+    desenharTraco(canvas)
+
+    trocarSecao('questoes')
+    await vi.waitFor(() => {
+      expect(obterEstadoAnotacoesUi()).toMatchObject({ viewId: 'secao:questoes', quantidadeTracos: 0 })
+    })
+    desenharTraco(canvas, [[240, 150], [280, 190], [290, 200]])
+
+    expect(carregarAnotacoes({ userId: 'anonimo', viewId: 'secao:flashcards' }).strokes).toHaveLength(1)
+    expect(carregarAnotacoes({ userId: 'anonimo', viewId: 'secao:questoes' }).strokes).toHaveLength(1)
+
+    trocarSecao('flashcards')
+    await vi.waitFor(() => {
+      expect(obterEstadoAnotacoesUi()).toMatchObject({ viewId: 'secao:flashcards', quantidadeTracos: 1 })
+    })
+
+    document.getElementById('anotacoes-ui').remove()
+    inicializarAnotacoesUi()
+    expect(obterEstadoAnotacoesUi()).toMatchObject({
+      ativo: false,
+      viewId: 'secao:flashcards',
+      quantidadeTracos: 1
+    })
+  })
+
+  it('armazena coordenadas da secao e agenda redraw no scroll sem canvas gigante', () => {
+    const { toggle, canvas } = obterElementosUi()
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 2 })
+    Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 9000 })
+    const callbacks = []
+    window.requestAnimationFrame = vi.fn(callback => {
+      callbacks.push(callback)
+      return callbacks.length
+    })
+    toggle.click()
+    desenharTraco(canvas)
+    contextoCanvas.moveTo.mockClear()
+
+    retangulosSecoes.flashcards.top = -50
+    window.dispatchEvent(new window.Event('scroll'))
+    window.dispatchEvent(new window.Event('scroll'))
+
+    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1)
+    callbacks.shift()()
+    expect(contextoCanvas.moveTo).toHaveBeenCalledWith(230, -10)
+    expect(canvas.height).toBe(700)
+    expect(canvas.height).not.toBe(9000)
+  })
+
+  it('ajusta canvas a viewport no resize e mantem pointer-events seguros apos desenhar', () => {
+    const { toggle, canvas } = obterElementosUi()
+    const callbacks = []
+    window.requestAnimationFrame = vi.fn(callback => {
+      callbacks.push(callback)
+      return callbacks.length
+    })
+    toggle.click()
+    desenharTraco(canvas)
+    expect(canvas.style.pointerEvents).toBe('auto')
+
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 800 })
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 500 })
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 2 })
+    window.dispatchEvent(new window.Event('resize'))
+    callbacks.shift()()
+
+    expect(canvas.width).toBe(1600)
+    expect(canvas.height).toBe(1000)
+    expect(canvas.style.width).toBe('800px')
+    expect(canvas.style.height).toBe('500px')
+    toggle.click()
+    expect(canvas.style.pointerEvents).toBe('none')
   })
 
   it('Escape desativa o modo sem erro quando a UI esta inativa', () => {

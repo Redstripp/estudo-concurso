@@ -2,6 +2,28 @@
 
 const ID_RAIZ_ANOTACOES_UI = 'anotacoes-ui'
 const documentosComAtalhoAnotacoesUi = new WeakSet()
+const janelasComEventosAnotacoesUi = new WeakSet()
+const estadosAnotacoesUi = new WeakMap()
+let sequenciaTracosAnotacoesUi = 0
+
+const USUARIO_ANOTACOES_UI = 'anonimo'
+const VIEW_ID_PADRAO_ANOTACOES_UI = 'secao:desconhecida'
+const MAX_PONTOS_TRACO_ANOTACOES_UI = 1000
+
+const CORES_CANVAS_ANOTACOES_UI = {
+  black: '#111827',
+  red: '#dc2626',
+  blue: '#2563eb',
+  green: '#16a34a',
+  yellow: '#facc15',
+  white: '#ffffff'
+}
+
+const ESPESSURAS_CANVAS_ANOTACOES_UI = {
+  thin: 2,
+  medium: 4,
+  thick: 7
+}
 
 const FERRAMENTAS_ANOTACOES_UI = [
   { valor: 'pen', rotulo: 'Lapis', icone: 'L' },
@@ -111,16 +133,193 @@ function obterRaizAnotacoesUi() {
   return document.getElementById(ID_RAIZ_ANOTACOES_UI)
 }
 
+function obterSecaoAtivaAnotacoesUi() {
+  return document.querySelector('.secao:not(.escondido)') || null
+}
+
+function obterViewIdAnotacoesUi(secao = obterSecaoAtivaAnotacoesUi()) {
+  const id = secao?.id || ''
+  return id.startsWith('secao:') || !id.startsWith('secao-')
+    ? VIEW_ID_PADRAO_ANOTACOES_UI
+    : `secao:${id.slice('secao-'.length)}`
+}
+
+function obterEstadoRuntimeAnotacoesUi(raiz = obterRaizAnotacoesUi()) {
+  return raiz ? estadosAnotacoesUi.get(raiz) : null
+}
+
 function obterEstadoAnotacoesUi() {
   const raiz = obterRaizAnotacoesUi()
   if (!raiz) return null
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
 
   return {
     ativo: raiz.dataset.ativo === 'true',
     ferramenta: raiz.dataset.ferramenta,
     cor: raiz.dataset.cor,
-    espessura: raiz.dataset.espessura
+    espessura: raiz.dataset.espessura,
+    viewId: runtime?.viewId || VIEW_ID_PADRAO_ANOTACOES_UI,
+    quantidadeTracos: runtime?.estado?.strokes?.length || 0
   }
+}
+
+function obterLarguraReferenciaAnotacoesUi(secao) {
+  return secao?.scrollWidth
+    || secao?.getBoundingClientRect?.().width
+    || window.innerWidth
+    || 1200
+}
+
+function carregarEstadoSecaoAnotacoesUi(viewId, secao) {
+  const modelo = globalThis.AnotacoesLivres
+  if (!modelo?.carregarAnotacoes) return { strokes: [] }
+
+  return modelo.carregarAnotacoes({
+    userId: USUARIO_ANOTACOES_UI,
+    viewId,
+    referenceWidth: obterLarguraReferenciaAnotacoesUi(secao)
+  })
+}
+
+function obterContextoCanvasAnotacoesUi(canvas) {
+  try {
+    return canvas?.getContext?.('2d') || null
+  } catch {
+    return null
+  }
+}
+
+function obterDprAnotacoesUi() {
+  const dpr = Number(window.devicePixelRatio)
+  return Number.isFinite(dpr) && dpr > 0 ? dpr : 1
+}
+
+function ajustarCanvasAnotacoesUi(raiz = obterRaizAnotacoesUi()) {
+  const canvas = raiz?.querySelector('#anotacoes-canvas')
+  if (!canvas) return
+
+  const largura = Math.max(1, Math.round(window.innerWidth || document.documentElement.clientWidth || 1))
+  const altura = Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || 1))
+  const dpr = obterDprAnotacoesUi()
+
+  canvas.width = Math.round(largura * dpr)
+  canvas.height = Math.round(altura * dpr)
+  canvas.style.width = `${largura}px`
+  canvas.style.height = `${altura}px`
+
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  if (runtime) runtime.temDesenhoRenderizado = false
+
+  const contexto = obterContextoCanvasAnotacoesUi(canvas)
+  contexto?.setTransform?.(dpr, 0, 0, dpr, 0, 0)
+}
+
+function obterPontoConteudoAnotacoesUi(evento, secao) {
+  if (!secao || !Number.isFinite(evento?.clientX) || !Number.isFinite(evento?.clientY)) return null
+  const retangulo = secao.getBoundingClientRect?.()
+  if (!retangulo) return null
+
+  const x = evento.clientX - retangulo.left + (secao.scrollLeft || 0)
+  const y = evento.clientY - retangulo.top + (secao.scrollTop || 0)
+  if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0) return null
+  return { x, y }
+}
+
+function obterPontoViewportAnotacoesUi(ponto, secao) {
+  const retangulo = secao?.getBoundingClientRect?.()
+  if (!retangulo) return null
+  return {
+    x: retangulo.left - (secao.scrollLeft || 0) + ponto.x,
+    y: retangulo.top - (secao.scrollTop || 0) + ponto.y
+  }
+}
+
+function configurarContextoTracoAnotacoesUi(contexto, traco) {
+  contexto.strokeStyle = CORES_CANVAS_ANOTACOES_UI[traco.color] || CORES_CANVAS_ANOTACOES_UI.black
+  contexto.lineWidth = ESPESSURAS_CANVAS_ANOTACOES_UI[traco.thickness] || ESPESSURAS_CANVAS_ANOTACOES_UI.medium
+  contexto.lineCap = 'round'
+  contexto.lineJoin = 'round'
+  contexto.globalAlpha = traco.opacity ?? 1
+}
+
+function desenharTracoAnotacoesUi(contexto, traco, secao) {
+  if (!contexto || traco?.tool !== 'pen' || !Array.isArray(traco.points) || traco.points.length < 2) return
+  const pontos = traco.points.map(ponto => obterPontoViewportAnotacoesUi(ponto, secao)).filter(Boolean)
+  if (pontos.length < 2) return
+
+  contexto.save?.()
+  configurarContextoTracoAnotacoesUi(contexto, traco)
+  contexto.beginPath()
+  contexto.moveTo(pontos[0].x, pontos[0].y)
+  pontos.slice(1).forEach(ponto => contexto.lineTo(ponto.x, ponto.y))
+  contexto.stroke()
+  contexto.restore?.()
+}
+
+function redesenharAnotacoesUi(raiz = obterRaizAnotacoesUi()) {
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  const canvas = raiz?.querySelector('#anotacoes-canvas')
+  if (!runtime || !canvas) return
+
+  const tracos = [...(runtime.estado?.strokes || [])]
+  if (runtime.tracoAtual) tracos.push(runtime.tracoAtual)
+  if (tracos.length === 0 && !runtime.temDesenhoRenderizado) return
+
+  const contexto = obterContextoCanvasAnotacoesUi(canvas)
+  if (!contexto) return
+
+  const dpr = obterDprAnotacoesUi()
+  contexto.setTransform?.(dpr, 0, 0, dpr, 0, 0)
+  contexto.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr)
+  tracos.forEach(traco => desenharTracoAnotacoesUi(contexto, traco, runtime.secao))
+  runtime.temDesenhoRenderizado = tracos.length > 0
+}
+
+function agendarRedesenhoAnotacoesUi({ ajustarCanvas = false } = {}) {
+  const raiz = obterRaizAnotacoesUi()
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  if (!runtime) return
+
+  runtime.ajustarCanvasPendente ||= ajustarCanvas
+  if (runtime.rafId !== null) return
+
+  const agendar = typeof window.requestAnimationFrame === 'function'
+    ? window.requestAnimationFrame.bind(window)
+    : callback => setTimeout(callback, 0)
+
+  runtime.rafId = agendar(() => {
+    runtime.rafId = null
+    if (runtime.ajustarCanvasPendente) ajustarCanvasAnotacoesUi(raiz)
+    runtime.ajustarCanvasPendente = false
+    redesenharAnotacoesUi(raiz)
+  })
+}
+
+function cancelarTracoAtualAnotacoesUi(raiz = obterRaizAnotacoesUi()) {
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  if (!runtime?.tracoAtual) return
+  runtime.tracoAtual = null
+  runtime.pointerId = null
+  redesenharAnotacoesUi(raiz)
+}
+
+function atualizarSecaoAnotacoesUi(raiz = obterRaizAnotacoesUi()) {
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  if (!runtime) return VIEW_ID_PADRAO_ANOTACOES_UI
+
+  const secaoAtiva = obterSecaoAtivaAnotacoesUi()
+  const secao = secaoAtiva || document.querySelector('.conteudo-principal') || document.documentElement
+  const viewId = obterViewIdAnotacoesUi(secaoAtiva)
+  if (runtime.viewId === viewId && runtime.secao === secao) return viewId
+
+  runtime.tracoAtual = null
+  runtime.pointerId = null
+  runtime.secao = secao
+  runtime.viewId = viewId
+  runtime.estado = carregarEstadoSecaoAnotacoesUi(viewId, secao)
+  raiz.dataset.viewId = viewId
+  redesenharAnotacoesUi(raiz)
+  return viewId
 }
 
 function atualizarSelecaoAnotacoesUi(raiz, grupo, valor) {
@@ -151,6 +350,7 @@ function definirModoAnotacoesUi(ativo) {
   canvas.classList.toggle('anotacoes-canvas--ativa', modoAtivo)
   canvas.style.pointerEvents = modoAtivo ? 'auto' : 'none'
   document.body.classList.toggle('modo-anotacoes-ativo', modoAtivo)
+  if (!modoAtivo) cancelarTracoAtualAnotacoesUi(raiz)
   return modoAtivo
 }
 
@@ -176,6 +376,120 @@ function tratarEscapeAnotacoesUi(evento) {
   definirModoAnotacoesUi(false)
 }
 
+function podeIniciarTracoAnotacoesUi(evento, raiz) {
+  const estado = obterEstadoAnotacoesUi()
+  if (!estado?.ativo || estado.ferramenta !== 'pen') return false
+  if (evento?.isPrimary === false) return false
+  if (!Number.isFinite(evento?.pointerId)) return false
+  if (Number.isFinite(evento?.button) && evento.button !== 0) return false
+  return Boolean(obterEstadoRuntimeAnotacoesUi(raiz)?.secao)
+}
+
+function adicionarPontoTracoAnotacoesUi(runtime, ponto) {
+  if (!ponto || !runtime?.tracoAtual) return false
+  if (runtime.tracoAtual.points.length >= MAX_PONTOS_TRACO_ANOTACOES_UI) return false
+  const ultimo = runtime.tracoAtual.points.at(-1)
+  if (ultimo?.x === ponto.x && ultimo?.y === ponto.y) return false
+  runtime.tracoAtual.points.push(ponto)
+  return true
+}
+
+function alterarCapturaPointerAnotacoesUi(elemento, metodo, pointerId) {
+  try {
+    elemento?.[metodo]?.(pointerId)
+  } catch {
+    // A captura pode nao existir ou ja ter sido liberada pelo navegador.
+  }
+}
+
+function iniciarTracoAnotacoesUi(evento) {
+  const raiz = obterRaizAnotacoesUi()
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  if (!runtime || !podeIniciarTracoAnotacoesUi(evento, raiz)) return
+
+  const ponto = obterPontoConteudoAnotacoesUi(evento, runtime.secao)
+  if (!ponto) return
+
+  runtime.pointerId = evento.pointerId
+  runtime.tracoAtual = {
+    id: `traco-${Date.now()}-${++sequenciaTracosAnotacoesUi}`,
+    tool: 'pen',
+    color: raiz.dataset.cor,
+    thickness: raiz.dataset.espessura,
+    opacity: 1,
+    points: [ponto],
+    createdAt: new Date().toISOString()
+  }
+  alterarCapturaPointerAnotacoesUi(evento.currentTarget, 'setPointerCapture', evento.pointerId)
+  evento.preventDefault?.()
+}
+
+function continuarTracoAnotacoesUi(evento) {
+  const raiz = obterRaizAnotacoesUi()
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  if (!runtime?.tracoAtual || runtime.pointerId !== evento.pointerId) return
+
+  const ponto = obterPontoConteudoAnotacoesUi(evento, runtime.secao)
+  if (!adicionarPontoTracoAnotacoesUi(runtime, ponto)) return
+  redesenharAnotacoesUi(raiz)
+  evento.preventDefault?.()
+}
+
+function finalizarTracoAnotacoesUi(evento) {
+  const raiz = obterRaizAnotacoesUi()
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  if (!runtime?.tracoAtual || runtime.pointerId !== evento.pointerId) return
+
+  adicionarPontoTracoAnotacoesUi(runtime, obterPontoConteudoAnotacoesUi(evento, runtime.secao))
+  const traco = runtime.tracoAtual
+  runtime.tracoAtual = null
+  runtime.pointerId = null
+  alterarCapturaPointerAnotacoesUi(evento.currentTarget, 'releasePointerCapture', evento.pointerId)
+
+  if (traco.points.length < 2) {
+    redesenharAnotacoesUi(raiz)
+    return
+  }
+
+  const modelo = globalThis.AnotacoesLivres
+  const estado = {
+    ...runtime.estado,
+    userId: USUARIO_ANOTACOES_UI,
+    viewId: runtime.viewId,
+    referenceWidth: obterLarguraReferenciaAnotacoesUi(runtime.secao),
+    strokes: [...(runtime.estado?.strokes || []).slice(-199), traco]
+  }
+  const resultado = modelo?.salvarAnotacoes?.(estado)
+  if (resultado?.ok) runtime.estado = resultado.estado
+  redesenharAnotacoesUi(raiz)
+  evento.preventDefault?.()
+}
+
+function cancelarPointerAnotacoesUi(evento) {
+  const runtime = obterEstadoRuntimeAnotacoesUi()
+  if (!runtime?.tracoAtual || runtime.pointerId !== evento.pointerId) return
+  alterarCapturaPointerAnotacoesUi(evento.currentTarget, 'releasePointerCapture', evento.pointerId)
+  cancelarTracoAtualAnotacoesUi()
+}
+
+function observarSecoesAnotacoesUi(raiz) {
+  const Observer = window.MutationObserver
+  if (typeof Observer !== 'function') return
+
+  const observer = new Observer(() => atualizarSecaoAnotacoesUi(raiz))
+  document.querySelectorAll('.secao').forEach(secao => {
+    observer.observe(secao, { attributes: true, attributeFilter: ['class'] })
+  })
+  obterEstadoRuntimeAnotacoesUi(raiz).observer = observer
+}
+
+function instalarEventosGlobaisAnotacoesUi() {
+  if (janelasComEventosAnotacoesUi.has(window)) return
+  window.addEventListener('scroll', () => agendarRedesenhoAnotacoesUi(), { passive: true })
+  window.addEventListener('resize', () => agendarRedesenhoAnotacoesUi({ ajustarCanvas: true }))
+  janelasComEventosAnotacoesUi.add(window)
+}
+
 function inicializarAnotacoesUi() {
   const existente = obterRaizAnotacoesUi()
   if (existente) return existente
@@ -193,6 +507,7 @@ function inicializarAnotacoesUi() {
   canvas.className = 'anotacoes-canvas'
   canvas.setAttribute('aria-hidden', 'true')
   canvas.style.pointerEvents = 'none'
+  canvas.style.touchAction = 'none'
 
   const toolbar = criarToolbarAnotacoesUi()
   const toggle = criarBotaoAnotacoesUi({
@@ -211,13 +526,35 @@ function inicializarAnotacoesUi() {
     const botao = evento.target.closest?.('[data-grupo-anotacoes]')
     if (!botao || !toolbar.contains(botao)) return
     atualizarSelecaoAnotacoesUi(raiz, botao.dataset.grupoAnotacoes, botao.dataset.valorAnotacoes)
+    if (botao.dataset.grupoAnotacoes === 'ferramenta' && botao.dataset.valorAnotacoes !== 'pen') {
+      cancelarTracoAtualAnotacoesUi(raiz)
+    }
   })
+
+  canvas.addEventListener('pointerdown', iniciarTracoAnotacoesUi)
+  canvas.addEventListener('pointermove', continuarTracoAnotacoesUi)
+  canvas.addEventListener('pointerup', finalizarTracoAnotacoesUi)
+  canvas.addEventListener('pointercancel', cancelarPointerAnotacoesUi)
 
   raiz.append(canvas, toolbar, toggle)
   document.body.appendChild(raiz)
+  estadosAnotacoesUi.set(raiz, {
+    ajustarCanvasPendente: false,
+    estado: { strokes: [] },
+    pointerId: null,
+    rafId: null,
+    secao: null,
+    temDesenhoRenderizado: false,
+    tracoAtual: null,
+    viewId: null
+  })
   atualizarSelecaoAnotacoesUi(raiz, 'ferramenta', 'pen')
   atualizarSelecaoAnotacoesUi(raiz, 'cor', 'black')
   atualizarSelecaoAnotacoesUi(raiz, 'espessura', 'medium')
+  ajustarCanvasAnotacoesUi(raiz)
+  atualizarSecaoAnotacoesUi(raiz)
+  observarSecoesAnotacoesUi(raiz)
+  instalarEventosGlobaisAnotacoesUi()
 
   if (!documentosComAtalhoAnotacoesUi.has(document)) {
     document.addEventListener('keydown', tratarEscapeAnotacoesUi)
@@ -230,7 +567,8 @@ function inicializarAnotacoesUi() {
 const AnotacoesLivresUi = Object.freeze({
   inicializarAnotacoesUi,
   definirModoAnotacoesUi,
-  obterEstadoAnotacoesUi
+  obterEstadoAnotacoesUi,
+  obterViewIdAnotacoesUi
 })
 
 if (typeof globalThis !== 'undefined') {
