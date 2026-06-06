@@ -27,7 +27,7 @@ const ESPESSURAS_CANVAS_ANOTACOES_UI = {
 }
 
 const OPACIDADE_MARCA_TEXTO_ANOTACOES_UI = 0.35
-const FERRAMENTAS_DESENHO_ANOTACOES_UI = new Set(['pen', 'highlighter'])
+const FERRAMENTAS_DESENHO_ANOTACOES_UI = new Set(['pen', 'highlighter', 'eraser'])
 
 const FERRAMENTAS_ANOTACOES_UI = [
   { valor: 'pen', rotulo: 'Lapis', icone: 'L' },
@@ -329,11 +329,15 @@ function obterPontoViewportAnotacoesUi(ponto, secao) {
 }
 
 function configurarContextoTracoAnotacoesUi(contexto, traco) {
-  contexto.strokeStyle = CORES_CANVAS_ANOTACOES_UI[traco.color] || CORES_CANVAS_ANOTACOES_UI.black
+  const usandoBorracha = traco.tool === 'eraser'
+  contexto.globalCompositeOperation = usandoBorracha ? 'destination-out' : 'source-over'
+  contexto.strokeStyle = usandoBorracha
+    ? CORES_CANVAS_ANOTACOES_UI.black
+    : CORES_CANVAS_ANOTACOES_UI[traco.color] || CORES_CANVAS_ANOTACOES_UI.black
   contexto.lineWidth = ESPESSURAS_CANVAS_ANOTACOES_UI[traco.thickness] || ESPESSURAS_CANVAS_ANOTACOES_UI.medium
   contexto.lineCap = 'round'
   contexto.lineJoin = 'round'
-  contexto.globalAlpha = traco.opacity ?? 1
+  contexto.globalAlpha = usandoBorracha ? 1 : traco.opacity ?? 1
 }
 
 function ferramentaDesenhaTracoAnotacoesUi(ferramenta) {
@@ -342,6 +346,10 @@ function ferramentaDesenhaTracoAnotacoesUi(ferramenta) {
 
 function obterOpacidadeFerramentaAnotacoesUi(ferramenta) {
   return ferramenta === 'highlighter' ? OPACIDADE_MARCA_TEXTO_ANOTACOES_UI : 1
+}
+
+function obterCorFerramentaAnotacoesUi(ferramenta, corSelecionada) {
+  return ferramenta === 'eraser' ? 'black' : corSelecionada
 }
 
 function desenharTracoAnotacoesUi(contexto, traco, secao) {
@@ -522,7 +530,7 @@ function iniciarTracoAnotacoesUi(evento) {
   runtime.tracoAtual = {
     id: `traco-${Date.now()}-${++sequenciaTracosAnotacoesUi}`,
     tool: ferramenta,
-    color: raiz.dataset.cor,
+    color: obterCorFerramentaAnotacoesUi(ferramenta, raiz.dataset.cor),
     thickness: raiz.dataset.espessura,
     opacity: obterOpacidadeFerramentaAnotacoesUi(ferramenta),
     points: [ponto],
