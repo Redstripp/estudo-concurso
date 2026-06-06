@@ -10,6 +10,13 @@ let sequenciaTracosAnotacoesUi = 0
 const USUARIO_ANOTACOES_UI = 'anonimo'
 const VIEW_ID_PADRAO_ANOTACOES_UI = 'secao:desconhecida'
 const MAX_PONTOS_TRACO_ANOTACOES_UI = 1000
+const CHAVE_POSICAO_ANOTACOES_UI = 'estudoConcursoAnotacoesUiPosicao:v1'
+const DISTANCIA_MINIMA_ARRASTE_ANOTACOES_UI = 6
+const MARGEM_POSICAO_ANOTACOES_UI = 8
+const LARGURA_PADRAO_TOGGLE_ANOTACOES_UI = 120
+const ALTURA_PADRAO_TOGGLE_ANOTACOES_UI = 42
+const LARGURA_PADRAO_TOOLBAR_ANOTACOES_UI = 560
+const ALTURA_PADRAO_TOOLBAR_ANOTACOES_UI = 56
 
 const CORES_CANVAS_ANOTACOES_UI = {
   black: '#111827',
@@ -259,6 +266,161 @@ function obterRetanguloNormalizadoAnotacoesUi(elemento) {
   return { left, top, right, bottom }
 }
 
+function obterStoragePosicaoAnotacoesUi() {
+  try {
+    return window.localStorage || globalThis.localStorage || null
+  } catch {
+    return null
+  }
+}
+
+function carregarPosicoesAnotacoesUi() {
+  const storage = obterStoragePosicaoAnotacoesUi()
+  if (!storage?.getItem) return {}
+
+  try {
+    const bruto = storage.getItem(CHAVE_POSICAO_ANOTACOES_UI)
+    const posicoes = bruto ? JSON.parse(bruto) : {}
+    return posicoes && typeof posicoes === 'object' && !Array.isArray(posicoes) ? posicoes : {}
+  } catch {
+    return {}
+  }
+}
+
+function salvarPosicoesAnotacoesUi(posicoes) {
+  const storage = obterStoragePosicaoAnotacoesUi()
+  if (!storage?.setItem) return false
+
+  try {
+    storage.setItem(CHAVE_POSICAO_ANOTACOES_UI, JSON.stringify(posicoes))
+    return true
+  } catch {
+    return false
+  }
+}
+
+function obterPerfilViewportAnotacoesUi() {
+  return obterDimensoesViewportAnotacoesUi().largura <= 768 ? 'mobile' : 'desktop'
+}
+
+function normalizarPosicaoSalvaAnotacoesUi(posicao) {
+  const x = Number(posicao?.x)
+  const y = Number(posicao?.y)
+  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null
+}
+
+function obterDimensoesElementoAnotacoesUi(elemento, fallback) {
+  const retangulo = obterRetanguloNormalizadoAnotacoesUi(elemento)
+  const largura = retangulo ? retangulo.right - retangulo.left : Number(elemento?.offsetWidth)
+  const altura = retangulo ? retangulo.bottom - retangulo.top : Number(elemento?.offsetHeight)
+
+  return {
+    largura: Number.isFinite(largura) && largura > 0 ? largura : fallback.largura,
+    altura: Number.isFinite(altura) && altura > 0 ? altura : fallback.altura
+  }
+}
+
+function limitarPosicaoElementoAnotacoesUi(posicao, elemento, fallback) {
+  const { largura, altura } = obterDimensoesViewportAnotacoesUi()
+  const dimensoes = obterDimensoesElementoAnotacoesUi(elemento, fallback)
+  const maxX = Math.max(MARGEM_POSICAO_ANOTACOES_UI, largura - dimensoes.largura - MARGEM_POSICAO_ANOTACOES_UI)
+  const maxY = Math.max(MARGEM_POSICAO_ANOTACOES_UI, altura - dimensoes.altura - MARGEM_POSICAO_ANOTACOES_UI)
+  const x = Number(posicao?.x)
+  const y = Number(posicao?.y)
+
+  return {
+    x: Math.round(Math.min(maxX, Math.max(MARGEM_POSICAO_ANOTACOES_UI, Number.isFinite(x) ? x : MARGEM_POSICAO_ANOTACOES_UI))),
+    y: Math.round(Math.min(maxY, Math.max(MARGEM_POSICAO_ANOTACOES_UI, Number.isFinite(y) ? y : MARGEM_POSICAO_ANOTACOES_UI)))
+  }
+}
+
+function aplicarPosicaoToggleAnotacoesUi(toggle, posicao) {
+  toggle.style.left = `${posicao.x}px`
+  toggle.style.top = `${posicao.y}px`
+  toggle.style.right = 'auto'
+  toggle.style.bottom = 'auto'
+}
+
+function limparPosicaoToggleAnotacoesUi(toggle) {
+  toggle.style.left = ''
+  toggle.style.top = ''
+  toggle.style.right = ''
+  toggle.style.bottom = ''
+}
+
+function obterPosicaoAtualToggleAnotacoesUi(toggle) {
+  const retangulo = obterRetanguloNormalizadoAnotacoesUi(toggle)
+  return {
+    x: retangulo?.left ?? MARGEM_POSICAO_ANOTACOES_UI,
+    y: retangulo?.top ?? MARGEM_POSICAO_ANOTACOES_UI
+  }
+}
+
+function salvarPosicaoToggleAnotacoesUi(posicao, perfil = obterPerfilViewportAnotacoesUi()) {
+  const posicoes = carregarPosicoesAnotacoesUi()
+  posicoes[perfil] = {
+    x: Math.round(posicao.x),
+    y: Math.round(posicao.y),
+    updatedAt: new Date().toISOString()
+  }
+  return salvarPosicoesAnotacoesUi(posicoes)
+}
+
+function posicaoDiferenteAnotacoesUi(a, b) {
+  return Math.round(a?.x) !== Math.round(b?.x) || Math.round(a?.y) !== Math.round(b?.y)
+}
+
+function posicionarToolbarAnotacoesUi(raiz = obterRaizAnotacoesUi()) {
+  const toggle = raiz?.querySelector('#btn-anotacoes-toggle')
+  const toolbar = raiz?.querySelector('#anotacoes-toolbar')
+  const retanguloToggle = obterRetanguloNormalizadoAnotacoesUi(toggle)
+  if (!toggle || !toolbar || !retanguloToggle) return
+
+  const { largura, altura } = obterDimensoesViewportAnotacoesUi()
+  const dimensoesToolbar = obterDimensoesElementoAnotacoesUi(toolbar, {
+    largura: LARGURA_PADRAO_TOOLBAR_ANOTACOES_UI,
+    altura: ALTURA_PADRAO_TOOLBAR_ANOTACOES_UI
+  })
+  const espaco = 10
+  const abreAcima = retanguloToggle.top - dimensoesToolbar.altura - espaco >= MARGEM_POSICAO_ANOTACOES_UI
+  const topDesejado = abreAcima
+    ? retanguloToggle.top - dimensoesToolbar.altura - espaco
+    : retanguloToggle.bottom + espaco
+  const maxLeft = Math.max(MARGEM_POSICAO_ANOTACOES_UI, largura - dimensoesToolbar.largura - MARGEM_POSICAO_ANOTACOES_UI)
+  const maxTop = Math.max(MARGEM_POSICAO_ANOTACOES_UI, altura - dimensoesToolbar.altura - MARGEM_POSICAO_ANOTACOES_UI)
+  const left = Math.round(Math.min(maxLeft, Math.max(MARGEM_POSICAO_ANOTACOES_UI, retanguloToggle.left)))
+  const top = Math.round(Math.min(maxTop, Math.max(MARGEM_POSICAO_ANOTACOES_UI, topDesejado)))
+
+  toolbar.style.left = `${left}px`
+  toolbar.style.top = `${top}px`
+  toolbar.style.right = 'auto'
+  toolbar.style.bottom = 'auto'
+  toolbar.dataset.direcao = abreAcima ? 'acima' : 'abaixo'
+}
+
+function aplicarPosicaoSalvaAnotacoesUi(raiz = obterRaizAnotacoesUi(), { salvarLimitada = false } = {}) {
+  const toggle = raiz?.querySelector('#btn-anotacoes-toggle')
+  if (!toggle) return
+
+  const perfil = obterPerfilViewportAnotacoesUi()
+  const posicaoSalva = normalizarPosicaoSalvaAnotacoesUi(carregarPosicoesAnotacoesUi()[perfil])
+  if (!posicaoSalva) {
+    limparPosicaoToggleAnotacoesUi(toggle)
+    posicionarToolbarAnotacoesUi(raiz)
+    return
+  }
+
+  const limitada = limitarPosicaoElementoAnotacoesUi(posicaoSalva, toggle, {
+    largura: LARGURA_PADRAO_TOGGLE_ANOTACOES_UI,
+    altura: ALTURA_PADRAO_TOGGLE_ANOTACOES_UI
+  })
+  aplicarPosicaoToggleAnotacoesUi(toggle, limitada)
+  if (salvarLimitada && posicaoDiferenteAnotacoesUi(posicaoSalva, limitada)) {
+    salvarPosicaoToggleAnotacoesUi(limitada, perfil)
+  }
+  posicionarToolbarAnotacoesUi(raiz)
+}
+
 function elementoVisivelAnotacoesUi(elemento) {
   if (!elemento) return false
   const estilo = typeof window.getComputedStyle === 'function'
@@ -480,6 +642,7 @@ function definirModoAnotacoesUi(ativo) {
   toggle.setAttribute('aria-label', modoAtivo ? 'Desativar anotacoes livres' : 'Ativar anotacoes livres')
   toggle.title = modoAtivo ? 'Desativar anotacoes livres' : 'Ativar anotacoes livres'
   toolbar.hidden = !modoAtivo
+  if (modoAtivo) posicionarToolbarAnotacoesUi(raiz)
   canvas.classList.toggle('anotacoes-canvas--ativa', modoAtivo)
   canvas.style.pointerEvents = modoAtivo ? 'auto' : 'none'
   atualizarAreaInterativaCanvasAnotacoesUi(raiz)
@@ -534,6 +697,79 @@ function alterarCapturaPointerAnotacoesUi(elemento, metodo, pointerId) {
   } catch {
     // A captura pode nao existir ou ja ter sido liberada pelo navegador.
   }
+}
+
+function iniciarArrasteToggleAnotacoesUi(evento) {
+  if (evento?.isPrimary === false) return
+  if (!Number.isFinite(evento?.pointerId)) return
+  if (Number.isFinite(evento?.button) && evento.button !== 0) return
+  if (!Number.isFinite(evento?.clientX) || !Number.isFinite(evento?.clientY)) return
+
+  const raiz = obterRaizAnotacoesUi()
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  if (!runtime) return
+
+  runtime.arrasteToggle = {
+    arrastando: false,
+    inicioX: evento.clientX,
+    inicioY: evento.clientY,
+    origem: obterPosicaoAtualToggleAnotacoesUi(evento.currentTarget),
+    pointerId: evento.pointerId,
+    ultimaPosicao: null
+  }
+  alterarCapturaPointerAnotacoesUi(evento.currentTarget, 'setPointerCapture', evento.pointerId)
+}
+
+function continuarArrasteToggleAnotacoesUi(evento) {
+  const raiz = obterRaizAnotacoesUi()
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  const arraste = runtime?.arrasteToggle
+  if (!arraste || arraste.pointerId !== evento.pointerId) return
+
+  const dx = evento.clientX - arraste.inicioX
+  const dy = evento.clientY - arraste.inicioY
+  if (!arraste.arrastando && Math.hypot(dx, dy) < DISTANCIA_MINIMA_ARRASTE_ANOTACOES_UI) return
+
+  arraste.arrastando = true
+  evento.currentTarget.classList.add('is-dragging')
+  const posicao = limitarPosicaoElementoAnotacoesUi({
+    x: arraste.origem.x + dx,
+    y: arraste.origem.y + dy
+  }, evento.currentTarget, {
+    largura: LARGURA_PADRAO_TOGGLE_ANOTACOES_UI,
+    altura: ALTURA_PADRAO_TOGGLE_ANOTACOES_UI
+  })
+  arraste.ultimaPosicao = posicao
+  aplicarPosicaoToggleAnotacoesUi(evento.currentTarget, posicao)
+  posicionarToolbarAnotacoesUi(raiz)
+  evento.preventDefault?.()
+}
+
+function finalizarArrasteToggleAnotacoesUi(evento) {
+  const raiz = obterRaizAnotacoesUi()
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  const arraste = runtime?.arrasteToggle
+  if (!arraste || arraste.pointerId !== evento.pointerId) return
+
+  alterarCapturaPointerAnotacoesUi(evento.currentTarget, 'releasePointerCapture', evento.pointerId)
+  evento.currentTarget.classList.remove('is-dragging')
+  runtime.arrasteToggle = null
+
+  if (!arraste.arrastando) return
+
+  runtime.suprimirCliqueToggle = true
+  salvarPosicaoToggleAnotacoesUi(arraste.ultimaPosicao || obterPosicaoAtualToggleAnotacoesUi(evento.currentTarget))
+  evento.preventDefault?.()
+}
+
+function cancelarArrasteToggleAnotacoesUi(evento) {
+  const runtime = obterEstadoRuntimeAnotacoesUi()
+  const arraste = runtime?.arrasteToggle
+  if (!arraste || arraste.pointerId !== evento.pointerId) return
+
+  alterarCapturaPointerAnotacoesUi(evento.currentTarget, 'releasePointerCapture', evento.pointerId)
+  evento.currentTarget.classList.remove('is-dragging')
+  runtime.arrasteToggle = null
 }
 
 function iniciarTracoAnotacoesUi(evento) {
@@ -655,7 +891,10 @@ function observarSecoesAnotacoesUi(raiz) {
 function instalarEventosGlobaisAnotacoesUi() {
   if (janelasComEventosAnotacoesUi.has(window)) return
   window.addEventListener('scroll', () => agendarRedesenhoAnotacoesUi(), { passive: true })
-  window.addEventListener('resize', () => agendarRedesenhoAnotacoesUi({ ajustarCanvas: true }))
+  window.addEventListener('resize', () => {
+    aplicarPosicaoSalvaAnotacoesUi(obterRaizAnotacoesUi(), { salvarLimitada: true })
+    agendarRedesenhoAnotacoesUi({ ajustarCanvas: true })
+  })
   janelasComEventosAnotacoesUi.add(window)
 }
 
@@ -697,7 +936,17 @@ function inicializarAnotacoesUi() {
   toggle.id = 'btn-anotacoes-toggle'
   toggle.setAttribute('aria-pressed', 'false')
 
-  toggle.addEventListener('click', () => {
+  toggle.addEventListener('pointerdown', iniciarArrasteToggleAnotacoesUi)
+  toggle.addEventListener('pointermove', continuarArrasteToggleAnotacoesUi)
+  toggle.addEventListener('pointerup', finalizarArrasteToggleAnotacoesUi)
+  toggle.addEventListener('pointercancel', cancelarArrasteToggleAnotacoesUi)
+  toggle.addEventListener('click', evento => {
+    const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+    if (runtime?.suprimirCliqueToggle) {
+      runtime.suprimirCliqueToggle = false
+      evento.preventDefault?.()
+      return
+    }
     definirModoAnotacoesUi(!obterEstadoAnotacoesUi()?.ativo)
   })
 
@@ -725,10 +974,12 @@ function inicializarAnotacoesUi() {
   document.body.appendChild(raiz)
   estadosAnotacoesUi.set(raiz, {
     ajustarCanvasPendente: false,
+    arrasteToggle: null,
     estado: { strokes: [] },
     pointerId: null,
     rafId: null,
     secao: null,
+    suprimirCliqueToggle: false,
     temDesenhoRenderizado: false,
     tracoAtual: null,
     viewId: null
@@ -738,6 +989,7 @@ function inicializarAnotacoesUi() {
   atualizarSelecaoAnotacoesUi(raiz, 'espessura', 'medium')
   ajustarCanvasAnotacoesUi(raiz)
   atualizarSecaoAnotacoesUi(raiz)
+  aplicarPosicaoSalvaAnotacoesUi(raiz, { salvarLimitada: true })
   observarSecoesAnotacoesUi(raiz)
   instalarEventosGlobaisAnotacoesUi()
   instalarIntegracaoMenuMobileAnotacoesUi()

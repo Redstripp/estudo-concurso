@@ -10,6 +10,8 @@ const {
 
 const { carregarAnotacoes, salvarAnotacoes } = globalThis.AnotacoesLivres
 
+const CHAVE_POSICAO_ANOTACOES_UI_TESTE = 'estudoConcursoAnotacoesUiPosicao:v1'
+
 let contextoCanvas
 let retangulosSecoes
 
@@ -69,6 +71,17 @@ function dispararPointer(canvas, tipo, { x, y, pointerId = 1, button = 0, isPrim
     pointerId: { value: pointerId }
   })
   canvas.dispatchEvent(evento)
+}
+
+function definirRetanguloElemento(elemento, { left, top, width, height }) {
+  elemento.getBoundingClientRect = () => ({
+    bottom: top + height,
+    height,
+    left,
+    right: left + width,
+    top,
+    width
+  })
 }
 
 function desenharTraco(canvas, pontos = [[230, 140], [260, 180], [270, 190]]) {
@@ -162,6 +175,103 @@ describe('shell visual de anotacoes livres', () => {
     expect(raiz.classList.contains('anotacoes-ui--ativa')).toBe(false)
     expect(toolbar.hidden).toBe(true)
     expect(canvas.style.pointerEvents).toBe('none')
+  })
+
+  it('permite arrastar o botao sem alternar modo e restaura posicao salva', () => {
+    const { toggle, toolbar } = obterElementosUi()
+    toggle.setPointerCapture = vi.fn()
+    toggle.releasePointerCapture = vi.fn()
+    definirRetanguloElemento(toggle, { left: 240, top: 610, width: 120, height: 42 })
+    definirRetanguloElemento(toolbar, { left: 0, top: 0, width: 300, height: 80 })
+
+    dispararPointer(toggle, 'pointerdown', { x: 250, y: 620 })
+    dispararPointer(toggle, 'pointermove', { x: 253, y: 623 })
+    expect(toggle.style.left).toBe('')
+    dispararPointer(toggle, 'pointermove', { x: 300, y: 580 })
+    dispararPointer(toggle, 'pointerup', { x: 300, y: 580 })
+
+    expect(toggle.setPointerCapture).toHaveBeenCalledWith(1)
+    expect(toggle.releasePointerCapture).toHaveBeenCalledWith(1)
+    expect(toggle.style.left).toBe('290px')
+    expect(toggle.style.top).toBe('570px')
+    expect(JSON.parse(localStorage.getItem(CHAVE_POSICAO_ANOTACOES_UI_TESTE)).desktop)
+      .toMatchObject({ x: 290, y: 570 })
+
+    toggle.click()
+    expect(obterEstadoAnotacoesUi().ativo).toBe(false)
+    toggle.click()
+    expect(obterEstadoAnotacoesUi().ativo).toBe(true)
+    definirModoAnotacoesUi(false)
+
+    document.getElementById('anotacoes-ui').remove()
+    inicializarAnotacoesUi()
+    const novoToggle = document.getElementById('btn-anotacoes-toggle')
+    expect(novoToggle.style.left).toBe('290px')
+    expect(novoToggle.style.top).toBe('570px')
+    expect(carregarAnotacoes({ userId: 'anonimo', viewId: 'secao:flashcards' }).strokes).toEqual([])
+  })
+
+  it('mantem posicoes separadas para desktop e mobile', () => {
+    localStorage.setItem(CHAVE_POSICAO_ANOTACOES_UI_TESTE, JSON.stringify({
+      desktop: { x: 320, y: 520 }
+    }))
+    document.getElementById('anotacoes-ui').remove()
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 500 })
+    inicializarAnotacoesUi()
+    const { toggle } = obterElementosUi()
+    definirRetanguloElemento(toggle, { left: 340, top: 18, width: 100, height: 38 })
+
+    expect(toggle.style.left).toBe('')
+    dispararPointer(toggle, 'pointerdown', { x: 350, y: 28 })
+    dispararPointer(toggle, 'pointermove', { x: 300, y: 88 })
+    dispararPointer(toggle, 'pointerup', { x: 300, y: 88 })
+
+    const posicoes = JSON.parse(localStorage.getItem(CHAVE_POSICAO_ANOTACOES_UI_TESTE))
+    expect(posicoes.desktop).toMatchObject({ x: 320, y: 520 })
+    expect(posicoes.mobile).toMatchObject({ x: 290, y: 78 })
+  })
+
+  it('limita posicao salva a viewport no carregamento e no resize', () => {
+    localStorage.setItem(CHAVE_POSICAO_ANOTACOES_UI_TESTE, JSON.stringify({
+      desktop: { x: 2000, y: -20 }
+    }))
+    document.getElementById('anotacoes-ui').remove()
+    inicializarAnotacoesUi()
+    const { toggle } = obterElementosUi()
+
+    expect(toggle.style.left).toBe('1072px')
+    expect(toggle.style.top).toBe('8px')
+    expect(JSON.parse(localStorage.getItem(CHAVE_POSICAO_ANOTACOES_UI_TESTE)).desktop)
+      .toMatchObject({ x: 1072, y: 8 })
+
+    localStorage.setItem(CHAVE_POSICAO_ANOTACOES_UI_TESTE, JSON.stringify({
+      desktop: { x: 900, y: 600 }
+    }))
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 800 })
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 500 })
+    window.dispatchEvent(new window.Event('resize'))
+
+    expect(toggle.style.left).toBe('672px')
+    expect(toggle.style.top).toBe('450px')
+  })
+
+  it('posiciona toolbar perto do botao e muda direcao perto da borda', () => {
+    const { toggle, toolbar } = obterElementosUi()
+    definirRetanguloElemento(toolbar, { left: 0, top: 0, width: 300, height: 100 })
+    definirRetanguloElemento(toggle, { left: 100, top: 650, width: 120, height: 42 })
+
+    definirModoAnotacoesUi(true)
+
+    expect(toolbar.dataset.direcao).toBe('acima')
+    expect(toolbar.style.left).toBe('100px')
+    expect(toolbar.style.top).toBe('540px')
+
+    definirRetanguloElemento(toggle, { left: 1050, top: 10, width: 120, height: 42 })
+    definirModoAnotacoesUi(true)
+
+    expect(toolbar.dataset.direcao).toBe('abaixo')
+    expect(toolbar.style.left).toBe('892px')
+    expect(toolbar.style.top).toBe('62px')
   })
 
   it('oferece ferramentas, cores e espessuras e altera somente o estado visual', () => {
