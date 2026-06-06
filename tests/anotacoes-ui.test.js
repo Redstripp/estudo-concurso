@@ -8,7 +8,7 @@ const {
   obterViewIdAnotacoesUi
 } = globalThis.AnotacoesLivresUi
 
-const { carregarAnotacoes } = globalThis.AnotacoesLivres
+const { carregarAnotacoes, salvarAnotacoes } = globalThis.AnotacoesLivres
 
 let contextoCanvas
 let retangulosSecoes
@@ -225,6 +225,83 @@ describe('shell visual de anotacoes livres', () => {
     expect(contextoCanvas.lineWidth).toBe(7)
   })
 
+  it('desenha com marca-texto semitransparente e salva ferramenta, cor e espessura', () => {
+    const { toggle, canvas } = obterElementosUi()
+    toggle.click()
+    clicar('[data-grupo-anotacoes="ferramenta"][data-valor-anotacoes="highlighter"]')
+    clicar('[data-grupo-anotacoes="cor"][data-valor-anotacoes="yellow"]')
+    clicar('[data-grupo-anotacoes="espessura"][data-valor-anotacoes="thin"]')
+
+    desenharTraco(canvas)
+    const salvo = carregarAnotacoes({ userId: 'anonimo', viewId: 'secao:flashcards' })
+
+    expect(salvo.strokes).toHaveLength(1)
+    expect(salvo.strokes[0]).toMatchObject({
+      tool: 'highlighter',
+      color: 'yellow',
+      thickness: 'thin',
+      opacity: 0.35,
+      points: [{ x: 30, y: 40 }, { x: 60, y: 80 }, { x: 70, y: 90 }]
+    })
+    expect(contextoCanvas.strokeStyle).toBe('#facc15')
+    expect(contextoCanvas.lineWidth).toBe(2)
+    expect(contextoCanvas.globalAlpha).toBe(0.35)
+  })
+
+  it('nao cria marca-texto fora da area desenhavel', () => {
+    const { toggle, canvas } = obterElementosUi()
+    toggle.click()
+    clicar('[data-grupo-anotacoes="ferramenta"][data-valor-anotacoes="highlighter"]')
+
+    dispararPointer(canvas, 'pointerdown', { x: 180, y: 140 })
+    dispararPointer(canvas, 'pointermove', { x: 260, y: 180 })
+    dispararPointer(canvas, 'pointerup', { x: 270, y: 190 })
+
+    expect(localStorage.length).toBe(0)
+    expect(obterEstadoAnotacoesUi().quantidadeTracos).toBe(0)
+  })
+
+  it('redesenha tracos de lapis e marca-texto ja persistidos', () => {
+    salvarAnotacoes({
+      version: 1,
+      userId: 'anonimo',
+      viewId: 'secao:flashcards',
+      referenceWidth: 900,
+      updatedAt: '2026-06-05T12:00:00.000Z',
+      strokes: [
+        {
+          id: 'lapis',
+          tool: 'pen',
+          color: 'blue',
+          thickness: 'medium',
+          opacity: 1,
+          points: [{ x: 30, y: 40 }, { x: 60, y: 80 }],
+          createdAt: '2026-06-05T12:00:00.000Z'
+        },
+        {
+          id: 'marca-texto',
+          tool: 'highlighter',
+          color: 'green',
+          thickness: 'thick',
+          opacity: 0.35,
+          points: [{ x: 40, y: 50 }, { x: 70, y: 90 }],
+          createdAt: '2026-06-05T12:00:01.000Z'
+        }
+      ]
+    })
+    document.getElementById('anotacoes-ui').remove()
+    contextoCanvas.moveTo.mockClear()
+    contextoCanvas.stroke.mockClear()
+
+    inicializarAnotacoesUi()
+
+    expect(contextoCanvas.moveTo).toHaveBeenCalledTimes(2)
+    expect(contextoCanvas.stroke).toHaveBeenCalledTimes(2)
+    expect(contextoCanvas.globalAlpha).toBe(0.35)
+    expect(contextoCanvas.strokeStyle).toBe('#16a34a')
+    expect(contextoCanvas.lineWidth).toBe(7)
+  })
+
   it('ignora inicio de traco fora da area desenhavel visivel', () => {
     const { toggle, canvas } = obterElementosUi()
     toggle.click()
@@ -266,9 +343,11 @@ describe('shell visual de anotacoes livres', () => {
     expect(obterEstadoAnotacoesUi().quantidadeTracos).toBe(0)
   })
 
-  it('nao desenha desativado, com marca-texto, borracha ou eventos incompletos', () => {
+  it('nao desenha desativado, com borracha ou eventos incompletos', () => {
     const { toggle, canvas } = obterElementosUi()
 
+    desenharTraco(canvas)
+    clicar('[data-grupo-anotacoes="ferramenta"][data-valor-anotacoes="highlighter"]')
     desenharTraco(canvas)
     dispararPointer(canvas, 'pointermove', { x: 240, y: 150 })
     dispararPointer(canvas, 'pointerup', { x: 250, y: 160 })
@@ -276,8 +355,6 @@ describe('shell visual de anotacoes livres', () => {
     expect(localStorage.length).toBe(0)
 
     toggle.click()
-    clicar('[data-grupo-anotacoes="ferramenta"][data-valor-anotacoes="highlighter"]')
-    desenharTraco(canvas)
     clicar('[data-grupo-anotacoes="ferramenta"][data-valor-anotacoes="eraser"]')
     desenharTraco(canvas)
     clicar('[data-grupo-anotacoes="ferramenta"][data-valor-anotacoes="pen"]')

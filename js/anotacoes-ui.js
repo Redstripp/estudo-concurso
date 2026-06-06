@@ -26,6 +26,9 @@ const ESPESSURAS_CANVAS_ANOTACOES_UI = {
   thick: 7
 }
 
+const OPACIDADE_MARCA_TEXTO_ANOTACOES_UI = 0.35
+const FERRAMENTAS_DESENHO_ANOTACOES_UI = new Set(['pen', 'highlighter'])
+
 const FERRAMENTAS_ANOTACOES_UI = [
   { valor: 'pen', rotulo: 'Lapis', icone: 'L' },
   { valor: 'highlighter', rotulo: 'Marca-texto', icone: 'M' },
@@ -333,8 +336,16 @@ function configurarContextoTracoAnotacoesUi(contexto, traco) {
   contexto.globalAlpha = traco.opacity ?? 1
 }
 
+function ferramentaDesenhaTracoAnotacoesUi(ferramenta) {
+  return FERRAMENTAS_DESENHO_ANOTACOES_UI.has(ferramenta)
+}
+
+function obterOpacidadeFerramentaAnotacoesUi(ferramenta) {
+  return ferramenta === 'highlighter' ? OPACIDADE_MARCA_TEXTO_ANOTACOES_UI : 1
+}
+
 function desenharTracoAnotacoesUi(contexto, traco, secao) {
-  if (!contexto || traco?.tool !== 'pen' || !Array.isArray(traco.points) || traco.points.length < 2) return
+  if (!contexto || !ferramentaDesenhaTracoAnotacoesUi(traco?.tool) || !Array.isArray(traco.points) || traco.points.length < 2) return
   const pontos = traco.points.map(ponto => obterPontoViewportAnotacoesUi(ponto, secao)).filter(Boolean)
   if (pontos.length < 2) return
 
@@ -474,7 +485,7 @@ function tratarEscapeAnotacoesUi(evento) {
 
 function podeIniciarTracoAnotacoesUi(evento, raiz) {
   const estado = obterEstadoAnotacoesUi()
-  if (!estado?.ativo || estado.ferramenta !== 'pen') return false
+  if (!estado?.ativo || !ferramentaDesenhaTracoAnotacoesUi(estado.ferramenta)) return false
   if (evento?.isPrimary === false) return false
   if (!Number.isFinite(evento?.pointerId)) return false
   if (Number.isFinite(evento?.button) && evento.button !== 0) return false
@@ -507,12 +518,13 @@ function iniciarTracoAnotacoesUi(evento) {
   if (!ponto) return
 
   runtime.pointerId = evento.pointerId
+  const ferramenta = raiz.dataset.ferramenta
   runtime.tracoAtual = {
     id: `traco-${Date.now()}-${++sequenciaTracosAnotacoesUi}`,
-    tool: 'pen',
+    tool: ferramenta,
     color: raiz.dataset.cor,
     thickness: raiz.dataset.espessura,
-    opacity: 1,
+    opacity: obterOpacidadeFerramentaAnotacoesUi(ferramenta),
     points: [ponto],
     createdAt: new Date().toISOString()
   }
