@@ -124,9 +124,10 @@ function criarToolbarAnotacoesUi() {
 
   const limpar = criarBotaoAnotacoesUi({
     classe: 'anotacoes-controle anotacoes-controle--limpar',
-    rotulo: 'Limpar anotacoes, disponivel em uma etapa futura',
+    rotulo: 'Limpar anotacoes da secao atual',
     texto: 'Limpar'
   })
+  limpar.setAttribute('aria-disabled', 'true')
   limpar.disabled = true
 
   toolbar.append(ferramentas, cores, espessuras, limpar)
@@ -165,6 +166,23 @@ function obterEstadoAnotacoesUi() {
     viewId: runtime?.viewId || VIEW_ID_PADRAO_ANOTACOES_UI,
     quantidadeTracos: runtime?.estado?.strokes?.length || 0
   }
+}
+
+function obterBotaoLimparAnotacoesUi(raiz = obterRaizAnotacoesUi()) {
+  return raiz?.querySelector('.anotacoes-controle--limpar') || null
+}
+
+function atualizarEstadoLimparAnotacoesUi(raiz = obterRaizAnotacoesUi()) {
+  const botao = obterBotaoLimparAnotacoesUi(raiz)
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  if (!botao) return
+
+  const habilitado = (runtime?.estado?.strokes?.length || 0) > 0
+  botao.disabled = !habilitado
+  botao.setAttribute('aria-disabled', String(!habilitado))
+  botao.title = habilitado
+    ? 'Limpar anotacoes da secao atual'
+    : 'Sem anotacoes para limpar nesta secao'
 }
 
 function obterLarguraReferenciaAnotacoesUi(secao) {
@@ -433,6 +451,7 @@ function atualizarSecaoAnotacoesUi(raiz = obterRaizAnotacoesUi()) {
   raiz.dataset.viewId = viewId
   atualizarAreaInterativaCanvasAnotacoesUi(raiz)
   redesenharAnotacoesUi(raiz)
+  atualizarEstadoLimparAnotacoesUi(raiz)
   return viewId
 }
 
@@ -578,6 +597,7 @@ function finalizarTracoAnotacoesUi(evento) {
   const resultado = modelo?.salvarAnotacoes?.(estado)
   if (resultado?.ok) runtime.estado = resultado.estado
   redesenharAnotacoesUi(raiz)
+  atualizarEstadoLimparAnotacoesUi(raiz)
   evento.preventDefault?.()
 }
 
@@ -586,6 +606,39 @@ function cancelarPointerAnotacoesUi(evento) {
   if (!runtime?.tracoAtual || runtime.pointerId !== evento.pointerId) return
   alterarCapturaPointerAnotacoesUi(evento.currentTarget, 'releasePointerCapture', evento.pointerId)
   cancelarTracoAtualAnotacoesUi()
+}
+
+function criarEstadoVazioRuntimeAnotacoesUi(runtime) {
+  const modelo = globalThis.AnotacoesLivres
+  return modelo?.criarEstadoAnotacoesVazio?.({
+    userId: USUARIO_ANOTACOES_UI,
+    viewId: runtime.viewId,
+    referenceWidth: obterLarguraReferenciaAnotacoesUi(runtime.secao)
+  }) || { strokes: [] }
+}
+
+function limparAnotacoesSecaoAtualUi(raiz = obterRaizAnotacoesUi()) {
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  if (!runtime || (runtime.estado?.strokes?.length || 0) === 0) return false
+
+  const confirmado = typeof window.confirm === 'function'
+    ? window.confirm('Limpar anotacoes desta secao?')
+    : true
+  if (!confirmado) return false
+
+  const modelo = globalThis.AnotacoesLivres
+  const resultado = modelo?.limparAnotacoes?.({
+    userId: USUARIO_ANOTACOES_UI,
+    viewId: runtime.viewId
+  })
+  if (!resultado?.ok) return false
+
+  runtime.tracoAtual = null
+  runtime.pointerId = null
+  runtime.estado = criarEstadoVazioRuntimeAnotacoesUi(runtime)
+  redesenharAnotacoesUi(raiz)
+  atualizarEstadoLimparAnotacoesUi(raiz)
+  return true
 }
 
 function observarSecoesAnotacoesUi(raiz) {
@@ -649,6 +702,12 @@ function inicializarAnotacoesUi() {
   })
 
   toolbar.addEventListener('click', evento => {
+    const botaoLimpar = evento.target.closest?.('.anotacoes-controle--limpar')
+    if (botaoLimpar && toolbar.contains(botaoLimpar)) {
+      limparAnotacoesSecaoAtualUi(raiz)
+      return
+    }
+
     const botao = evento.target.closest?.('[data-grupo-anotacoes]')
     if (!botao || !toolbar.contains(botao)) return
     atualizarSelecaoAnotacoesUi(raiz, botao.dataset.grupoAnotacoes, botao.dataset.valorAnotacoes)

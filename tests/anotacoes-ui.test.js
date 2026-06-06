@@ -88,6 +88,7 @@ function obterElementosUi() {
     raiz: document.getElementById('anotacoes-ui'),
     toggle: document.getElementById('btn-anotacoes-toggle'),
     toolbar: document.getElementById('anotacoes-toolbar'),
+    limpar: document.querySelector('.anotacoes-controle--limpar'),
     canvas: document.getElementById('anotacoes-canvas')
   }
 }
@@ -172,6 +173,7 @@ describe('shell visual de anotacoes livres', () => {
     expect(valores('cor')).toEqual(['black', 'red', 'blue', 'green', 'yellow', 'white'])
     expect(valores('espessura')).toEqual(['thin', 'medium', 'thick'])
     expect(raiz.querySelector('.anotacoes-controle--limpar').disabled).toBe(true)
+    expect(raiz.querySelector('.anotacoes-controle--limpar').getAttribute('aria-disabled')).toBe('true')
 
     const marcaTexto = clicar('[data-grupo-anotacoes="ferramenta"][data-valor-anotacoes="highlighter"]')
     const azul = clicar('[data-grupo-anotacoes="cor"][data-valor-anotacoes="blue"]')
@@ -363,6 +365,58 @@ describe('shell visual de anotacoes livres', () => {
     expect(contextoCanvas.stroke).toHaveBeenCalledTimes(3)
     expect(contextoCanvas.globalCompositeOperation).toBe('destination-out')
     expect(contextoCanvas.lineWidth).toBe(2)
+  })
+
+  it('habilita Limpar quando ha tracos e nao apaga se a confirmacao for cancelada', () => {
+    const { toggle, canvas, limpar } = obterElementosUi()
+    toggle.click()
+    desenharTraco(canvas)
+    expect(limpar.disabled).toBe(false)
+    expect(limpar.getAttribute('aria-disabled')).toBe('false')
+    contextoCanvas.clearRect.mockClear()
+    const confirmacao = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    limpar.click()
+
+    expect(confirmacao).toHaveBeenCalledWith('Limpar anotacoes desta secao?')
+    expect(carregarAnotacoes({ userId: 'anonimo', viewId: 'secao:flashcards' }).strokes).toHaveLength(1)
+    expect(limpar.disabled).toBe(false)
+    expect(contextoCanvas.clearRect).not.toHaveBeenCalled()
+    confirmacao.mockRestore()
+  })
+
+  it('limpa somente a secao atual e mantem outras secoes apos reload', async () => {
+    const { toggle, canvas, limpar } = obterElementosUi()
+    toggle.click()
+    desenharTraco(canvas)
+
+    trocarSecao('questoes')
+    await vi.waitFor(() => {
+      expect(obterEstadoAnotacoesUi()).toMatchObject({ viewId: 'secao:questoes', quantidadeTracos: 0 })
+    })
+    desenharTraco(canvas, [[240, 150], [280, 190], [290, 200]])
+    expect(limpar.disabled).toBe(false)
+    contextoCanvas.clearRect.mockClear()
+    const confirmacao = vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    limpar.click()
+
+    expect(confirmacao).toHaveBeenCalledWith('Limpar anotacoes desta secao?')
+    expect(carregarAnotacoes({ userId: 'anonimo', viewId: 'secao:questoes' }).strokes).toEqual([])
+    expect(carregarAnotacoes({ userId: 'anonimo', viewId: 'secao:flashcards' }).strokes).toHaveLength(1)
+    expect(limpar.disabled).toBe(true)
+    expect(contextoCanvas.clearRect).toHaveBeenCalled()
+
+    document.getElementById('anotacoes-ui').remove()
+    inicializarAnotacoesUi()
+    expect(obterEstadoAnotacoesUi()).toMatchObject({ viewId: 'secao:questoes', quantidadeTracos: 0 })
+
+    trocarSecao('flashcards')
+    await vi.waitFor(() => {
+      expect(obterEstadoAnotacoesUi()).toMatchObject({ viewId: 'secao:flashcards', quantidadeTracos: 1 })
+    })
+    expect(document.querySelector('.anotacoes-controle--limpar').disabled).toBe(false)
+    confirmacao.mockRestore()
   })
 
   it('ignora inicio de traco fora da area desenhavel visivel', () => {
