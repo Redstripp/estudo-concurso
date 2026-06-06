@@ -8,7 +8,7 @@ A prioridade atual é estabilidade: revisão, flashcards, questões, estatístic
 
 ## Estado técnico atual
 
-- Estado confiável: `9da16aa feat: render markdown bold in edital notes`.
+- Estado funcional confiável: `e9267a0 fix: improve annotation toolbar on narrow screens`.
 - Branch `main` sincronizada com `origin/main`.
 - Working tree limpo.
 - Projeto em HTML, CSS e JavaScript, com TypeScript gradual.
@@ -23,12 +23,12 @@ A prioridade atual é estabilidade: revisão, flashcards, questões, estatístic
 ## Estado de validação atual
 
 - `check:js` passando.
-- 490 testes passando em 22 arquivos.
+- 535 testes passando em 24 arquivos.
 - `typecheck` passando.
 - `build` passando.
-- CI verde no GitHub Actions no commit `9da16aa`.
-- GitHub Pages verde no commit `9da16aa`.
-- QA visual/manual aprovado no Google Chrome normal do Windows.
+- CI verde no GitHub Actions no commit `e9267a0`.
+- GitHub Pages verde no commit `e9267a0`.
+- QA visual/manual anterior aprovado no Google Chrome normal do Windows; QA manual final da ferramenta completa de anotações ainda recomendado.
 
 ## Melhorias recentes
 
@@ -74,6 +74,18 @@ A prioridade atual é estabilidade: revisão, flashcards, questões, estatístic
 - Edital: concluído no commit `9da16aa feat: render markdown bold in edital notes`.
 - Markdown continua proibido em inputs, textareas, atributos HTML, PDF/exportações, prompts copiáveis, botões, métricas, gráficos, SVG, filtros e labels técnicos, salvo novo diagnóstico específico.
 
+### Anotações livres globais
+
+- Shell visual global: `4dda34c feat: add annotation toolbar shell`.
+- Lápis básico com persistência local por seção: `1c2d3d2 feat: add basic annotation pen drawing`.
+- Correção para o canvas não bloquear controles globais: `e65245e fix: keep annotation canvas from blocking global controls`.
+- Marca-texto funcional: `703cd4f feat: add annotation highlighter tool`.
+- Borracha pontual vetorial: `96f3b89 feat: add annotation eraser tool`.
+- Limpar anotações somente da seção atual: `a002955 feat: clear annotations for current view`.
+- Botão/barra arrastável com persistência separada desktop/mobile: `9651c05 feat: make annotation toolbar draggable`.
+- Toolbar responsiva em janela estreita: `e9267a0 fix: improve annotation toolbar on narrow screens`.
+- Persistência de traços continua em `localStorage`, separada da chave de posição da UI.
+
 ## Regras que não devem ser quebradas
 
 - Não reintroduzir `delete` automático em `questoes` no arquivamento mensal.
@@ -108,18 +120,27 @@ A prioridade atual é estabilidade: revisão, flashcards, questões, estatístic
 5. Verificar CI verde no GitHub Actions.
 6. Considerar a mudança pronta somente com CI verde.
 
+## Limitações conhecidas atuais
+
+- A reescala responsiva perfeita dos traços ainda não é garantida quando cards reorganizam verticalmente.
+- As anotações são locais, via `localStorage`, e não sincronizam entre dispositivos.
+- A persistência usa fallback `anonimo` enquanto não houver integração explícita com usuário real.
+- Subcontextos de abas internas, filtros, paginação ou cards podem ser evoluídos depois se necessário.
+- Não há undo/redo, edição de traços antigos, OCR, exportação ou backup de anotações nesta fase.
+
 ## Próximas pendências recomendadas
 
 Ordem segura sugerida:
 
-1. Usar o sistema em estudo real.
-2. Corrigir somente bugs específicos e reproduzíveis.
-3. Diagnosticar refresh do Dashboard após salvar questão somente se a lentidão persistir.
-4. Tratar `BUG-DASH-004` somente se incomodar.
-5. Tratar `BUG-DASH-005/006` em etapa separada e de baixa prioridade.
-6. Tratar `BUG-DASH-007` em etapa separada.
-7. Avaliar persistência estruturada dos campos ricos dos Flashcards somente com plano de banco separado.
-8. Avaliar paginação server-side somente com diagnóstico próprio.
+1. Fazer QA visual/manual final da ferramenta global de anotações no Google Chrome normal do Windows.
+2. Usar o sistema em estudo real.
+3. Corrigir somente bugs específicos e reproduzíveis.
+4. Diagnosticar refresh do Dashboard após salvar questão somente se a lentidão persistir.
+5. Tratar `BUG-DASH-004` somente se incomodar.
+6. Tratar `BUG-DASH-005/006` em etapa separada e de baixa prioridade.
+7. Tratar `BUG-DASH-007` em etapa separada.
+8. Avaliar persistência estruturada dos campos ricos dos Flashcards somente com plano de banco separado.
+9. Avaliar paginação server-side somente com diagnóstico próprio.
 
 ## Coisas para não fazer agora
 
@@ -129,6 +150,8 @@ Ordem segura sugerida:
 - Trocar `window.print()` por jsPDF agora.
 - Converter tudo para TypeScript de uma vez.
 - Mexer em RLS/Supabase sem auditoria.
+- Sincronizar anotações com Supabase sem plano de dados próprio.
+- Implementar reescala responsiva avançada dos traços sem diagnóstico e versionamento.
 
 ## Estilo de trabalho esperado
 
