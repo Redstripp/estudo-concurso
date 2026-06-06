@@ -274,6 +274,15 @@ describe('shell visual de anotacoes livres', () => {
     expect(toolbar.style.top).toBe('62px')
   })
 
+  it('mantem toolbar compacta e rolavel em telas estreitas pelo CSS', () => {
+    const css = readFileSync(new URL('../css/estilo.css', import.meta.url), 'utf8')
+
+    expect(css).toMatch(/@media \(max-width: 480px\)/)
+    expect(css).toMatch(/\.anotacoes-toolbar\s*{[^}]*flex-wrap:\s*nowrap;[^}]*overflow-x:\s*auto;[^}]*overflow-y:\s*hidden;/s)
+    expect(css).toMatch(/\.anotacoes-toolbar-grupo\s*{[^}]*flex:\s*0 0 auto;/s)
+    expect(css).toMatch(/\.anotacoes-controle\s*{[^}]*min-width:\s*32px;/s)
+  })
+
   it('oferece ferramentas, cores e espessuras e altera somente o estado visual', () => {
     const { raiz } = obterElementosUi()
     const valores = grupo => Array.from(raiz.querySelectorAll(`[data-grupo-anotacoes="${grupo}"]`))
