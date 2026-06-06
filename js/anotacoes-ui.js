@@ -3,6 +3,7 @@
 const ID_RAIZ_ANOTACOES_UI = 'anotacoes-ui'
 const documentosComAtalhoAnotacoesUi = new WeakSet()
 const janelasComEventosAnotacoesUi = new WeakSet()
+const botoesMenuComAnotacoesUi = new WeakSet()
 const estadosAnotacoesUi = new WeakMap()
 let sequenciaTracosAnotacoesUi = 0
 
@@ -194,12 +195,18 @@ function obterDprAnotacoesUi() {
   return Number.isFinite(dpr) && dpr > 0 ? dpr : 1
 }
 
+function obterDimensoesViewportAnotacoesUi() {
+  return {
+    largura: Math.max(1, Math.round(window.innerWidth || document.documentElement.clientWidth || 1)),
+    altura: Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || 1))
+  }
+}
+
 function ajustarCanvasAnotacoesUi(raiz = obterRaizAnotacoesUi()) {
   const canvas = raiz?.querySelector('#anotacoes-canvas')
   if (!canvas) return
 
-  const largura = Math.max(1, Math.round(window.innerWidth || document.documentElement.clientWidth || 1))
-  const altura = Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || 1))
+  const { largura, altura } = obterDimensoesViewportAnotacoesUi()
   const dpr = obterDprAnotacoesUi()
 
   canvas.width = Math.round(largura * dpr)
@@ -214,9 +221,93 @@ function ajustarCanvasAnotacoesUi(raiz = obterRaizAnotacoesUi()) {
   contexto?.setTransform?.(dpr, 0, 0, dpr, 0, 0)
 }
 
+function obterRetanguloNormalizadoAnotacoesUi(elemento) {
+  const retangulo = elemento?.getBoundingClientRect?.()
+  if (!retangulo) return null
+
+  const left = Number(retangulo.left)
+  const top = Number(retangulo.top)
+  const right = Number.isFinite(Number(retangulo.right))
+    ? Number(retangulo.right)
+    : left + Number(retangulo.width)
+  const bottom = Number.isFinite(Number(retangulo.bottom))
+    ? Number(retangulo.bottom)
+    : top + Number(retangulo.height)
+
+  if (![left, top, right, bottom].every(Number.isFinite)) return null
+  return { left, top, right, bottom }
+}
+
+function elementoVisivelAnotacoesUi(elemento) {
+  if (!elemento) return false
+  const estilo = typeof window.getComputedStyle === 'function'
+    ? window.getComputedStyle(elemento)
+    : null
+  return estilo?.display !== 'none'
+    && estilo?.visibility !== 'hidden'
+    && estilo?.opacity !== '0'
+}
+
+function obterLimiteSuperiorGlobalAnotacoesUi(alturaViewport) {
+  const header = document.querySelector('.header-mobile')
+  const retangulo = elementoVisivelAnotacoesUi(header)
+    ? obterRetanguloNormalizadoAnotacoesUi(header)
+    : null
+  if (!retangulo || retangulo.bottom <= 0 || retangulo.top >= alturaViewport) return 0
+  return Math.min(alturaViewport, Math.max(0, retangulo.bottom))
+}
+
+function obterAreaDesenhavelAnotacoesUi(secao) {
+  const retangulo = obterRetanguloNormalizadoAnotacoesUi(secao)
+  if (!retangulo) return null
+
+  const { largura, altura } = obterDimensoesViewportAnotacoesUi()
+  const left = Math.max(0, retangulo.left)
+  const top = Math.max(0, retangulo.top, obterLimiteSuperiorGlobalAnotacoesUi(altura))
+  const right = Math.min(largura, retangulo.right)
+  const bottom = Math.min(altura, retangulo.bottom)
+
+  if (right <= left || bottom <= top) return null
+  return { left, top, right, bottom }
+}
+
+function atualizarAreaInterativaCanvasAnotacoesUi(raiz = obterRaizAnotacoesUi()) {
+  const canvas = raiz?.querySelector('#anotacoes-canvas')
+  const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
+  if (!canvas || !runtime) return null
+
+  const area = obterAreaDesenhavelAnotacoesUi(runtime.secao)
+  const { largura, altura } = obterDimensoesViewportAnotacoesUi()
+  runtime.areaDesenhavel = area
+
+  if (!area) {
+    canvas.style.clipPath = 'inset(100% 0 0 0)'
+    return null
+  }
+
+  const top = Math.max(0, Math.round(area.top))
+  const right = Math.max(0, Math.round(largura - area.right))
+  const bottom = Math.max(0, Math.round(altura - area.bottom))
+  const left = Math.max(0, Math.round(area.left))
+  canvas.style.clipPath = `inset(${top}px ${right}px ${bottom}px ${left}px)`
+  return area
+}
+
+function pontoEstaNaAreaDesenhavelAnotacoesUi(evento, secao) {
+  if (!Number.isFinite(evento?.clientX) || !Number.isFinite(evento?.clientY)) return false
+  const area = atualizarAreaInterativaCanvasAnotacoesUi()
+    || obterAreaDesenhavelAnotacoesUi(secao)
+  if (!area) return false
+  return evento.clientX >= area.left
+    && evento.clientX <= area.right
+    && evento.clientY >= area.top
+    && evento.clientY <= area.bottom
+}
+
 function obterPontoConteudoAnotacoesUi(evento, secao) {
   if (!secao || !Number.isFinite(evento?.clientX) || !Number.isFinite(evento?.clientY)) return null
-  const retangulo = secao.getBoundingClientRect?.()
+  if (!pontoEstaNaAreaDesenhavelAnotacoesUi(evento, secao)) return null
+  const retangulo = obterRetanguloNormalizadoAnotacoesUi(secao)
   if (!retangulo) return null
 
   const x = evento.clientX - retangulo.left + (secao.scrollLeft || 0)
@@ -289,8 +380,11 @@ function agendarRedesenhoAnotacoesUi({ ajustarCanvas = false } = {}) {
 
   runtime.rafId = agendar(() => {
     runtime.rafId = null
-    if (runtime.ajustarCanvasPendente) ajustarCanvasAnotacoesUi(raiz)
+    if (runtime.ajustarCanvasPendente) {
+      ajustarCanvasAnotacoesUi(raiz)
+    }
     runtime.ajustarCanvasPendente = false
+    atualizarAreaInterativaCanvasAnotacoesUi(raiz)
     redesenharAnotacoesUi(raiz)
   })
 }
@@ -318,6 +412,7 @@ function atualizarSecaoAnotacoesUi(raiz = obterRaizAnotacoesUi()) {
   runtime.viewId = viewId
   runtime.estado = carregarEstadoSecaoAnotacoesUi(viewId, secao)
   raiz.dataset.viewId = viewId
+  atualizarAreaInterativaCanvasAnotacoesUi(raiz)
   redesenharAnotacoesUi(raiz)
   return viewId
 }
@@ -349,6 +444,7 @@ function definirModoAnotacoesUi(ativo) {
   toolbar.hidden = !modoAtivo
   canvas.classList.toggle('anotacoes-canvas--ativa', modoAtivo)
   canvas.style.pointerEvents = modoAtivo ? 'auto' : 'none'
+  atualizarAreaInterativaCanvasAnotacoesUi(raiz)
   document.body.classList.toggle('modo-anotacoes-ativo', modoAtivo)
   if (!modoAtivo) cancelarTracoAtualAnotacoesUi(raiz)
   return modoAtivo
@@ -490,6 +586,16 @@ function instalarEventosGlobaisAnotacoesUi() {
   janelasComEventosAnotacoesUi.add(window)
 }
 
+function instalarIntegracaoMenuMobileAnotacoesUi() {
+  const btnMenu = document.getElementById('btn-menu')
+  if (!btnMenu || botoesMenuComAnotacoesUi.has(btnMenu)) return
+
+  btnMenu.addEventListener('click', () => {
+    if (obterEstadoAnotacoesUi()?.ativo) definirModoAnotacoesUi(false)
+  }, { capture: true })
+  botoesMenuComAnotacoesUi.add(btnMenu)
+}
+
 function inicializarAnotacoesUi() {
   const existente = obterRaizAnotacoesUi()
   if (existente) return existente
@@ -555,6 +661,7 @@ function inicializarAnotacoesUi() {
   atualizarSecaoAnotacoesUi(raiz)
   observarSecoesAnotacoesUi(raiz)
   instalarEventosGlobaisAnotacoesUi()
+  instalarIntegracaoMenuMobileAnotacoesUi()
 
   if (!documentosComAtalhoAnotacoesUi.has(document)) {
     document.addEventListener('keydown', tratarEscapeAnotacoesUi)

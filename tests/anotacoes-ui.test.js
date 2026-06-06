@@ -28,8 +28,13 @@ function criarContextoCanvas() {
 
 function montarSecoes(ativa = 'flashcards') {
   document.body.innerHTML = `
+    <header class="header-mobile">
+      <button id="btn-menu" type="button">Menu</button>
+    </header>
     <main class="conteudo-principal">
-      <section id="secao-flashcards" class="secao ${ativa === 'flashcards' ? '' : 'escondido'}"></section>
+      <section id="secao-flashcards" class="secao ${ativa === 'flashcards' ? '' : 'escondido'}">
+        <button class="btn-ajuda-secao" type="button">?</button>
+      </section>
       <section id="secao-questoes" class="secao ${ativa === 'questoes' ? '' : 'escondido'}"></section>
     </main>
   `
@@ -135,6 +140,7 @@ describe('shell visual de anotacoes livres', () => {
     expect(toolbar.hidden).toBe(true)
     expect(canvas.style.pointerEvents).toBe('none')
     expect(canvas.style.touchAction).toBe('none')
+    expect(canvas.style.clipPath).toBe('inset(100px 100px 0px 200px)')
   })
 
   it('alterna modo, aria-pressed, classes e eventos do canvas pelo botao', () => {
@@ -219,6 +225,47 @@ describe('shell visual de anotacoes livres', () => {
     expect(contextoCanvas.lineWidth).toBe(7)
   })
 
+  it('ignora inicio de traco fora da area desenhavel visivel', () => {
+    const { toggle, canvas } = obterElementosUi()
+    toggle.click()
+
+    dispararPointer(canvas, 'pointerdown', { x: 180, y: 140 })
+    dispararPointer(canvas, 'pointermove', { x: 260, y: 180 })
+    dispararPointer(canvas, 'pointerup', { x: 270, y: 190 })
+
+    expect(localStorage.length).toBe(0)
+    expect(obterEstadoAnotacoesUi().quantidadeTracos).toBe(0)
+  })
+
+  it('nao adiciona pontos fora da area desenhavel durante um traco', () => {
+    const { toggle, canvas } = obterElementosUi()
+    toggle.click()
+
+    dispararPointer(canvas, 'pointerdown', { x: 230, y: 140 })
+    dispararPointer(canvas, 'pointermove', { x: 1150, y: 180 })
+    dispararPointer(canvas, 'pointermove', { x: 270, y: 190 })
+    dispararPointer(canvas, 'pointerup', { x: 280, y: 200 })
+
+    const salvo = carregarAnotacoes({ userId: 'anonimo', viewId: 'secao:flashcards' })
+    expect(salvo.strokes).toHaveLength(1)
+    expect(salvo.strokes[0].points).toEqual([
+      { x: 30, y: 40 },
+      { x: 70, y: 90 },
+      { x: 80, y: 100 }
+    ])
+  })
+
+  it('nao salva traco vazio quando o pointerup acontece fora da area desenhavel', () => {
+    const { toggle, canvas } = obterElementosUi()
+    toggle.click()
+
+    dispararPointer(canvas, 'pointerdown', { x: 230, y: 140 })
+    dispararPointer(canvas, 'pointerup', { x: 1150, y: 180 })
+
+    expect(localStorage.length).toBe(0)
+    expect(obterEstadoAnotacoesUi().quantidadeTracos).toBe(0)
+  })
+
   it('nao desenha desativado, com marca-texto, borracha ou eventos incompletos', () => {
     const { toggle, canvas } = obterElementosUi()
 
@@ -289,8 +336,38 @@ describe('shell visual de anotacoes livres', () => {
     expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1)
     callbacks.shift()()
     expect(contextoCanvas.moveTo).toHaveBeenCalledWith(230, -10)
+    expect(canvas.style.clipPath).toBe('inset(0px 100px 0px 200px)')
     expect(canvas.height).toBe(700)
     expect(canvas.height).not.toBe(9000)
+  })
+
+  it('exclui o header mobile visivel da area desenhavel', () => {
+    const { toggle, canvas } = obterElementosUi()
+    const callbacks = []
+    const header = document.querySelector('.header-mobile')
+    header.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 1200,
+      bottom: 80,
+      width: 1200,
+      height: 80
+    })
+    window.requestAnimationFrame = vi.fn(callback => {
+      callbacks.push(callback)
+      return callbacks.length
+    })
+    toggle.click()
+
+    retangulosSecoes.flashcards.top = -50
+    window.dispatchEvent(new window.Event('scroll'))
+    callbacks.shift()()
+    dispararPointer(canvas, 'pointerdown', { x: 230, y: 60 })
+    dispararPointer(canvas, 'pointermove', { x: 260, y: 100 })
+    dispararPointer(canvas, 'pointerup', { x: 270, y: 110 })
+
+    expect(canvas.style.clipPath).toBe('inset(80px 100px 0px 200px)')
+    expect(localStorage.length).toBe(0)
   })
 
   it('ajusta canvas a viewport no resize e mantem pointer-events seguros apos desenhar', () => {
@@ -314,8 +391,36 @@ describe('shell visual de anotacoes livres', () => {
     expect(canvas.height).toBe(1000)
     expect(canvas.style.width).toBe('800px')
     expect(canvas.style.height).toBe('500px')
+    expect(canvas.style.clipPath).toBe('inset(100px 0px 0px 200px)')
     toggle.click()
     expect(canvas.style.pointerEvents).toBe('none')
+  })
+
+  it('mantem ajuda acima da camada de anotacoes e clicavel', () => {
+    const css = readFileSync(new URL('../css/estilo.css', import.meta.url), 'utf8')
+    const ajuda = document.querySelector('.btn-ajuda-secao')
+    const abrirAjuda = vi.fn()
+    ajuda.addEventListener('click', abrirAjuda)
+    definirModoAnotacoesUi(true)
+
+    ajuda.click()
+
+    expect(abrirAjuda).toHaveBeenCalledTimes(1)
+    expect(css).toMatch(/\.btn-ajuda-secao\s*{[^}]*position:\s*relative;[^}]*z-index:\s*701/s)
+  })
+
+  it('desativa o modo de anotacao antes de abrir o menu mobile', () => {
+    const { toggle } = obterElementosUi()
+    const btnMenu = document.getElementById('btn-menu')
+    const abrirMenu = vi.fn()
+    btnMenu.addEventListener('click', abrirMenu)
+    toggle.click()
+    expect(obterEstadoAnotacoesUi().ativo).toBe(true)
+
+    btnMenu.click()
+
+    expect(obterEstadoAnotacoesUi().ativo).toBe(false)
+    expect(abrirMenu).toHaveBeenCalledTimes(1)
   })
 
   it('Escape desativa o modo sem erro quando a UI esta inativa', () => {
