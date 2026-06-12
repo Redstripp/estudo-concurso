@@ -58,8 +58,18 @@ Caderno de Erros -> IA -> previa editavel -> adicionar ao deck -> revisar pelo S
 
 - Limite diario de cards novos no Estudo do Dia.
 - Configuracao propria de grade dos flashcards.
+- Funcionalidade administrativa futura para redistribuir revisoes acumuladas de flashcards.
 - Associacao direta com questao original no banco.
 - Dashboard global dos flashcards.
 - Graficos avancados.
 - Geracao direta por API de IA.
 - Restauracao de cards desativados.
+
+## Backlog administrativo: redistribuir revisoes de flashcards
+
+- Objetivo: permitir que um admin redistribua cards acumulados de um usuario sem mexer no SM-2.
+- A tela futura deve permitir escolher usuario alvo, data limite dos cards acumulados, data inicial da redistribuicao, quantidade de cards por dia e se considera apenas cards ativos.
+- A acao deve ter previa obrigatoria antes de aplicar e confirmacao explicita antes de qualquer update real.
+- A redistribuicao deve alterar somente `flashcards.due_date`.
+- Nao alterar `ease_factor`, `interval_days`, `repetitions`, `last_reviewed_at`, historico ou estatisticas.
+- Recomendado registrar auditoria administrativa com admin executor, usuario alvo, parametros, total afetado e horario.
