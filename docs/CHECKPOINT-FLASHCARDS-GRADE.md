@@ -44,6 +44,15 @@ Caderno de Erros -> IA -> previa editavel -> adicionar ao deck -> revisar pelo S
 - Nao sera feita migration agora.
 - Melhoria futura opcional: adicionar campos separados no formulario manual que apenas montem o mesmo `verso` estruturado, sem alterar schema.
 
+## Paginacao/listagem dos flashcards
+
+- A aba Todos os Cards ja possui paginacao visual de 20 cards por pagina no DOM.
+- `listarFlashcards()` ainda busca todos os cards do usuario de uma vez.
+- A melhoria futura correta e paginacao server-side completa somente para Todos os Cards.
+- Nao basta aplicar `.range()` diretamente, pois busca, filtros e contadores precisam continuar corretos.
+- O filtro por `tags` precisa de decisao tecnica antes, porque hoje aceita busca parcial em memoria.
+- Decisao atual: nao implementar agora e manter como backlog tecnico.
+
 ## Ultimos PRs relevantes
 
 - #93 SM-2.
