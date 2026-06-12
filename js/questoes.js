@@ -3211,9 +3211,21 @@ function definirValorCampoQuestao(id, valor) {
 
 async function atualizarTelasAposRegistro(opcoes = {}) {
   const tarefas = []
+  const secaoDashboard = document.getElementById('secao-dashboard')
+  const dashboardVisivel = secaoDashboard && !secaoDashboard.classList.contains('escondido')
 
   if (typeof inicializarDashboard === 'function') {
-    tarefas.push(inicializarDashboard())
+    const atualizarDashboard = inicializarDashboard
+
+    if (dashboardVisivel) {
+      tarefas.push(atualizarDashboard())
+    } else {
+      setTimeout(() => {
+        Promise.resolve()
+          .then(() => atualizarDashboard())
+          .catch(erro => console.error(erro))
+      }, 0)
+    }
   }
 
   if (

@@ -1659,8 +1659,9 @@ describe('atualizarTelasAposRegistro', () => {
     }))
   }
 
-  function montarCadernoQuestoes({ visivel = true } = {}) {
+  function montarCadernoQuestoes({ visivel = true, dashboardVisivel = false } = {}) {
     document.body.innerHTML = `
+      <section id="secao-dashboard" class="${dashboardVisivel ? '' : 'escondido'}"></section>
       <section id="secao-questoes" class="${visivel ? '' : 'escondido'}">
         <div id="caderno-erros-acoes"></div>
         <input id="busca-caderno" />
@@ -1757,6 +1758,48 @@ describe('atualizarTelasAposRegistro', () => {
       globalThis.db = dbAnterior
       window.usuarioAtual = usuarioAnterior
       restaurarGlobais()
+    }
+  })
+
+  it('dispara Dashboard oculto em segundo plano sem bloquear a atualizacao visivel do Caderno', async () => {
+    const dbAnterior = globalThis.db
+    const usuarioAnterior = window.usuarioAtual
+    const dashboardAnterior = globalThis.inicializarDashboard
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const dbMock = criarDbQuestoesMock(criarQuestoesParaAtualizacao(2))
+    const erroDashboard = new Error('dashboard indisponivel no teste')
+    let rejeitarDashboard
+
+    montarCadernoQuestoes({ visivel: true, dashboardVisivel: false })
+    globalThis.db = dbMock
+    window.usuarioAtual = { id: 'user-1' }
+    globalThis.inicializarDashboard = vi.fn(() => new Promise((_, reject) => {
+      rejeitarDashboard = reject
+    }))
+
+    try {
+      const atualizacao = atualizarTelasAposRegistro({ questaoNova: true })
+
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(globalThis.inicializarDashboard).toHaveBeenCalledTimes(1)
+      await expect(Promise.race([
+        atualizacao.then(() => 'resolvida'),
+        new Promise(resolve => setTimeout(() => resolve('pendente'), 30))
+      ])).resolves.toBe('resolvida')
+      expect(dbMock.from).toHaveBeenCalledTimes(1)
+      expect(document.querySelectorAll('#lista-questoes .card-questao')).toHaveLength(2)
+
+      rejeitarDashboard(erroDashboard)
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(consoleError).toHaveBeenCalledWith(erroDashboard)
+    } finally {
+      globalThis.db = dbAnterior
+      window.usuarioAtual = usuarioAnterior
+      if (dashboardAnterior === undefined) delete globalThis.inicializarDashboard
+      else globalThis.inicializarDashboard = dashboardAnterior
+      consoleError.mockRestore()
     }
   })
 })
