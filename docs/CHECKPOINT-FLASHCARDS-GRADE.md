@@ -35,6 +35,15 @@ Checkpoint documental da funcionalidade de Flashcards apos o PR #109.
 
 Caderno de Erros -> IA -> previa editavel -> adicionar ao deck -> revisar pelo SM-2 -> estatisticas -> alerta de acumulo.
 
+## Campos ricos dos flashcards
+
+- Diagnostico concluido para `contexto`, `reconhecer` e `alerta_banca`.
+- Esses campos nao sao colunas proprias da tabela `flashcards`.
+- O contrato atual armazena os campos ricos dentro de `flashcards.verso`, em formato estruturado com rotulos.
+- Prompt, parser, previa, salvamento, listagem e revisao ja reconhecem esse formato estruturado.
+- Nao sera feita migration agora.
+- Melhoria futura opcional: adicionar campos separados no formulario manual que apenas montem o mesmo `verso` estruturado, sem alterar schema.
+
 ## Ultimos PRs relevantes
 
 - #93 SM-2.
