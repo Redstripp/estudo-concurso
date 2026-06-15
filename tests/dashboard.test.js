@@ -531,7 +531,7 @@ describe('dashboard helpers', () => {
     const carregarCardsDashboard = criarCarregarCardsDashboardParaTeste({
       db,
       buscarTotaisMensaisArquivados,
-      obterResumoStreakGamificacao: vi.fn(async () => ({ streak: 0, recorde: 0, sequenciaEmRisco: false })),
+      obterResumoStreakGamificacao: vi.fn(async () => ({ streak: 4, recorde: 7, sequenciaEmRisco: false })),
       criarOnboardingDashboard
     })
 
@@ -545,6 +545,9 @@ describe('dashboard helpers', () => {
     })
     expect(criarOnboardingDashboard).toHaveBeenCalledWith(5, expect.any(Number), 0)
     expect(html).toContain('data-total-materias="5"')
+    expect(html).toMatch(/dash-card-valor[^>]*>4<\/div>\s*<div class="dash-card-label">dias com atividade<\/div>/)
+    expect(html).toContain('Recorde: 7 dias')
+    expect(html).not.toContain('dias seguidos')
     expect(html).toMatch(/<strong>4<\/strong>\s*<small>mat\S+rias estudadas<\/small>/)
     expect(html).toMatch(/<strong>Direito Administrativo<\/strong>\s*<small>mat\S+ria com mais erros<\/small>/)
     expect(html).not.toMatch(/mat\S+ria com mais revis\S+o/)

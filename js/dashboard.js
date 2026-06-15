@@ -102,7 +102,7 @@ function criarCardsDashboardVazios() {
       </div>
       <div class="dash-card dash-card--vazio">
         <div class="dash-card-valor">0</div>
-        <div class="dash-card-label">dias seguidos</div>
+        <div class="dash-card-label">dias com atividade</div>
       </div>
       <div class="dash-card dash-card--vazio">
         <div class="dash-card-valor">0</div>
@@ -2017,7 +2017,7 @@ async function carregarCardsDashboard(userId) {
           <span class="dash-card-tag">Sequência</span>
         </div>
         <div class="dash-card-valor dash-card-valor--grande">${streakResumo.streak}</div>
-        <div class="dash-card-label">dias seguidos</div>
+        <div class="dash-card-label">dias com atividade</div>
         <p class="dash-card-subtexto">Recorde: ${streakResumo.recorde} dia${streakResumo.recorde !== 1 ? 's' : ''}</p>
         ${streakResumo.sequenciaEmRisco ? '<span class="dash-card-alerta">Sua sequência está em risco!</span>' : ''}
       </article>
