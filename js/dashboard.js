@@ -435,7 +435,9 @@ function criarPainelCentralHoje(dados) {
   const diasTexto = typeof textoDiasRevisao === 'function' ? textoDiasRevisao(dados.config.dias_revisao) : 'sábado'
   const proximaTexto = typeof formatarDataCurtaRevisao === 'function' ? formatarDataCurtaRevisao(dados.proxima) : formatarDataBRArquivamento(dados.proxima)
   const totalPendente = Number(dados.relatorio.totalPendente || 0)
+  const totalRevisaoDia = Number(dados.relatorio.vencidas || 0)
   const temRevisaoPendente = totalPendente > 0
+  const temRevisaoDia = totalRevisaoDia > 0
   const totalMetaDia = dados.plano.reduce((acc, item) => acc + (Number(item.meta_questoes) || 0), 0)
   const metaDiaTexto = dados.plano.length
     ? `${totalMetaDia} ${totalMetaDia === 1 ? 'questão' : 'questões'} previstas no plano`
@@ -465,11 +467,11 @@ function criarPainelCentralHoje(dados) {
       </div>
 
       <div class="central-hoje-visual">
-        <div class="${temRevisaoPendente ? 'central-hoje-visual-item central-hoje-visual-item--pendente' : 'central-hoje-visual-item central-hoje-visual-item--ok'}">
-          <span class="central-hoje-visual-icone">${temRevisaoPendente ? '&#11036;' : '&#9989;'}</span>
+        <div class="${temRevisaoDia ? 'central-hoje-visual-item central-hoje-visual-item--pendente' : 'central-hoje-visual-item central-hoje-visual-item--ok'}">
+          <span class="central-hoje-visual-icone">${temRevisaoDia ? '&#11036;' : '&#9989;'}</span>
           <div>
             <strong>Revisão do dia</strong>
-            <p>${temRevisaoPendente ? `${totalPendente} ${totalPendente === 1 ? 'questão' : 'questões'} para revisar` : 'Nada para revisar hoje'}</p>
+            <p>${temRevisaoDia ? `${totalRevisaoDia} ${totalRevisaoDia === 1 ? 'questão' : 'questões'} para revisar hoje` : 'Nada para revisar hoje'}</p>
           </div>
         </div>
         <div class="central-hoje-visual-item">

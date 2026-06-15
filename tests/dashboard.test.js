@@ -23,10 +23,29 @@ const appSource = readFileSync(new URL('../js/app.js', import.meta.url), 'utf8')
 const estiloSource = readFileSync(new URL('../css/estilo.css', import.meta.url), 'utf8')
 
 function extrairFuncaoDashboard(nome) {
-  const inicio = dashboardSource.indexOf(`async function ${nome}(`)
-  if (inicio === -1) throw new Error(`Funcao ${nome} nao encontrada.`)
+  const assinaturas = [`async function ${nome}(`, `function ${nome}(`]
+  const inicio = assinaturas
+    .map(assinatura => dashboardSource.indexOf(assinatura))
+    .filter(indice => indice >= 0)
+    .sort((a, b) => a - b)[0]
+  if (inicio === undefined) throw new Error(`Funcao ${nome} nao encontrada.`)
 
-  const abertura = dashboardSource.indexOf('{', inicio)
+  const inicioParametros = dashboardSource.indexOf('(', inicio)
+  let profundidadeParametros = 0
+  let abertura = -1
+
+  for (let indice = inicioParametros; indice < dashboardSource.length; indice += 1) {
+    if (dashboardSource[indice] === '(') profundidadeParametros += 1
+    if (dashboardSource[indice] === ')') {
+      profundidadeParametros -= 1
+      if (profundidadeParametros === 0) {
+        abertura = dashboardSource.indexOf('{', indice)
+        break
+      }
+    }
+  }
+
+  if (abertura === -1) throw new Error(`Corpo da funcao ${nome} nao encontrado.`)
   let profundidade = 0
 
   for (let indice = abertura; indice < dashboardSource.length; indice += 1) {
@@ -218,6 +237,32 @@ function criarBuscarResumoSessaoHojeDashboardParaTeste(db) {
   )
 }
 
+function criarPainelCentralHojeParaTeste() {
+  const fonte = [
+    'obterProximoPassoCentral',
+    'criarPainelMetaQualidadeCentral',
+    'criarPainelCentralHoje'
+  ].map(extrairFuncaoDashboard).join('\n')
+
+  return Function(
+    'escaparHtmlSeguro',
+    'textoDiasRevisao',
+    'formatarDataCurtaRevisao',
+    'formatarDataBRArquivamento',
+    `${fonte}; return criarPainelCentralHoje;`
+  )(
+    valor => String(valor ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;'),
+    () => 'segunda',
+    data => data,
+    data => data
+  )
+}
+
 function criarPeriodoArquivamentoTeste() {
   return {
     inicio: '2026-05-01',
@@ -344,6 +389,40 @@ describe('dashboard helpers', () => {
     expect(html).toContain('dash-resumo-principal')
     expect(html).toContain('0%')
     expect(html).toContain('aproveitamento histórico')
+  })
+
+  it('usa vencidas no card Revisao do dia e preserva pendencias gerais', () => {
+    const criarPainelCentralHoje = criarPainelCentralHojeParaTeste()
+
+    const html = criarPainelCentralHoje({
+      ehRevisao: true,
+      proxima: '2026-06-16',
+      config: { dias_revisao: [1] },
+      questoesHoje: 0,
+      errosHoje: 0,
+      plano: [],
+      planoOrigem: 'vazio',
+      editalConfig: null,
+      relatorio: {
+        totalPendente: 8,
+        totalCiclo: 8,
+        vencidas: 2,
+        fila: [{
+          materias: { nome: 'Direito Constitucional' },
+          edital_topicos: { titulo: 'Controle de constitucionalidade' }
+        }],
+        porMotivo: [],
+        semDiagnostico: 0,
+        diagnosticoFraco: 0,
+        diagnosticoForte: 8,
+        semAssunto: 0,
+        comPegadinhas: 0
+      }
+    })
+
+    expect(html).toMatch(/2 quest\S+es para revisar hoje/)
+    expect(html).not.toMatch(/8 quest\S+es para revisar/)
+    expect(html).toMatch(/<strong>8<\/strong><span>revis\S+es pendentes<\/span>/)
   })
 
   it('monta o periodo mensal de arquivamento a partir do mes alvo', () => {
