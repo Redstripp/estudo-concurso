@@ -1580,6 +1580,49 @@ function obterTotaisArquivadosDaMateria(totaisArquivados, materia) {
     { acertos: 0, erradas: 0, chutadas: 0 }
 }
 
+function normalizarNomeMateriaEstudadaDashboard(nome) {
+  const texto = String(nome || '').trim()
+  if (!texto || texto.toLocaleLowerCase('pt-BR') === 'sem matéria') return ''
+  return texto.toLocaleLowerCase('pt-BR')
+}
+
+function adicionarMateriaEstudadaDashboard(acumulador, registro, permitirNomeSemId = false) {
+  const materiaId = String(registro?.materia_id || '').trim()
+  const nome = normalizarNomeMateriaEstudadaDashboard(registro?.materias?.nome || registro?.materia)
+
+  if (materiaId) {
+    acumulador.ids.add(materiaId)
+    if (nome) acumulador.nomesComId.add(nome)
+    return
+  }
+
+  if (permitirNomeSemId && nome) acumulador.nomesSemId.add(nome)
+}
+
+function contarMateriasEstudadasDashboard(questoes = [], certas = [], arquivadas = []) {
+  const acumulador = {
+    ids: new Set(),
+    nomesComId: new Set(),
+    nomesSemId: new Set()
+  }
+
+  ;(questoes || []).forEach(questao => adicionarMateriaEstudadaDashboard(acumulador, questao))
+  ;(certas || []).forEach(registro => {
+    if ((Number(registro.quantidade) || 0) > 0) adicionarMateriaEstudadaDashboard(acumulador, registro)
+  })
+  ;(arquivadas || []).forEach(materia => {
+    const total = (Number(materia.acertos) || 0) + (Number(materia.erradas) || 0) + (Number(materia.chutadas) || 0)
+    if (total > 0) adicionarMateriaEstudadaDashboard(acumulador, materia, true)
+  })
+
+  let totalSemId = 0
+  acumulador.nomesSemId.forEach(nome => {
+    if (!acumulador.nomesComId.has(nome)) totalSemId += 1
+  })
+
+  return acumulador.ids.size + totalSemId
+}
+
 // ─── CARDS ───────────────────────────────────────────────
 
 // ─── RELATÓRIO DE ERROS RECORRENTES ────────────────────────
@@ -1866,7 +1909,7 @@ async function carregarCardsDashboard(userId) {
       .eq('user_id', userId),
     db
       .from('questoes_certas')
-      .select('quantidade, criado_em')
+      .select('quantidade, materia_id, criado_em, materias(nome)')
       .eq('user_id', userId),
     db
       .from('materias')
@@ -1921,6 +1964,7 @@ async function carregarCardsDashboard(userId) {
   const totalGeral = totalErradasAtivas + totalCertasAtivas + totaisArquivados.totalQuestoes
   const aproveitamento = totalGeral > 0 ? Math.round((totalCertas / totalGeral) * 100) : 0
   const totalMaterias = totalMateriasResp.count || 0
+  const totalMateriasEstudadas = contarMateriasEstudadasDashboard(questoesComMateriaResp.data || [], certasResp.data || [], totaisArquivados.listaPorMateria || [])
   const totalRevisoesPendentes = pendentesResp.count || 0
   const totalRevisoesFeitas = revisoesFeitasResp.count || 0
 
@@ -2002,7 +2046,7 @@ async function carregarCardsDashboard(userId) {
       </div>
       <div class="dash-mini-card">
         <span>&#128218;</span>
-        <strong>${totalMaterias}</strong>
+        <strong>${totalMateriasEstudadas}</strong>
         <small>matérias estudadas</small>
       </div>
       <div class="dash-mini-card">

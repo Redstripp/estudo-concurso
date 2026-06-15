@@ -263,6 +263,68 @@ function criarPainelCentralHojeParaTeste() {
   )
 }
 
+function criarCarregarCardsDashboardParaTeste(dependencias) {
+  const fonte = [
+    'normalizarNomeMateriaEstudadaDashboard',
+    'adicionarMateriaEstudadaDashboard',
+    'contarMateriasEstudadasDashboard',
+    'carregarCardsDashboard'
+  ].map(extrairFuncaoDashboard).join('\n')
+
+  return Function(
+    'db',
+    'document',
+    'criarErroConsultaDashboard',
+    'criarMesesComDetalhesDashboard',
+    'buscarTotaisMensaisArquivados',
+    'obterResumoStreakGamificacao',
+    'criarOnboardingDashboard',
+    'obterClasseAproveitamentoDashboard',
+    'criarDonutAproveitamentoDashboard',
+    'escaparHtmlSeguro',
+    `${fonte}; return carregarCardsDashboard;`
+  )(
+    dependencias.db,
+    document,
+    (mensagem, erro) => new Error(`${mensagem} ${erro?.message || ''}`.trim()),
+    criarMesesComDetalhesDashboard,
+    dependencias.buscarTotaisMensaisArquivados,
+    dependencias.obterResumoStreakGamificacao,
+    dependencias.criarOnboardingDashboard,
+    obterClasseAproveitamentoDashboard,
+    criarDonutAproveitamentoDashboard,
+    valor => String(valor ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+  )
+}
+
+function criarDbCardsDashboard(respostasPorTabela) {
+  const filas = Object.fromEntries(
+    Object.entries(respostasPorTabela).map(([tabela, respostas]) => [tabela, [...respostas]])
+  )
+  const chamadas = []
+  const from = vi.fn((tabela) => {
+    const resposta = filas[tabela]?.shift()
+    if (!resposta) throw new Error(`Resposta nao configurada para ${tabela}`)
+
+    const chain = {}
+    ;['select', 'eq'].forEach(metodo => {
+      chain[metodo] = vi.fn(function (...args) {
+        chamadas.push({ tabela, metodo, args })
+        return this
+      })
+    })
+    chain.then = (resolve, reject) => Promise.resolve(resposta).then(resolve, reject)
+    return chain
+  })
+
+  return { db: { from }, from, chamadas }
+}
+
 function criarPeriodoArquivamentoTeste() {
   return {
     inicio: '2026-05-01',
@@ -423,6 +485,68 @@ describe('dashboard helpers', () => {
     expect(html).toMatch(/2 quest\S+es para revisar hoje/)
     expect(html).not.toMatch(/8 quest\S+es para revisar/)
     expect(html).toMatch(/<strong>8<\/strong><span>revis\S+es pendentes<\/span>/)
+  })
+
+  it('mostra no mini card apenas materias com atividade registrada', async () => {
+    document.body.innerHTML = '<div id="dashboard-cards"></div>'
+    const { db, chamadas } = criarDbCardsDashboard({
+      questoes: [
+        { count: 3, data: [], error: null },
+        {
+          data: [
+            { materia_id: 'm1', criado_em: '2026-06-10T10:00:00Z', materias: { nome: 'Direito Administrativo' } },
+            { materia_id: 'm1', criado_em: '2026-06-10T10:10:00Z', materias: { nome: 'Direito Administrativo' } },
+            { materia_id: null, criado_em: '2026-06-10T10:20:00Z', materias: { nome: 'Sem matéria' } }
+          ],
+          error: null
+        },
+        { count: 1, data: [], error: null }
+      ],
+      questoes_certas: [{
+        data: [
+          { materia_id: 'm1', quantidade: 4, criado_em: '2026-06-10T10:30:00Z', materias: { nome: 'Direito Administrativo' } },
+          { materia_id: 'm2', quantidade: 3, criado_em: '2026-06-10T10:40:00Z', materias: { nome: 'Direito Constitucional' } },
+          { materia_id: 'm5', quantidade: 0, criado_em: '2026-06-10T10:50:00Z', materias: { nome: 'Direito Penal' } },
+          { materia_id: null, quantidade: 2, criado_em: '2026-06-10T11:00:00Z', materias: { nome: 'Sem matéria' } }
+        ],
+        error: null
+      }],
+      materias: [{ count: 5, data: [], error: null }],
+      questoes_revisoes: [{ count: 0, data: [], error: null }]
+    })
+    const buscarTotaisMensaisArquivados = vi.fn(async () => ({
+      totalQuestoes: 6,
+      totalAcertos: 3,
+      totalErradas: 2,
+      totalChutadas: 1,
+      listaPorMateria: [
+        { materia_id: 'm2', materia: 'Direito Constitucional', acertos: 1, erradas: 0, chutadas: 0 },
+        { materia_id: 'm3', materia: 'Direito Tributário', acertos: 0, erradas: 1, chutadas: 0 },
+        { materia_id: null, materia: 'Direito Administrativo', acertos: 1, erradas: 0, chutadas: 0 },
+        { materia_id: null, materia: 'Legislação Especial', acertos: 1, erradas: 0, chutadas: 0 },
+        { materia_id: null, materia: 'Sem matéria', acertos: 1, erradas: 0, chutadas: 0 }
+      ]
+    }))
+    const criarOnboardingDashboard = vi.fn(totalMaterias => `<div data-total-materias="${totalMaterias}"></div>`)
+    const carregarCardsDashboard = criarCarregarCardsDashboardParaTeste({
+      db,
+      buscarTotaisMensaisArquivados,
+      obterResumoStreakGamificacao: vi.fn(async () => ({ streak: 0, recorde: 0, sequenciaEmRisco: false })),
+      criarOnboardingDashboard
+    })
+
+    await carregarCardsDashboard('user-1')
+
+    const html = document.getElementById('dashboard-cards').innerHTML
+    expect(chamadas).toContainEqual({
+      tabela: 'questoes_certas',
+      metodo: 'select',
+      args: ['quantidade, materia_id, criado_em, materias(nome)']
+    })
+    expect(criarOnboardingDashboard).toHaveBeenCalledWith(5, expect.any(Number), 0)
+    expect(html).toContain('data-total-materias="5"')
+    expect(html).toMatch(/<strong>4<\/strong>\s*<small>mat\S+rias estudadas<\/small>/)
+    expect(html).toMatch(/mat\S+ria com mais revis\S+o/)
   })
 
   it('monta o periodo mensal de arquivamento a partir do mes alvo', () => {
