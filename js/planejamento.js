@@ -98,11 +98,30 @@ async function carregarPlanejamento() {
     atualizarCampoMetaCentralPlanejamento()
     renderizarGradeSemanal()
     renderizarLeiSeca()
-    gerarRelatorioProntoProva()
+    agendarRelatorioProntoProva()
   } catch (erro) {
     console.error(erro)
     mostrarErroPlanejamento('Execute o arquivo supabase-planejamento-inteligente.sql no Supabase para habilitar esta aba.')
   }
+}
+
+function agendarRelatorioProntoProva({
+  executar = gerarRelatorioProntoProva,
+  agendador = setTimeout,
+  aoErro = console.warn
+} = {}) {
+  const executarComTratamento = () => Promise.resolve()
+    .then(executar)
+    .catch(erro => {
+      aoErro('Nao foi possivel atualizar o relatorio de prova em segundo plano.', erro)
+    })
+
+  if (typeof agendador === 'function') {
+    agendador(executarComTratamento, 0)
+    return
+  }
+
+  executarComTratamento()
 }
 
 function obterMetaCentralPlanejamento() {
@@ -978,6 +997,7 @@ function mostrarErroPlanejamento(mensagem) {
 if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined') {
   globalThis.renderizarTextoPlanejamentoComMarkdownBasico = renderizarTextoPlanejamentoComMarkdownBasico
   globalThis.criarCardLeiSeca = criarCardLeiSeca
+  globalThis.agendarRelatorioProntoProva = agendarRelatorioProntoProva
   globalThis.montarRelatorioProntoProva = montarRelatorioProntoProva
   globalThis.montarFilaInteligente = montarFilaInteligente
   globalThis.converterDiaSemanaPlanejamento = converterDiaSemanaPlanejamento

@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 const {
   renderizarTextoPlanejamentoComMarkdownBasico,
   criarCardLeiSeca,
+  agendarRelatorioProntoProva,
   montarRelatorioProntoProva,
   montarFilaInteligente,
   converterDiaSemanaPlanejamento,
@@ -92,6 +93,66 @@ describe('Markdown basico nas anotacoes de Lei Seca', () => {
 })
 
 describe('montarRelatorioProntoProva', () => {
+  it('agenda o relatorio sem bloquear o carregamento principal', async () => {
+    const executar = vi.fn(() => Promise.resolve())
+    const tarefas = []
+    const agendador = vi.fn((callback, atraso) => {
+      tarefas.push(callback)
+      expect(atraso).toBe(0)
+    })
+
+    agendarRelatorioProntoProva({
+      executar,
+      agendador,
+      aoErro: vi.fn()
+    })
+
+    expect(agendador).toHaveBeenCalledTimes(1)
+    expect(executar).not.toHaveBeenCalled()
+
+    await tarefas[0]()
+
+    expect(executar).toHaveBeenCalledTimes(1)
+  })
+
+  it('trata erro do relatorio em segundo plano sem propagar rejeicao', async () => {
+    const erro = new Error('falha no relatorio')
+    const aoErro = vi.fn()
+    const tarefas = []
+
+    agendarRelatorioProntoProva({
+      executar: vi.fn(() => Promise.reject(erro)),
+      agendador: callback => tarefas.push(callback),
+      aoErro
+    })
+
+    await expect(tarefas[0]()).resolves.toBeUndefined()
+    expect(aoErro).toHaveBeenCalledWith(
+      'Nao foi possivel atualizar o relatorio de prova em segundo plano.',
+      erro
+    )
+  })
+
+  it('preserva a renderizacao do relatorio quando a funcao especifica termina', async () => {
+    const container = document.createElement('div')
+    container.id = 'relatorio-pronto-prova'
+    document.body.appendChild(container)
+
+    const tarefas = []
+    agendarRelatorioProntoProva({
+      executar: async () => {
+        container.innerHTML = '<div class="relatorio-prova-bloco"><strong>85%</strong></div>'
+      },
+      agendador: callback => tarefas.push(callback),
+      aoErro: vi.fn()
+    })
+
+    await tarefas[0]()
+
+    expect(container.textContent).toContain('85%')
+    container.remove()
+  })
+
   it('calcula o relatório com edital, questões, revisões e Lei Seca', () => {
     const relatorio = montarRelatorioProntoProva({
       topicos: [
