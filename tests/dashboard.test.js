@@ -546,7 +546,8 @@ describe('dashboard helpers', () => {
     expect(criarOnboardingDashboard).toHaveBeenCalledWith(5, expect.any(Number), 0)
     expect(html).toContain('data-total-materias="5"')
     expect(html).toMatch(/<strong>4<\/strong>\s*<small>mat\S+rias estudadas<\/small>/)
-    expect(html).toMatch(/mat\S+ria com mais revis\S+o/)
+    expect(html).toMatch(/<strong>Direito Administrativo<\/strong>\s*<small>mat\S+ria com mais erros<\/small>/)
+    expect(html).not.toMatch(/mat\S+ria com mais revis\S+o/)
   })
 
   it('monta o periodo mensal de arquivamento a partir do mes alvo', () => {

@@ -2052,7 +2052,7 @@ async function carregarCardsDashboard(userId) {
       <div class="dash-mini-card">
         <span>&#9888;&#65039;</span>
         <strong>${escaparHtmlSeguro(materiaCampea)}</strong>
-        <small>matéria com mais revisão</small>
+        <small>matéria com mais erros</small>
       </div>
     </div>
   `
