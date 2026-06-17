@@ -8,7 +8,7 @@ const MAX_TRACOS_ANOTACOES = 200
 const MAX_PONTOS_POR_TRACO_ANOTACOES = 1000
 const MAX_COORDENADA_ANOTACOES = 10000000
 
-const FERRAMENTAS_ANOTACOES = new Set(['pen', 'highlighter', 'eraser'])
+const FERRAMENTAS_ANOTACOES = new Set(['pen', 'highlighter', 'eraser', 'rectangle'])
 const CORES_ANOTACOES = new Set(['black', 'red', 'blue', 'green', 'yellow', 'white'])
 const ESPESSURAS_ANOTACOES = new Set(['thin', 'medium', 'thick'])
 

@@ -104,6 +104,26 @@ describe('modelo local de anotações livres', () => {
       expect(carregado.strokes).toEqual([criarTracoValido()])
     })
 
+    it('salva e carrega rectangle sem descartar a ferramenta nova', () => {
+      const retangulo = criarTracoValido({
+        id: 'retangulo-1',
+        tool: 'rectangle',
+        color: 'green',
+        thickness: 'thick',
+        points: [{ x: 15, y: 25 }, { x: 80, y: 95 }]
+      })
+      const estado = criarEstadoComTracos([retangulo])
+      const resultado = salvarAnotacoes(estado, { storage })
+      const carregado = carregarAnotacoes({
+        userId: 'usuario-1',
+        viewId: 'secao:flashcards',
+        storage
+      })
+
+      expect(resultado.ok).toBe(true)
+      expect(carregado.strokes).toEqual([retangulo])
+    })
+
     it('remove somente a chave da seção atual', () => {
       salvarAnotacoes(criarEstadoComTracos([criarTracoValido()]), { storage })
       salvarAnotacoes(criarEstadoComTracos([criarTracoValido()], { viewId: 'secao:questoes' }), { storage })
@@ -146,6 +166,18 @@ describe('modelo local de anotações livres', () => {
       ])
 
       expect(normalizarEstadoAnotacoes(estado, estado).strokes.map(traco => traco.id)).toEqual(['valido'])
+    })
+
+    it('mantem ferramentas antigas e aceita rectangle como ferramenta valida', () => {
+      const estado = criarEstadoComTracos([
+        criarTracoValido({ id: 'lapis', tool: 'pen' }),
+        criarTracoValido({ id: 'marca-texto', tool: 'highlighter', opacity: 0.35 }),
+        criarTracoValido({ id: 'borracha', tool: 'eraser', color: 'black' }),
+        criarTracoValido({ id: 'retangulo', tool: 'rectangle' })
+      ])
+
+      expect(normalizarEstadoAnotacoes(estado, estado).strokes.map(traco => traco.tool))
+        .toEqual(['pen', 'highlighter', 'eraser', 'rectangle'])
     })
 
     it('descarta pontos inválidos e mantém somente coordenadas numéricas finitas', () => {

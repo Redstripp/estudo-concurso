@@ -24,7 +24,8 @@ function criarContextoCanvas() {
     restore: vi.fn(),
     save: vi.fn(),
     setTransform: vi.fn(),
-    stroke: vi.fn()
+    stroke: vi.fn(),
+    strokeRect: vi.fn()
   }
 }
 
@@ -89,6 +90,18 @@ function desenharTraco(canvas, pontos = [[230, 140], [260, 180], [270, 190]]) {
   pontos.slice(1, -1).forEach(([x, y]) => dispararPointer(canvas, 'pointermove', { x, y }))
   const ultimo = pontos.at(-1)
   dispararPointer(canvas, 'pointerup', { x: ultimo[0], y: ultimo[1] })
+}
+
+function dispararCtrlEspaco(alvo = document) {
+  const evento = new window.KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    code: 'Space',
+    ctrlKey: true,
+    key: ' '
+  })
+  alvo.dispatchEvent(evento)
+  return evento
 }
 
 function trocarSecao(secao) {
@@ -288,7 +301,7 @@ describe('shell visual de anotacoes livres', () => {
     const valores = grupo => Array.from(raiz.querySelectorAll(`[data-grupo-anotacoes="${grupo}"]`))
       .map(botao => botao.dataset.valorAnotacoes)
 
-    expect(valores('ferramenta')).toEqual(['pen', 'highlighter', 'eraser'])
+    expect(valores('ferramenta')).toEqual(['pen', 'highlighter', 'eraser', 'rectangle'])
     expect(valores('cor')).toEqual(['black', 'red', 'blue', 'green', 'yellow', 'white'])
     expect(valores('espessura')).toEqual(['thin', 'medium', 'thick'])
     expect(raiz.querySelector('.anotacoes-controle--limpar').disabled).toBe(true)
@@ -306,6 +319,19 @@ describe('shell visual de anotacoes livres', () => {
     expect(marcaTexto.getAttribute('aria-pressed')).toBe('true')
     expect(azul.classList.contains('is-selected')).toBe(true)
     expect(grosso.classList.contains('is-selected')).toBe(true)
+    expect(localStorage.length).toBe(0)
+  })
+
+  it('seleciona ferramenta rectangle pela toolbar sem persistir dados', () => {
+    const quadrado = clicar('[data-grupo-anotacoes="ferramenta"][data-valor-anotacoes="rectangle"]')
+
+    expect(obterEstadoAnotacoesUi()).toMatchObject({
+      ferramenta: 'rectangle',
+      cor: 'black',
+      espessura: 'medium'
+    })
+    expect(quadrado.title).toBe('Quadrado')
+    expect(quadrado.getAttribute('aria-pressed')).toBe('true')
     expect(localStorage.length).toBe(0)
   })
 
@@ -344,6 +370,38 @@ describe('shell visual de anotacoes livres', () => {
     expect(contextoCanvas.lineJoin).toBe('round')
     expect(contextoCanvas.strokeStyle).toBe('#2563eb')
     expect(contextoCanvas.lineWidth).toBe(7)
+  })
+
+  it('desenha rectangle com preview e salva somente ponto inicial e final', () => {
+    const { toggle, canvas } = obterElementosUi()
+    toggle.click()
+    clicar('[data-grupo-anotacoes="ferramenta"][data-valor-anotacoes="rectangle"]')
+    clicar('[data-grupo-anotacoes="cor"][data-valor-anotacoes="red"]')
+    clicar('[data-grupo-anotacoes="espessura"][data-valor-anotacoes="thick"]')
+
+    dispararPointer(canvas, 'pointerdown', { x: 230, y: 140 })
+    dispararPointer(canvas, 'pointermove', { x: 260, y: 180 })
+
+    expect(localStorage.length).toBe(0)
+    expect(contextoCanvas.strokeRect).toHaveBeenLastCalledWith(230, 140, 30, 40)
+
+    dispararPointer(canvas, 'pointerup', { x: 270, y: 190 })
+    const salvo = carregarAnotacoes({ userId: 'anonimo', viewId: 'secao:flashcards' })
+
+    expect(salvo.strokes).toHaveLength(1)
+    expect(salvo.strokes[0]).toMatchObject({
+      tool: 'rectangle',
+      color: 'red',
+      thickness: 'thick',
+      opacity: 1,
+      points: [{ x: 30, y: 40 }, { x: 70, y: 90 }]
+    })
+    expect(salvo.strokes[0].points).toHaveLength(2)
+    expect(contextoCanvas.strokeRect).toHaveBeenLastCalledWith(230, 140, 40, 50)
+    expect(contextoCanvas.globalCompositeOperation).toBe('source-over')
+    expect(contextoCanvas.strokeStyle).toBe('#dc2626')
+    expect(contextoCanvas.lineWidth).toBe(7)
+    expect(contextoCanvas.globalAlpha).toBe(1)
   })
 
   it('desenha com marca-texto semitransparente e salva ferramenta, cor e espessura', () => {
@@ -734,6 +792,52 @@ describe('shell visual de anotacoes livres', () => {
 
     expect(obterEstadoAnotacoesUi().ativo).toBe(false)
     expect(abrirMenu).toHaveBeenCalledTimes(1)
+  })
+
+  it('Ctrl + Espaco ativa e desativa o modo de anotacao mantendo a ferramenta selecionada', () => {
+    clicar('[data-grupo-anotacoes="ferramenta"][data-valor-anotacoes="rectangle"]')
+
+    const ativar = dispararCtrlEspaco()
+    expect(ativar.defaultPrevented).toBe(true)
+    expect(obterEstadoAnotacoesUi()).toMatchObject({
+      ativo: true,
+      ferramenta: 'rectangle'
+    })
+
+    const desativar = dispararCtrlEspaco()
+    expect(desativar.defaultPrevented).toBe(true)
+    expect(obterEstadoAnotacoesUi()).toMatchObject({
+      ativo: false,
+      ferramenta: 'rectangle'
+    })
+  })
+
+  it('Ctrl + Espaco nao interfere com campos editaveis', () => {
+    const input = document.createElement('input')
+    const editavel = document.createElement('div')
+    editavel.setAttribute('contenteditable', '')
+    document.body.appendChild(input)
+    document.body.appendChild(editavel)
+
+    const eventoInput = dispararCtrlEspaco(input)
+    expect(eventoInput.defaultPrevented).toBe(false)
+    expect(obterEstadoAnotacoesUi().ativo).toBe(false)
+
+    definirModoAnotacoesUi(true)
+    const eventoEditavel = dispararCtrlEspaco(editavel)
+    expect(eventoEditavel.defaultPrevented).toBe(false)
+    expect(obterEstadoAnotacoesUi().ativo).toBe(true)
+  })
+
+  it('Ctrl + Espaco usa rectangle se a ferramenta atual estiver invalida', () => {
+    document.getElementById('anotacoes-ui').dataset.ferramenta = 'invalida'
+
+    dispararCtrlEspaco()
+
+    expect(obterEstadoAnotacoesUi()).toMatchObject({
+      ativo: true,
+      ferramenta: 'rectangle'
+    })
   })
 
   it('Escape desativa o modo sem erro quando a UI esta inativa', () => {

@@ -17,6 +17,7 @@ const LARGURA_PADRAO_TOGGLE_ANOTACOES_UI = 120
 const ALTURA_PADRAO_TOGGLE_ANOTACOES_UI = 42
 const LARGURA_PADRAO_TOOLBAR_ANOTACOES_UI = 560
 const ALTURA_PADRAO_TOOLBAR_ANOTACOES_UI = 56
+const TAMANHO_MINIMO_RETANGULO_ANOTACOES_UI = 3
 
 const CORES_CANVAS_ANOTACOES_UI = {
   black: '#111827',
@@ -34,12 +35,13 @@ const ESPESSURAS_CANVAS_ANOTACOES_UI = {
 }
 
 const OPACIDADE_MARCA_TEXTO_ANOTACOES_UI = 0.35
-const FERRAMENTAS_DESENHO_ANOTACOES_UI = new Set(['pen', 'highlighter', 'eraser'])
+const FERRAMENTAS_DESENHO_ANOTACOES_UI = new Set(['pen', 'highlighter', 'eraser', 'rectangle'])
 
 const FERRAMENTAS_ANOTACOES_UI = [
   { valor: 'pen', rotulo: 'Lapis', icone: 'L' },
   { valor: 'highlighter', rotulo: 'Marca-texto', icone: 'M' },
-  { valor: 'eraser', rotulo: 'Borracha', icone: 'B' }
+  { valor: 'eraser', rotulo: 'Borracha', icone: 'B' },
+  { valor: 'rectangle', rotulo: 'Quadrado', icone: '\u25a1' }
 ]
 
 const CORES_ANOTACOES_UI = [
@@ -508,6 +510,15 @@ function obterPontoViewportAnotacoesUi(ponto, secao) {
   }
 }
 
+function obterMedidasRetanguloAnotacoesUi(pontoInicial, pontoFinal) {
+  if (!pontoInicial || !pontoFinal) return null
+  const left = Math.min(pontoInicial.x, pontoFinal.x)
+  const top = Math.min(pontoInicial.y, pontoFinal.y)
+  const width = Math.abs(pontoFinal.x - pontoInicial.x)
+  const height = Math.abs(pontoFinal.y - pontoInicial.y)
+  return { left, top, width, height }
+}
+
 function configurarContextoTracoAnotacoesUi(contexto, traco) {
   const usandoBorracha = traco.tool === 'eraser'
   contexto.globalCompositeOperation = usandoBorracha ? 'destination-out' : 'source-over'
@@ -532,8 +543,42 @@ function obterCorFerramentaAnotacoesUi(ferramenta, corSelecionada) {
   return ferramenta === 'eraser' ? 'black' : corSelecionada
 }
 
+function tracoRetanguloValidoAnotacoesUi(traco) {
+  if (!Array.isArray(traco?.points) || traco.points.length < 2) return false
+  const medidas = obterMedidasRetanguloAnotacoesUi(traco.points[0], traco.points[1])
+  return Boolean(
+    medidas
+    && medidas.width >= TAMANHO_MINIMO_RETANGULO_ANOTACOES_UI
+    && medidas.height >= TAMANHO_MINIMO_RETANGULO_ANOTACOES_UI
+  )
+}
+
+function tracoValidoParaSalvarAnotacoesUi(traco) {
+  return traco?.tool === 'rectangle'
+    ? tracoRetanguloValidoAnotacoesUi(traco)
+    : Array.isArray(traco?.points) && traco.points.length >= 2
+}
+
+function desenharRetanguloAnotacoesUi(contexto, traco, secao) {
+  if (!tracoRetanguloValidoAnotacoesUi(traco)) return
+  const pontoInicial = obterPontoViewportAnotacoesUi(traco.points[0], secao)
+  const pontoFinal = obterPontoViewportAnotacoesUi(traco.points[1], secao)
+  const medidas = obterMedidasRetanguloAnotacoesUi(pontoInicial, pontoFinal)
+  if (!medidas) return
+
+  contexto.save?.()
+  configurarContextoTracoAnotacoesUi(contexto, traco)
+  contexto.strokeRect(medidas.left, medidas.top, medidas.width, medidas.height)
+  contexto.restore?.()
+}
+
 function desenharTracoAnotacoesUi(contexto, traco, secao) {
   if (!contexto || !ferramentaDesenhaTracoAnotacoesUi(traco?.tool) || !Array.isArray(traco.points) || traco.points.length < 2) return
+  if (traco.tool === 'rectangle') {
+    desenharRetanguloAnotacoesUi(contexto, traco, secao)
+    return
+  }
+
   const pontos = traco.points.map(ponto => obterPontoViewportAnotacoesUi(ponto, secao)).filter(Boolean)
   if (pontos.length < 2) return
 
@@ -665,12 +710,37 @@ function existeModalVisivelAnotacoesUi() {
   })
 }
 
-function tratarEscapeAnotacoesUi(evento) {
-  if (evento.key !== 'Escape') return
-  if (!obterEstadoAnotacoesUi()?.ativo) return
+function eventoCtrlEspacoAnotacoesUi(evento) {
+  return Boolean(
+    evento?.ctrlKey
+    && !evento.altKey
+    && !evento.metaKey
+    && !evento.repeat
+    && (evento.code === 'Space' || [' ', 'Space', 'Spacebar'].includes(evento.key))
+  )
+}
+
+function tratarTecladoAnotacoesUi(evento) {
+  if (evento.key === 'Escape') {
+    if (!obterEstadoAnotacoesUi()?.ativo) return
+    if (elementoEditavelAnotacoesUi(evento.target)) return
+    if (existeModalVisivelAnotacoesUi()) return
+    definirModoAnotacoesUi(false)
+    return
+  }
+
+  if (!eventoCtrlEspacoAnotacoesUi(evento)) return
   if (elementoEditavelAnotacoesUi(evento.target)) return
   if (existeModalVisivelAnotacoesUi()) return
-  definirModoAnotacoesUi(false)
+
+  const raiz = obterRaizAnotacoesUi()
+  if (!raiz) return
+  if (!ferramentaDesenhaTracoAnotacoesUi(raiz.dataset.ferramenta)) {
+    atualizarSelecaoAnotacoesUi(raiz, 'ferramenta', 'rectangle')
+  }
+
+  definirModoAnotacoesUi(!obterEstadoAnotacoesUi()?.ativo)
+  evento.preventDefault?.()
 }
 
 function podeIniciarTracoAnotacoesUi(evento, raiz) {
@@ -689,6 +759,20 @@ function adicionarPontoTracoAnotacoesUi(runtime, ponto) {
   if (ultimo?.x === ponto.x && ultimo?.y === ponto.y) return false
   runtime.tracoAtual.points.push(ponto)
   return true
+}
+
+function atualizarPontoFinalRetanguloAnotacoesUi(runtime, ponto) {
+  if (!ponto || !runtime?.tracoAtual || runtime.tracoAtual.tool !== 'rectangle') return false
+  const pontoFinal = runtime.tracoAtual.points[1]
+  if (pontoFinal?.x === ponto.x && pontoFinal?.y === ponto.y) return false
+  runtime.tracoAtual.points[1] = ponto
+  return true
+}
+
+function atualizarTracoAtualAnotacoesUi(runtime, ponto) {
+  return runtime?.tracoAtual?.tool === 'rectangle'
+    ? atualizarPontoFinalRetanguloAnotacoesUi(runtime, ponto)
+    : adicionarPontoTracoAnotacoesUi(runtime, ponto)
 }
 
 function alterarCapturaPointerAnotacoesUi(elemento, metodo, pointerId) {
@@ -801,7 +885,7 @@ function continuarTracoAnotacoesUi(evento) {
   if (!runtime?.tracoAtual || runtime.pointerId !== evento.pointerId) return
 
   const ponto = obterPontoConteudoAnotacoesUi(evento, runtime.secao)
-  if (!adicionarPontoTracoAnotacoesUi(runtime, ponto)) return
+  if (!atualizarTracoAtualAnotacoesUi(runtime, ponto)) return
   redesenharAnotacoesUi(raiz)
   evento.preventDefault?.()
 }
@@ -811,13 +895,13 @@ function finalizarTracoAnotacoesUi(evento) {
   const runtime = obterEstadoRuntimeAnotacoesUi(raiz)
   if (!runtime?.tracoAtual || runtime.pointerId !== evento.pointerId) return
 
-  adicionarPontoTracoAnotacoesUi(runtime, obterPontoConteudoAnotacoesUi(evento, runtime.secao))
+  atualizarTracoAtualAnotacoesUi(runtime, obterPontoConteudoAnotacoesUi(evento, runtime.secao))
   const traco = runtime.tracoAtual
   runtime.tracoAtual = null
   runtime.pointerId = null
   alterarCapturaPointerAnotacoesUi(evento.currentTarget, 'releasePointerCapture', evento.pointerId)
 
-  if (traco.points.length < 2) {
+  if (!tracoValidoParaSalvarAnotacoesUi(traco)) {
     redesenharAnotacoesUi(raiz)
     return
   }
@@ -995,7 +1079,7 @@ function inicializarAnotacoesUi() {
   instalarIntegracaoMenuMobileAnotacoesUi()
 
   if (!documentosComAtalhoAnotacoesUi.has(document)) {
-    document.addEventListener('keydown', tratarEscapeAnotacoesUi)
+    document.addEventListener('keydown', tratarTecladoAnotacoesUi)
     documentosComAtalhoAnotacoesUi.add(document)
   }
 
