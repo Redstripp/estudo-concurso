@@ -11,6 +11,11 @@ export type TipoQuestao = 'Errada' | 'Chutada';
 export type StatusRevisao = 'pendente' | 'recuperada';
 export type ResultadoRevisao = 'Acertou' | 'Errou';
 export type AlternativasQuestao = Record<string, string> | string[];
+export type ReviewSchedulerMode = 'legacy' | 'sm2_v1';
+export type QuestaoReviewAlgorithm = 'sm2_v1';
+export type QuestaoReviewOrigin = 'new' | 'migrated';
+export type QuestaoReviewResult = 'correct' | 'incorrect';
+export type StatusFilaSm2 = 'atrasada' | 'hoje' | 'proxima' | 'sem_agendamento';
 
 export interface Usuario {
   id: Id;
@@ -76,6 +81,12 @@ export interface Questao {
     peso?: number | null;
   } | null;
   tipoNormalizado?: TipoQuestao;
+  review_state?: QuestaoReviewState | null;
+  scheduler_mode?: ReviewSchedulerMode;
+  status_fila_sm2?: StatusFilaSm2;
+  dias_atraso_sm2?: number;
+  prioridade_revisao?: number;
+  motivos_prioridade_revisao?: string[];
 }
 
 export interface QuestaoCerta {
@@ -104,6 +115,48 @@ export interface Revisao {
   conceito_chave?: string | null;
   como_reconhecer?: string | null;
   acao_corretiva?: string | null;
+  scheduler_algorithm?: QuestaoReviewAlgorithm | null;
+  review_grade?: number | null;
+  source_attempt_id?: Id | null;
+  response_time_ms?: number | null;
+}
+
+export interface QuestaoReviewState {
+  id?: Id;
+  user_id?: Id;
+  questao_id: Id;
+  algorithm_version?: QuestaoReviewAlgorithm;
+  state_origin?: QuestaoReviewOrigin;
+  easiness_factor?: number;
+  repetition_count?: number;
+  interval_days?: number;
+  lapse_count?: number;
+  correct_streak?: number;
+  total_reviews?: number;
+  last_grade?: number | null;
+  last_result?: QuestaoReviewResult | null;
+  last_reviewed_at?: ISODateTime | null;
+  next_review_at?: ISODateTime | null;
+  created_at?: ISODateTime | null;
+  updated_at?: ISODateTime | null;
+}
+
+export interface QuestaoReviewEvent {
+  id?: Id;
+  user_id: Id;
+  questao_id: Id;
+  source_attempt_id?: Id | null;
+  algorithm_version?: QuestaoReviewAlgorithm;
+  event_origin?: QuestaoReviewOrigin;
+  grade: number;
+  was_correct: boolean;
+  reviewed_at?: ISODateTime;
+  previous_interval_days?: number;
+  new_interval_days: number;
+  previous_due_at?: ISODateTime | null;
+  next_review_at: ISODateTime;
+  response_time_ms?: number | null;
+  created_at?: ISODateTime;
 }
 
 export interface Simulado {
@@ -176,6 +229,9 @@ export interface ConfiguracaoRevisao {
   dias_revisao?: number[];
   tempo_revisao_minutos?: number;
   ultima_revisao_geral?: ISODate | null;
+  review_scheduler_mode?: ReviewSchedulerMode;
+  review_timezone?: string;
+  review_max_interval_days?: number;
   criado_em?: ISODateTime;
   atualizado_em?: ISODateTime;
 }

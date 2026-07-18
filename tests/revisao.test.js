@@ -12,7 +12,12 @@ const {
   preRespostaTreinoCompleta,
   criarDiagnosticoTreino,
   criarCardTreinoRevisao,
-  criarCardRevisao
+  criarCardRevisao,
+  criarControleQualidadeAcertoSm2,
+  criarListaFilaPrioritaria,
+  montarRelatorioFilaRevisaoSm2,
+  normalizarConfiguracaoRevisao,
+  erroIndicaEstruturaSm2Ausente
 } = globalThis
 
 describe('calcularProximaRevisao24730', () => {
@@ -165,5 +170,123 @@ describe('clareza do treino filtrado da Revisao', () => {
     expect(revisaoJs).toContain('Nenhuma questão pendente com estes filtros')
     expect(revisaoJs).toContain('Use a fila inteligente para revisar itens priorizados do ciclo')
     expect(revisaoJs).not.toContain('Nenhuma questão pendente para treinar com esses filtros')
+  })
+})
+
+describe('Revisao Inteligente com scheduler sm2_v1', () => {
+  function criarQuestaoSm2(sobrescritas = {}) {
+    return {
+      id: sobrescritas.id || 'q-sm2-1',
+      enunciado: 'Enunciado',
+      alternativas: { A: 'Errada', B: 'Correta' },
+      alternativa_marcada: 'A',
+      alternativa_correta: 'B',
+      tipo_questao: 'Errada',
+      motivo_erro: 'Falta de conteudo',
+      materias: { nome: 'Direito Administrativo' },
+      edital_topicos: { titulo: 'Atos administrativos' },
+      review_state: {
+        algorithm_version: 'sm2_v1',
+        next_review_at: sobrescritas.nextReviewAt || '2026-07-16T12:00:00.000Z',
+        lapse_count: sobrescritas.lapseCount ?? 0,
+        easiness_factor: sobrescritas.easinessFactor ?? 2.5,
+        correct_streak: sobrescritas.correctStreak ?? 0,
+        interval_days: sobrescritas.intervalDays ?? 1,
+        last_reviewed_at: sobrescritas.lastReviewedAt || '2026-07-10T12:00:00.000Z'
+      },
+      status_fila_sm2: sobrescritas.statusFila || 'atrasada',
+      dias_atraso_sm2: sobrescritas.diasAtraso ?? 1,
+      prioridade_revisao: sobrescritas.prioridade ?? 10,
+      motivos_prioridade_revisao: sobrescritas.motivos || ['atrasada ha 1 dia'],
+      ...sobrescritas
+    }
+  }
+
+  const config = {
+    dias_revisao: [5],
+    tempo_revisao_minutos: 60,
+    review_scheduler_mode: 'sm2_v1',
+    review_timezone: 'America/Recife'
+  }
+
+  it('ordena a fila por vencimento, lapsos e desempate deterministico', () => {
+    const relatorio = montarRelatorioFilaRevisaoSm2({
+      schedulerMode: 'sm2_v1',
+      hojePermitido: true,
+      limite: 10,
+      janela: {
+        dataISO: '2026-07-17',
+        inicio: '2026-07-17T03:00:00.000Z',
+        fimExclusivo: '2026-07-18T03:00:00.000Z',
+        fimInclusivo: '2026-07-18T02:59:59.999Z'
+      },
+      questoes: [
+        criarQuestaoSm2({ id: 'q-b', nextReviewAt: '2026-07-16T12:00:00.000Z', lapseCount: 1 }),
+        criarQuestaoSm2({ id: 'q-a', nextReviewAt: '2026-07-16T12:00:00.000Z', lapseCount: 3 }),
+        criarQuestaoSm2({ id: 'q-c', nextReviewAt: '2026-07-17T12:00:00.000Z', lapseCount: 10 })
+      ],
+      contagens: { atrasadas: 2, hoje: 1, proximas: 1, semAgendamento: 0, totalVencidas: 3, pendentesAlemLimite: 0 },
+      metricas: { sample_size: 12 }
+    }, config)
+
+    expect(relatorio.fila.map(q => q.id)).toEqual(['q-a', 'q-b', 'q-c'])
+    expect(relatorio.atrasadas).toBe(2)
+    expect(relatorio.vencemHoje).toBe(1)
+    expect(relatorio.schedulerMode).toBe('sm2_v1')
+  })
+
+  it('nao inicia sessao automaticamente em dia nao permitido', () => {
+    const relatorio = montarRelatorioFilaRevisaoSm2({
+      schedulerMode: 'sm2_v1',
+      hojePermitido: false,
+      limite: 10,
+      janela: { dataISO: '2026-07-17' },
+      questoes: [criarQuestaoSm2()],
+      contagens: { atrasadas: 1, hoje: 0, proximas: 2, semAgendamento: 1, totalVencidas: 1, pendentesAlemLimite: 1 },
+      metricas: { sample_size: 0 }
+    }, config)
+
+    expect(relatorio.totalCiclo).toBe(1)
+    expect(relatorio.fila).toEqual([])
+    expect(relatorio.semAgendamento).toBe(1)
+  })
+
+  it('mostra detalhes de atraso, lapsos e sequencia na fila prioritaria', () => {
+    const html = criarListaFilaPrioritaria([
+      criarQuestaoSm2({ lapseCount: 2, correctStreak: 3, diasAtraso: 4 })
+    ])
+
+    expect(html).toContain('Atrasada ha 4 dias')
+    expect(html).toContain('Erros recorrentes: 2')
+    expect(html).toContain('Sequencia atual: 3 acertos')
+  })
+
+  it('mostra classificacao opcional apenas para acertos', () => {
+    const htmlAcerto = criarControleQualidadeAcertoSm2(true)
+    const htmlErro = criarControleQualidadeAcertoSm2(false)
+
+    expect(htmlAcerto).toContain('name="treino-qualidade-acerto"')
+    expect(htmlAcerto).toContain('value="dificil"')
+    expect(htmlAcerto).toContain('value="bom"')
+    expect(htmlAcerto).toContain('value="facil"')
+    expect(htmlErro).toBe('')
+  })
+
+  it('mantem legacy para configuracao nula ou scheduler desconhecido', () => {
+    expect(normalizarConfiguracaoRevisao(null, 'user-1').review_scheduler_mode).toBe('legacy')
+    expect(normalizarConfiguracaoRevisao({ review_scheduler_mode: 'fsrs' }, 'user-1').review_scheduler_mode).toBe('legacy')
+    expect(normalizarConfiguracaoRevisao({ review_scheduler_mode: 'sm2_v1' }, 'user-1').review_scheduler_mode).toBe('sm2_v1')
+  })
+
+  it('reconhece erro de estrutura ausente para fallback pre-migration', () => {
+    expect(erroIndicaEstruturaSm2Ausente({
+      code: '42P01',
+      message: 'relation "public.questao_review_states" does not exist'
+    })).toBe(true)
+    expect(erroIndicaEstruturaSm2Ausente({
+      code: 'PGRST202',
+      message: 'Could not find the function public.obter_metricas_revisao_sm2'
+    })).toBe(true)
+    expect(erroIndicaEstruturaSm2Ausente({ code: '42501', message: 'permission denied' })).toBe(false)
   })
 })

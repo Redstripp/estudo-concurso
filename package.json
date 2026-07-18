@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "check:js": "node scripts/check-js.mjs",
+    "check:dist": "node scripts/check-dist-classic-scripts.mjs",
     "test": "vitest run"
   },
   "devDependencies": {
