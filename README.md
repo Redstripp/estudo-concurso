@@ -12,12 +12,13 @@ Sistema web para controle de estudos para concurso publico, com cadastro de mate
 ## Como rodar localmente
 
 1. Configure um projeto no Supabase.
-2. Se o banco estiver vazio, no Supabase SQL Editor, execute o arquivo `supabase/schema.sql`.
-   Se voce ja usa este app com seu Supabase atual, nao execute esse arquivo sem comparar antes.
-3. Copie `js/config.example.js` para `js/config.js`.
-4. Preencha `SUPABASE_URL` e `SUPABASE_ANON_KEY` em `js/config.js`.
+2. Use o fluxo oficial de migrations em `docs/supabase-migrations.md` para preparar ou evoluir o banco.
+   Nao use o SQL Editor remoto para mudancas de schema da aplicacao no fluxo normal.
+3. Confira `SUPABASE_URL` e `SUPABASE_ANON_KEY` em `js/config.js`.
+   Esse arquivo e publico e versionado; ele pode conter somente URL publica e chave anon/publishable de frontend.
+   Nunca coloque nele `service_role`, `sb_secret`, senha, connection string, PAT ou secrets de IA.
    Para ver o bloco administrativo de protecao do banco, coloque seu e-mail em `window.ADMIN_EMAILS`.
-5. Rode o servidor local:
+4. Rode o servidor local:
 
 ```bash
 npm run dev
@@ -25,27 +26,18 @@ npm run dev
 
 No PowerShell do Windows, se o `npm` cair na politica de execucao, use `npm.cmd run dev`.
 
-6. Abra `http://localhost:4173`.
+5. Abra `http://localhost:4173`.
 
 Tambem da para abrir `index.html` diretamente no navegador, mas usar servidor local evita problemas com redirecionamentos e politicas do navegador.
 
 ## Configuracao local segura
 
-- `js/config.js` contem credenciais locais do Supabase e deve ficar fora do Git.
-- `js/config.example.js` e o modelo versionado para novos desenvolvedores.
-- Para criar sua configuracao local, copie o modelo:
-
-```bash
-cp js/config.example.js js/config.js
-```
-
-No PowerShell:
-
-```powershell
-Copy-Item js/config.example.js js/config.js
-```
-
-Depois edite apenas o `js/config.js` local com a URL e a anon key do seu projeto.
+- `js/config.js` e publico e rastreado pelo Git porque roda no navegador.
+- Ele pode conter somente `SUPABASE_URL` publica e chave `anon` legada ou publishable key moderna.
+- Nunca coloque `service_role`, `sb_secret`, senha, connection string PostgreSQL, PAT, secrets de IA ou qualquer credencial privilegiada no frontend.
+- `js/config.example.js` continua como modelo de referencia para novos projetos.
+- Para comparar com o modelo, consulte `js/config.example.js`.
+- Se usar outro projeto Supabase, altere apenas os valores publicos de frontend em `js/config.js`.
 
 ## Configuracao do Supabase
 
@@ -66,14 +58,17 @@ Essas URLs precisam estar cadastradas no Supabase. Se faltar a pasta do reposito
 
 ## Banco de dados
 
-- Para projeto novo, execute `supabase/schema.sql`.
-- Para um banco antigo que ja tem as tabelas base, `supabase-melhoria-estudos.sql` continua servindo como migracao incremental.
-- Para habilitar o arquivamento mensal, execute uma vez `supabase-arquivamento-mensal.sql` no SQL Editor do Supabase.
-- Para habilitar edital verticalizado, reta final, pegadinhas da banca e ciclo 24h/7d/30d, execute uma vez `supabase-edital-concurso.sql`.
-- Para habilitar planejamento semanal, fila diaria inteligente e Lei Seca, execute uma vez `supabase-planejamento-inteligente.sql`.
-- Para sincronizar os dias de revisao configuraveis entre navegadores, execute uma vez `supabase-configuracao-revisao.sql`.
-- Para calcular streak e conquistas de gamificacao sem trafegar listas grandes para o navegador, execute uma vez `supabase-gamificacao-resumo.sql`.
-- Para habilitar a assistente de IA integrada com limite diario por usuario, execute uma vez `supabase-ia-assistente.sql`.
+- O fluxo oficial de schema usa Supabase CLI e esta documentado em `docs/supabase-migrations.md`.
+- Nao aplique novas mudancas diretamente no SQL Editor remoto durante o fluxo normal de desenvolvimento.
+- Os arquivos `supabase-*.sql` na raiz sao historico do fluxo manual anterior e referencia de auditoria.
+- O banco remoto de desenvolvimento esta alinhado com estas migrations:
+  - `supabase/migrations/20260717112500_remote_schema_baseline.sql`;
+  - `supabase/migrations/20260717113000_add_question_sm2_scheduler.sql`;
+  - `supabase/migrations/20260717212105_harden_criar_perfil_automatico.sql`.
+- O scheduler SM-2 esta instalado, mas permanece desativado por configuracao (`legacy`).
+- Nao ha aplicacao em producao confirmada a partir deste repositorio local.
+- Antes de qualquer alteracao remota, execute `supabase migration list --db-url <DATABASE_URL>` e `supabase db push --dry-run --db-url <DATABASE_URL> --dns-resolver native`.
+- O push real de migrations exige autorizacao explicita.
 
 O schema cria as tabelas:
 
@@ -100,11 +95,12 @@ Ele tambem cria politicas de RLS para que cada usuario acesse apenas os seus pro
 
 O sistema tem um botao opcional **Analisar com IA e sugerir preenchimento** no Caderno de Erros. Ele nao salva automaticamente: a IA apenas preenche sugestoes para o usuario revisar antes de salvar.
 
-Para ativar em producao:
+Para ativar ou alterar esse recurso em ambiente remoto:
 
-1. Execute `supabase-ia-assistente.sql` no SQL Editor.
-2. Publique a Edge Function `supabase/functions/assistente-ia-questao`.
-3. Configure os secrets da funcao:
+1. Trate `supabase-ia-assistente.sql` como referencia historica do fluxo manual anterior.
+   Mudancas de banco devem virar migrations revisadas e autorizadas.
+2. Publique a Edge Function `supabase/functions/assistente-ia-questao` somente no fluxo de deploy apropriado.
+3. Configure os secrets da funcao fora do frontend:
    - `DEEPSEEK_API_KEY`: chave da API da DeepSeek.
    - `SUPABASE_SERVICE_ROLE_KEY`: service role key do seu projeto Supabase.
    - `IA_LIMITE_DIARIO`: opcional, padrao `20` analises por usuario/dia.

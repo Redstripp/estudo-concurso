@@ -5,13 +5,15 @@ node_modules/
 .env
 .env.local
 .env.*
-js/config.js
+# js/config.js is intentionally tracked. It may contain only public
+# frontend Supabase config: project URL and anon/publishable key.
 
 # Logs and temp files
 *.log
 *.tmp
 tmp/
 temp/
+.backups/
 
 # Editors
 .vscode/
