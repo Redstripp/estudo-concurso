@@ -10,9 +10,11 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "check:js": "node scripts/check-js.mjs",
+    "check:dist": "node scripts/check-dist-classic-scripts.mjs",
     "test": "vitest run"
   },
   "devDependencies": {
+    "supabase": "2.109.1",
     "typescript": "^6.0.3",
     "vite": "^8.0.13",
     "vitest": "^4.1.6"

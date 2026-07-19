@@ -34,3 +34,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Check dist classic scripts
+        run: npm run check:dist

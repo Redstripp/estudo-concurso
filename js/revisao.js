@@ -8,11 +8,19 @@ let treinoRevisaoErros = 0
 let treinoRevisaoRespostaSelecionada = null
 let treinoRevisaoPreResposta = ''
 let treinoRevisaoChecklist = { comando: false, pegadinha: false, tipo: false }
+let treinoRevisaoQualidadeAcerto = 'bom'
+let treinoRevisaoTentativaId = null
+let treinoRevisaoUltimoAgendamento = ''
 let filaRevisaoInteligenteAtual = []
 let filaRevisaoCompletaAtual = []
 let treinoRevisaoConfianca = ''
 let treinoRevisaoResultados = []
 let modoFocoAtivo = false
+const REVISAO_SCHEDULER_LEGACY = 'legacy'
+const REVISAO_SCHEDULER_SM2 = 'sm2_v1'
+const REVISAO_TIMEZONE_PADRAO = typeof QUESTAO_SM2_TIMEZONE_PADRAO !== 'undefined'
+  ? QUESTAO_SM2_TIMEZONE_PADRAO
+  : 'America/Recife'
 const TAMANHO_PAGINA_FILA_REVISAO = 1000
 const CAMPOS_QUESTOES_FILA_REVISAO = [
   'id',
@@ -91,6 +99,88 @@ function renderizarTextoRevisaoComMarkdownBasico(texto) {
     : escaparHtmlSeguro(texto)
 }
 
+function resetarEstadoTreinoRevisao() {
+  treinoRevisaoIndice = 0
+  treinoRevisaoAcertos = 0
+  treinoRevisaoErros = 0
+  treinoRevisaoRespostaSelecionada = null
+  treinoRevisaoPreResposta = ''
+  treinoRevisaoChecklist = { comando: false, pegadinha: false, tipo: false }
+  treinoRevisaoQualidadeAcerto = 'bom'
+  treinoRevisaoTentativaId = null
+  treinoRevisaoUltimoAgendamento = ''
+  treinoRevisaoConfianca = ''
+  treinoRevisaoResultados = []
+}
+
+function iniciarSessaoTreinoRevisao(questoes = []) {
+  treinoRevisaoQuestoes = questoes
+  resetarEstadoTreinoRevisao()
+  renderizarTreinoRevisao()
+}
+
+function resetarQuestaoAtualTreinoRevisao() {
+  treinoRevisaoRespostaSelecionada = null
+  treinoRevisaoPreResposta = ''
+  treinoRevisaoChecklist = { comando: false, pegadinha: false, tipo: false }
+  treinoRevisaoQualidadeAcerto = 'bom'
+  treinoRevisaoTentativaId = null
+  treinoRevisaoConfianca = ''
+}
+
+function criarUuidTentativaRevisao() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
+    const valor = Math.floor(Math.random() * 16)
+    const uuid = char === 'x' ? valor : (valor & 0x3) | 0x8
+    return uuid.toString(16)
+  })
+}
+
+function obterTentativaTreinoRevisao() {
+  if (!treinoRevisaoTentativaId) treinoRevisaoTentativaId = criarUuidTentativaRevisao()
+  return treinoRevisaoTentativaId
+}
+
+function questaoUsaSchedulerSm2(q) {
+  return q?.scheduler_mode === REVISAO_SCHEDULER_SM2 || q?.review_state?.algorithm_version === REVISAO_SCHEDULER_SM2
+}
+
+function erroIndicaEstruturaSm2Ausente(erro) {
+  const texto = [
+    erro?.code,
+    erro?.message,
+    erro?.details,
+    erro?.hint
+  ].filter(Boolean).join(' ')
+
+  return /42P01|42883|PGRST202|PGRST205|questao_review_states|questao_review_events|obter_metricas_revisao_sm2/i.test(texto)
+}
+
+async function buscarDadosFilaRevisaoComFallback(userId, config) {
+  if (config.review_scheduler_mode !== REVISAO_SCHEDULER_SM2) {
+    return buscarDadosFilaRevisao(userId)
+  }
+
+  try {
+    return await buscarDadosFilaRevisaoSm2(userId, config)
+  } catch (erro) {
+    if (!erroIndicaEstruturaSm2Ausente(erro)) throw erro
+
+    console.warn('Estrutura sm2_v1 ausente. Usando fila legada ate a migration ser aplicada.', {
+      code: erro?.code,
+      message: erro?.message
+    })
+    const dadosLegados = await buscarDadosFilaRevisao(userId)
+    return {
+      ...dadosLegados,
+      schedulerMode: REVISAO_SCHEDULER_LEGACY,
+      fallbackSm2: true
+    }
+  }
+}
+
 // ============================================
 // INICIALIZAR
 // ============================================
@@ -152,7 +242,9 @@ async function carregarConfiguracaoRevisaoTela() {
 
   const container = document.getElementById('revisao-relatorio-inteligente')
   if (container) {
-    if (ehDiaDeRevisaoHoje(config)) {
+    if (config.review_scheduler_mode === REVISAO_SCHEDULER_SM2) {
+      await gerarFilaRevisaoInteligente({ automatico: true })
+    } else if (ehDiaDeRevisaoHoje(config)) {
       await gerarFilaRevisaoInteligente({ automatico: true })
     } else {
       container.innerHTML = criarEstadoAguardandoRevisao(config)
@@ -169,7 +261,7 @@ async function obterConfiguracaoRevisaoUsuario(userId = window.usuarioAtual?.id)
   try {
     const { data, error } = await db
       .from('configuracoes_revisao')
-      .select('user_id, dias_revisao, tempo_revisao_minutos, ultima_revisao_geral, atualizado_em')
+      .select('*')
       .eq('user_id', userId)
       .maybeSingle()
 
@@ -209,7 +301,10 @@ function criarConfiguracaoRevisaoPadrao(userId) {
     user_id: userId || null,
     dias_revisao: [6],
     tempo_revisao_minutos: 60,
-    ultima_revisao_geral: null
+    ultima_revisao_geral: null,
+    review_scheduler_mode: REVISAO_SCHEDULER_LEGACY,
+    review_timezone: REVISAO_TIMEZONE_PADRAO,
+    review_max_interval_days: 365
   }
 }
 
@@ -226,12 +321,23 @@ function normalizarConfiguracaoRevisao(config, userId) {
     .filter(valor => valor >= 1 && valor <= 7))]
     .sort((a, b) => a - b)
 
+  const schedulerMode = [REVISAO_SCHEDULER_LEGACY, REVISAO_SCHEDULER_SM2].includes(config?.review_scheduler_mode)
+    ? config.review_scheduler_mode
+    : padrao.review_scheduler_mode
+  const timeZone = typeof validarTimeZoneQuestaoSm2 === 'function'
+    ? validarTimeZoneQuestaoSm2(config?.review_timezone || padrao.review_timezone)
+    : padrao.review_timezone
+  const maxInterval = Number(config?.review_max_interval_days || padrao.review_max_interval_days)
+
   return {
     user_id: userId || config?.user_id || padrao.user_id,
     dias_revisao: diasValidos.length > 0 ? diasValidos : padrao.dias_revisao,
     tempo_revisao_minutos: Math.min(240, Math.max(10, Number(config?.tempo_revisao_minutos || padrao.tempo_revisao_minutos))),
     ultima_revisao_geral: config?.ultima_revisao_geral || null,
-    atualizado_em: config?.atualizado_em || null
+    atualizado_em: config?.atualizado_em || null,
+    review_scheduler_mode: schedulerMode,
+    review_timezone: timeZone,
+    review_max_interval_days: Number.isInteger(maxInterval) && maxInterval >= 1 ? maxInterval : padrao.review_max_interval_days
   }
 }
 
@@ -516,20 +622,23 @@ async function gerarFilaRevisaoInteligente(opcoes = {}) {
 
   try {
     const userId = window.usuarioAtual.id
-    const [config, dados] = await Promise.all([
-      obterConfiguracaoRevisaoUsuario(userId),
-      buscarDadosFilaRevisao(userId)
-    ])
+    const config = await obterConfiguracaoRevisaoUsuario(userId)
+    const dados = await buscarDadosFilaRevisaoComFallback(userId, config)
+    const configEfetiva = dados.fallbackSm2
+      ? { ...config, review_scheduler_mode: REVISAO_SCHEDULER_LEGACY }
+      : config
 
-    revisaoConfiguracaoAtual = config
-    aplicarConfiguracaoRevisaoTela(config)
+    revisaoConfiguracaoAtual = configEfetiva
+    aplicarConfiguracaoRevisaoTela(configEfetiva)
 
-    const relatorio = montarRelatorioFilaRevisao(dados.questoes, config, dados.editalConfig, dados.revisoes)
+    const relatorio = dados.schedulerMode === REVISAO_SCHEDULER_SM2
+      ? montarRelatorioFilaRevisaoSm2(dados, configEfetiva)
+      : montarRelatorioFilaRevisao(dados.questoes, configEfetiva, dados.editalConfig, dados.revisoes)
     filaRevisaoInteligenteAtual = relatorio.fila
     filaRevisaoCompletaAtual = relatorio.filaCompleta || relatorio.fila
 
     if (container) {
-      container.innerHTML = criarPainelFilaRevisao(relatorio, config, opcoes)
+      container.innerHTML = criarPainelFilaRevisao(relatorio, configEfetiva, opcoes)
       vincularAcoesPainelFilaRevisao()
     }
 
@@ -574,6 +683,174 @@ async function buscarDadosFilaRevisao(userId) {
     editalConfig: editalResp.error ? null : editalResp.data,
     revisoes: revisoesResp.error ? [] : (revisoesResp.data || [])
   }
+}
+
+function obterLimiteSessaoRevisao(config) {
+  return Math.max(5, Math.min(60, Math.ceil(Number(config.tempo_revisao_minutos || 60) / 4)))
+}
+
+function obterJanelaRevisaoConfig(config, referencia = new Date()) {
+  if (typeof obterJanelaDiaFusoQuestaoSm2 === 'function') {
+    return obterJanelaDiaFusoQuestaoSm2(referencia, config.review_timezone || REVISAO_TIMEZONE_PADRAO)
+  }
+
+  const hoje = dataHoje()
+  return {
+    dataISO: hoje,
+    inicio: `${hoje}T00:00:00.000Z`,
+    fimExclusivo: `${adicionarDias(hoje, 1)}T00:00:00.000Z`,
+    fimInclusivo: `${hoje}T23:59:59.999Z`
+  }
+}
+
+function converterDiaSemanaLocalRevisao(dataISO) {
+  const data = new Date(`${dataISO}T12:00:00`)
+  const dia = data.getDay()
+  return dia === 0 ? 7 : dia
+}
+
+function diaRevisaoPermitidoSm2(config, janela) {
+  const dia = typeof converterDiaSemanaQuestaoSm2 === 'function'
+    ? converterDiaSemanaQuestaoSm2(janela.dataISO, config.review_timezone)
+    : converterDiaSemanaLocalRevisao(janela.dataISO)
+  return (config.dias_revisao || []).includes(dia)
+}
+
+async function buscarContagemEstadosSm2(userId, operador, valor, valorFinal = null) {
+  let query = db
+    .from('questao_review_states')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+
+  if (operador === 'lt') query = query.lt('next_review_at', valor)
+  if (operador === 'gte_lt') query = query.gte('next_review_at', valor).lt('next_review_at', valorFinal)
+  if (operador === 'gt') query = query.gt('next_review_at', valor)
+  if (operador === 'is_null') query = query.is('next_review_at', null)
+
+  const { count, error } = await query
+  if (error) throw error
+  return Number(count || 0)
+}
+
+async function buscarDadosFilaRevisaoSm2(userId, config) {
+  const janela = obterJanelaRevisaoConfig(config)
+  const hojePermitido = diaRevisaoPermitidoSm2(config, janela)
+  const limite = obterLimiteSessaoRevisao(config)
+
+  const [atrasadas, hoje, proximas, semAgendamento, metricasResp] = await Promise.all([
+    buscarContagemEstadosSm2(userId, 'lt', janela.inicio),
+    buscarContagemEstadosSm2(userId, 'gte_lt', janela.inicio, janela.fimExclusivo),
+    buscarContagemEstadosSm2(userId, 'gt', janela.fimExclusivo),
+    buscarContagemEstadosSm2(userId, 'is_null', null),
+    db.rpc ? db.rpc('obter_metricas_revisao_sm2', { p_days: 60 }) : Promise.resolve({ data: null, error: null })
+  ])
+
+  let estados = []
+  if (hojePermitido) {
+    const { data, error } = await db
+      .from('questao_review_states')
+      .select(`
+        id,
+        questao_id,
+        algorithm_version,
+        state_origin,
+        easiness_factor,
+        repetition_count,
+        interval_days,
+        lapse_count,
+        correct_streak,
+        total_reviews,
+        last_grade,
+        last_result,
+        last_reviewed_at,
+        next_review_at,
+        questoes!inner(${CAMPOS_QUESTOES_FILA_REVISAO})
+      `)
+      .eq('user_id', userId)
+      .lte('next_review_at', janela.fimInclusivo)
+      .order('next_review_at', { ascending: true })
+      .order('lapse_count', { ascending: false })
+      .order('easiness_factor', { ascending: true })
+      .order('correct_streak', { ascending: true })
+      .order('last_reviewed_at', { ascending: true, nullsFirst: true })
+      .order('questao_id', { ascending: true })
+      .limit(limite)
+
+    if (error) throw error
+    estados = data || []
+  }
+
+  const questoes = estados.map(item => normalizarQuestaoSm2(item, janela))
+  const editalResp = await db
+    .from('edital_config')
+    .select('data_prova, concurso_alvo')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  return {
+    schedulerMode: REVISAO_SCHEDULER_SM2,
+    questoes,
+    editalConfig: editalResp.error ? null : editalResp.data,
+    revisoes: [],
+    janela,
+    hojePermitido,
+    limite,
+    metricas: metricasResp.error ? null : metricasResp.data,
+    contagens: {
+      atrasadas,
+      hoje,
+      proximas,
+      semAgendamento,
+      totalVencidas: atrasadas + hoje,
+      pendentesAlemLimite: Math.max(0, atrasadas + hoje - questoes.length)
+    }
+  }
+}
+
+function normalizarQuestaoSm2(item, janela) {
+  const questao = item.questoes || {}
+  const reviewState = {
+    id: item.id,
+    questao_id: item.questao_id,
+    algorithm_version: item.algorithm_version,
+    state_origin: item.state_origin,
+    easiness_factor: Number(item.easiness_factor),
+    repetition_count: Number(item.repetition_count || 0),
+    interval_days: Number(item.interval_days || 0),
+    lapse_count: Number(item.lapse_count || 0),
+    correct_streak: Number(item.correct_streak || 0),
+    total_reviews: Number(item.total_reviews || 0),
+    last_grade: item.last_grade,
+    last_result: item.last_result,
+    last_reviewed_at: item.last_reviewed_at,
+    next_review_at: item.next_review_at
+  }
+  const statusFila = typeof classificarEstadoFilaQuestaoSm2 === 'function'
+    ? classificarEstadoFilaQuestaoSm2(reviewState, janela)
+    : 'hoje'
+  const diasAtraso = reviewState.next_review_at && typeof calcularDiasAtrasoQuestaoSm2 === 'function'
+    ? calcularDiasAtrasoQuestaoSm2(reviewState.next_review_at, janela.fimInclusivo)
+    : 0
+
+  return {
+    ...questao,
+    review_state: reviewState,
+    scheduler_mode: REVISAO_SCHEDULER_SM2,
+    status_fila_sm2: statusFila,
+    dias_atraso_sm2: diasAtraso,
+    prioridade_revisao: Math.round(diasAtraso * 10 + reviewState.lapse_count * 4 + Math.max(0, 5 - reviewState.easiness_factor)),
+    motivos_prioridade_revisao: criarMotivosPrioridadeSm2(reviewState, statusFila, diasAtraso)
+  }
+}
+
+function criarMotivosPrioridadeSm2(estado, statusFila, diasAtraso) {
+  const motivos = []
+  if (statusFila === 'atrasada') motivos.push(`atrasada ha ${diasAtraso} dia${diasAtraso !== 1 ? 's' : ''}`)
+  if (statusFila === 'hoje') motivos.push('vence hoje')
+  if (estado.lapse_count > 0) motivos.push(`errou ${estado.lapse_count} vez${estado.lapse_count !== 1 ? 'es' : ''}`)
+  if (estado.correct_streak > 0) motivos.push(`sequencia ${estado.correct_streak}`)
+  if (estado.interval_days > 0) motivos.push(`intervalo ${estado.interval_days}d`)
+  return motivos.length ? motivos : ['agendada pelo sm2_v1']
 }
 
 async function buscarQuestoesPendentesFilaRevisao(userId) {
@@ -661,6 +938,59 @@ function montarRelatorioFilaRevisao(questoes, config, editalConfig = null, revis
     calibracaoConfianca: montarCalibracaoConfiancaRevisao(revisoes),
     historicoCiclos: montarHistoricoEvolucaoCiclo(revisoes),
     acoes: montarAcoesFilaRevisao({ porMateria, porMotivo, porTopico, porPegadinha, semDiagnostico, diagnosticoFraco, vencidas, comPegadinhas, semAssunto, fila })
+  }
+}
+
+function montarRelatorioFilaRevisaoSm2(dados, config) {
+  const questoes = dados.questoes || []
+  const base = typeof ordenarFilaQuestaoSm2 === 'function'
+    ? ordenarFilaQuestaoSm2(questoes)
+    : questoes
+  const porMateria = contarValoresRevisao(base.map(q => q.materias?.nome || 'Sem materia'))
+  const porMotivo = contarValoresRevisao(base.map(q => q.motivo_erro || 'Sem motivo preenchido'))
+  const porTopico = contarValoresRevisao(base.map(q => q.edital_topicos?.titulo || 'Sem assunto do edital'))
+  const porPegadinha = contarValoresRevisao(base.flatMap(q => classificarPegadinhasRevisao(q.pegadinha_banca)))
+  const qualidadesDiagnostico = base.map(q => avaliarQualidadeDiagnosticoQuestao(q))
+  const semDiagnostico = qualidadesDiagnostico.filter(q => q.status === 'incompleto').length
+  const diagnosticoFraco = qualidadesDiagnostico.filter(q => q.status === 'fraco').length
+  const diagnosticoForte = qualidadesDiagnostico.filter(q => q.status === 'completo').length
+  const comPegadinhas = base.filter(q => String(q.pegadinha_banca || '').trim()).length
+  const semAssunto = base.filter(q => !q.edital_topico_id).length
+  const diasAteProva = calcularDiasAteProvaRevisao(dados.editalConfig?.data_prova)
+  const totalVencidas = Number(dados.contagens?.totalVencidas || 0)
+  const fila = dados.hojePermitido ? base.slice(0, dados.limite) : []
+
+  return {
+    schedulerMode: REVISAO_SCHEDULER_SM2,
+    totalPendente: totalVencidas,
+    totalCiclo: totalVencidas,
+    fila,
+    filaCompleta: base,
+    porMateria,
+    porMotivo,
+    porTopico,
+    porPegadinha,
+    semDiagnostico,
+    diagnosticoFraco,
+    diagnosticoForte,
+    comPegadinhas,
+    vencidas: totalVencidas,
+    atrasadas: Number(dados.contagens?.atrasadas || 0),
+    vencemHoje: Number(dados.contagens?.hoje || 0),
+    proximas: Number(dados.contagens?.proximas || 0),
+    semAgendamento: Number(dados.contagens?.semAgendamento || 0),
+    pendentesAlemLimite: Number(dados.contagens?.pendentesAlemLimite || 0),
+    semAssunto,
+    periodoTexto: `em ${dados.janela?.dataISO || dataHoje()}`,
+    diasAteProva,
+    editalConfig: dados.editalConfig,
+    calibracaoConfianca: { total: 0, itens: [], resumo: 'As metricas SM-2 aparecem conforme voce registra revisoes agendadas.' },
+    historicoCiclos: { itens: [], tendencia: dados.metricas?.message || 'Ainda nao ha dados suficientes para comparacao.' },
+    acoes: montarAcoesFilaRevisao({ porMateria, porMotivo, porTopico, porPegadinha, semDiagnostico, diagnosticoFraco, vencidas: totalVencidas, comPegadinhas, semAssunto, fila }),
+    metricasSm2: dados.metricas,
+    hojePermitido: dados.hojePermitido,
+    proximoDiaRevisao: calcularProximaDataRevisao(config.dias_revisao),
+    janela: dados.janela
   }
 }
 
@@ -932,16 +1262,18 @@ function montarAcoesFilaRevisao(relatorio) {
 }
 
 function criarPainelFilaRevisao(relatorio, config, opcoes = {}) {
+  const schedulerSm2 = relatorio.schedulerMode === REVISAO_SCHEDULER_SM2
   if (relatorio.totalCiclo === 0) {
     return `
       <div class="revisao-fila-card">
         <div class="revisao-fila-topo">
           <div>
-            <h3>Nada acumulado para revisar</h3>
-            <p>Quando voce registrar erros ou chutes, esta area responde o que revisar no dia escolhido.</p>
+            <h3>${schedulerSm2 ? 'Nenhuma questao vencida agora' : 'Nada acumulado para revisar'}</h3>
+            <p>${schedulerSm2 ? 'As proximas questoes aparecem quando vencerem no calendario individual.' : 'Quando voce registrar erros ou chutes, esta area responde o que revisar no dia escolhido.'}</p>
           </div>
           <span class="tag-estudo">${escaparHtmlSeguro(textoDiasRevisao(config.dias_revisao))}</span>
         </div>
+        ${schedulerSm2 ? criarMetricasSm2Revisao(relatorio) : ''}
         <div class="revisao-fila-acoes">
           <button class="btn-secundario" data-revisao-atalho="questoes" type="button">Registrar questao errada</button>
         </div>
@@ -950,7 +1282,10 @@ function criarPainelFilaRevisao(relatorio, config, opcoes = {}) {
   }
 
   const hojeRevisao = ehDiaDeRevisaoHoje(config)
-  const titulo = hojeRevisao || opcoes.manual ? 'O que revisar agora' : 'Fila inteligente preparada'
+  const podeIniciarSm2 = !schedulerSm2 || relatorio.hojePermitido
+  const titulo = schedulerSm2
+    ? relatorio.hojePermitido ? 'Questoes vencidas para hoje' : 'Revisoes vencidas aguardando dia de estudo'
+    : hojeRevisao || opcoes.manual ? 'O que revisar agora' : 'Fila inteligente preparada'
   const materiaPrincipal = relatorio.porMateria[0]?.nome || '-'
   const motivoPrincipal = relatorio.porMotivo.find(item => item.nome !== 'Sem motivo preenchido')?.nome || '-'
   const topicoPrincipal = relatorio.porTopico.find(item => item.nome !== 'Sem assunto do edital')?.nome || '-'
@@ -961,22 +1296,29 @@ function criarPainelFilaRevisao(relatorio, config, opcoes = {}) {
       <div class="revisao-fila-topo">
         <div>
           <h3>${escaparHtmlSeguro(titulo)}</h3>
-          <p>Analise dos erros acumulados ${escaparHtmlSeguro(relatorio.periodoTexto)}. Foco em revisar o que mais tende a se repetir.</p>
+          <p>${schedulerSm2
+            ? `Agenda individual ${escaparHtmlSeguro(relatorio.periodoTexto)}. Questoes vencidas fora dos dias de estudo continuam atrasadas ate o proximo dia permitido.`
+            : `Analise dos erros acumulados ${escaparHtmlSeguro(relatorio.periodoTexto)}. Foco em revisar o que mais tende a se repetir.`}</p>
         </div>
         <div class="revisao-fila-tags">
-          <span class="tag-estudo">${hojeRevisao ? 'Dia de revisao' : `Proxima: ${formatarDataCurtaRevisao(calcularProximaDataRevisao(config.dias_revisao))}`}</span>
+          <span class="tag-estudo">${schedulerSm2
+            ? relatorio.hojePermitido ? 'Dia de estudo permitido' : `Proximo estudo: ${formatarDataCurtaRevisao(relatorio.proximoDiaRevisao)}`
+            : hojeRevisao ? 'Dia de revisao' : `Proxima: ${formatarDataCurtaRevisao(calcularProximaDataRevisao(config.dias_revisao))}`}</span>
           <span class="tag-estudo">${config.tempo_revisao_minutos} min</span>
+          ${schedulerSm2 ? '<span class="tag-estudo">sm2_v1</span>' : ''}
         </div>
       </div>
 
-      <div class="revisao-fila-metricas">
-        <div><strong>${relatorio.totalCiclo}</strong><span>erros no ciclo</span></div>
-        <div><strong>${relatorio.fila.length}</strong><span>na fila de hoje</span></div>
-        <div><strong>${relatorio.vencidas}</strong><span>revisoes vencidas</span></div>
-        <div><strong>${relatorio.comPegadinhas}</strong><span>com pegadinhas</span></div>
-        <div><strong>${relatorio.semDiagnostico + relatorio.diagnosticoFraco}</strong><span>diagnostico a reforcar</span></div>
-        <div><strong>${relatorio.semAssunto}</strong><span>sem assunto do edital</span></div>
-      </div>
+      ${schedulerSm2 ? criarMetricasSm2Revisao(relatorio) : `
+        <div class="revisao-fila-metricas">
+          <div><strong>${relatorio.totalCiclo}</strong><span>erros no ciclo</span></div>
+          <div><strong>${relatorio.fila.length}</strong><span>na fila de hoje</span></div>
+          <div><strong>${relatorio.vencidas}</strong><span>revisoes vencidas</span></div>
+          <div><strong>${relatorio.comPegadinhas}</strong><span>com pegadinhas</span></div>
+          <div><strong>${relatorio.semDiagnostico + relatorio.diagnosticoFraco}</strong><span>diagnostico a reforcar</span></div>
+          <div><strong>${relatorio.semAssunto}</strong><span>sem assunto do edital</span></div>
+        </div>
+      `}
 
       ${criarRitualSemanalRevisao(relatorio)}
       ${criarPainelCalibracaoHistoricoRevisao(relatorio)}
@@ -1011,11 +1353,25 @@ function criarPainelFilaRevisao(relatorio, config, opcoes = {}) {
       </div>
 
       <div class="revisao-fila-acoes">
-        <button class="btn-primario" id="btn-iniciar-fila-inteligente" type="button">Iniciar fila nos flashcards</button>
+        <button class="btn-primario" id="btn-iniciar-fila-inteligente" type="button" ${podeIniciarSm2 && relatorio.fila.length ? '' : 'disabled'}>Iniciar fila nos flashcards</button>
         <button class="btn-secundario" id="btn-revisar-assunto-critico" type="button">Revisar assunto critico</button>
         <button class="btn-secundario" id="btn-treinar-pegadinhas-fila" type="button">Treinar pegadinhas</button>
         <button class="btn-secundario" data-revisao-atalho="questoes" type="button">Completar diagnosticos</button>
       </div>
+    </div>
+  `
+}
+
+function criarMetricasSm2Revisao(relatorio) {
+  return `
+    <div class="revisao-fila-metricas">
+      <div><strong>${relatorio.atrasadas || 0}</strong><span>atrasadas</span></div>
+      <div><strong>${relatorio.vencemHoje || 0}</strong><span>vencem hoje</span></div>
+      <div><strong>${relatorio.proximas || 0}</strong><span>proximas</span></div>
+      <div><strong>${relatorio.semAgendamento || 0}</strong><span>sem agenda</span></div>
+      <div><strong>${relatorio.fila.length}</strong><span>na sessao</span></div>
+      <div><strong>${relatorio.pendentesAlemLimite || 0}</strong><span>ficam vencidas</span></div>
+      <div><strong>${relatorio.metricasSm2?.sample_size || 0}</strong><span>amostra 60d</span></div>
     </div>
   `
 }
@@ -1134,6 +1490,7 @@ function criarListaFilaPrioritaria(fila) {
             <strong>${escaparHtmlSeguro(q.materias?.nome || 'Sem materia')}</strong>
             <p>${renderizarTextoRevisaoComMarkdownBasico(q.edital_topicos?.titulo || q.motivo_erro || 'Sem assunto definido')}</p>
             <small>${renderizarTextoRevisaoComMarkdownBasico((q.motivos_prioridade_revisao || []).join(' · ') || 'prioridade calculada')}</small>
+            ${criarDetalhesAgendaSm2(q)}
           </div>
           <div class="revisao-fila-item-tags">
             <span class="diagnostico-qualidade-tag ${avaliarQualidadeDiagnosticoQuestao(q).classe}">${escaparHtmlSeguro(avaliarQualidadeDiagnosticoQuestao(q).rotulo)}</span>
@@ -1143,6 +1500,27 @@ function criarListaFilaPrioritaria(fila) {
       `).join('')}
     </div>
   `
+}
+
+function criarDetalhesAgendaSm2(q) {
+  if (!questaoUsaSchedulerSm2(q)) return ''
+
+  const estado = q.review_state || {}
+  const detalhes = []
+  const diasAtraso = Number(q.dias_atraso_sm2 || 0)
+  const sequencia = Number(estado.correct_streak || 0)
+
+  if (q.status_fila_sm2 === 'atrasada') {
+    detalhes.push(`Atrasada ha ${diasAtraso} dia${diasAtraso !== 1 ? 's' : ''}`)
+  } else if (q.status_fila_sm2 === 'hoje') {
+    detalhes.push('Vence hoje')
+  }
+
+  detalhes.push(`Erros recorrentes: ${Number(estado.lapse_count || 0)}`)
+  detalhes.push(`Sequencia atual: ${sequencia} acerto${sequencia !== 1 ? 's' : ''}`)
+  if (estado.next_review_at) detalhes.push(`Vencimento: ${formatarDataCurtaRevisao(estado.next_review_at)}`)
+
+  return `<small>${detalhes.map(escaparHtmlSeguro).join(' Â· ')}</small>`
 }
 
 function criarChipsRevisao(itens) {
@@ -1192,16 +1570,7 @@ async function iniciarTreinoCausaRaiz(motivo) {
     return
   }
 
-  treinoRevisaoQuestoes = listaFiltrada
-  treinoRevisaoIndice = 0
-  treinoRevisaoAcertos = 0
-  treinoRevisaoErros = 0
-  treinoRevisaoRespostaSelecionada = null
-  treinoRevisaoPreResposta = ''
-  treinoRevisaoChecklist = { comando: false, pegadinha: false, tipo: false }
-  treinoRevisaoConfianca = ''
-  treinoRevisaoResultados = []
-  renderizarTreinoRevisao()
+  iniciarSessaoTreinoRevisao(listaFiltrada)
 }
 
 async function iniciarTreinoAssuntoCritico() {
@@ -1223,19 +1592,11 @@ async function iniciarTreinoAssuntoCritico() {
     return
   }
 
-  treinoRevisaoQuestoes = base
+  const questoesAssunto = base
     .filter(q => q.edital_topicos?.titulo === assunto.nome)
     .sort((a, b) => Number(b.prioridade_revisao || 0) - Number(a.prioridade_revisao || 0))
     .slice(0, 30)
-  treinoRevisaoIndice = 0
-  treinoRevisaoAcertos = 0
-  treinoRevisaoErros = 0
-  treinoRevisaoRespostaSelecionada = null
-  treinoRevisaoPreResposta = ''
-  treinoRevisaoChecklist = { comando: false, pegadinha: false, tipo: false }
-  treinoRevisaoConfianca = ''
-  treinoRevisaoResultados = []
-  renderizarTreinoRevisao()
+  iniciarSessaoTreinoRevisao(questoesAssunto)
 }
 
 async function iniciarTreinoFilaInteligente() {
@@ -1244,16 +1605,7 @@ async function iniciarTreinoFilaInteligente() {
     if (!relatorio?.fila?.length) return
   }
 
-  treinoRevisaoQuestoes = filaRevisaoInteligenteAtual
-  treinoRevisaoIndice = 0
-  treinoRevisaoAcertos = 0
-  treinoRevisaoErros = 0
-  treinoRevisaoRespostaSelecionada = null
-  treinoRevisaoPreResposta = ''
-  treinoRevisaoChecklist = { comando: false, pegadinha: false, tipo: false }
-  treinoRevisaoConfianca = ''
-  treinoRevisaoResultados = []
-  renderizarTreinoRevisao()
+  iniciarSessaoTreinoRevisao(filaRevisaoInteligenteAtual)
 }
 
 async function iniciarTreinoRevisao() {
@@ -1266,6 +1618,24 @@ async function iniciarTreinoRevisao() {
 
   // Mostrar botão de modo foco durante o treino
   if (btnModoFoco) btnModoFoco.style.display = 'inline-block'
+
+  const config = await obterConfiguracaoRevisaoUsuario(window.usuarioAtual.id)
+
+  if (config.review_scheduler_mode === REVISAO_SCHEDULER_SM2) {
+    const relatorio = await gerarFilaRevisaoInteligente({ manual: true })
+    const fila = relatorio?.fila || []
+
+    if (!fila.length) {
+      lista.innerHTML = relatorio?.hojePermitido
+        ? '<p class="texto-placeholder">Nenhuma questao vencida para treinar agora na agenda individual.</p>'
+        : '<p class="texto-placeholder">Hoje nao e um dia de estudo configurado. As questoes vencidas continuam pendentes para o proximo dia permitido.</p>'
+      if (btnModoFoco) btnModoFoco.style.display = 'none'
+      return
+    }
+
+    iniciarSessaoTreinoRevisao(fila)
+    return
+  }
 
   const { data, error } = await buscarQuestoesRevisao()
 
@@ -1282,16 +1652,7 @@ async function iniciarTreinoRevisao() {
     return
   }
 
-  treinoRevisaoQuestoes = data
-  treinoRevisaoIndice = 0
-  treinoRevisaoAcertos = 0
-  treinoRevisaoErros = 0
-  treinoRevisaoRespostaSelecionada = null
-  treinoRevisaoPreResposta = ''
-  treinoRevisaoChecklist = { comando: false, pegadinha: false, tipo: false }
-  treinoRevisaoConfianca = ''
-  treinoRevisaoResultados = []
-  renderizarTreinoRevisao()
+  iniciarSessaoTreinoRevisao(data)
 }
 
 async function iniciarTreinoPegadinhas() {
@@ -1303,12 +1664,17 @@ async function iniciarTreinoPegadinhas() {
 
   try {
     const userId = window.usuarioAtual.id
-    const [config, dados] = await Promise.all([
-      obterConfiguracaoRevisaoUsuario(userId),
-      buscarDadosFilaRevisao(userId)
-    ])
-    const relatorio = montarRelatorioFilaRevisao(dados.questoes, config, dados.editalConfig)
-    const base = (filaRevisaoInteligenteAtual.length ? filaRevisaoInteligenteAtual : relatorio.filaCompleta)
+    const config = await obterConfiguracaoRevisaoUsuario(userId)
+    let relatorio = null
+
+    if (config.review_scheduler_mode === REVISAO_SCHEDULER_SM2) {
+      relatorio = await gerarFilaRevisaoInteligente({ manual: true })
+    } else {
+      const dados = await buscarDadosFilaRevisao(userId)
+      relatorio = montarRelatorioFilaRevisao(dados.questoes, config, dados.editalConfig)
+    }
+
+    const base = (filaRevisaoInteligenteAtual.length ? filaRevisaoInteligenteAtual : relatorio?.filaCompleta || [])
       .filter(q => String(q.pegadinha_banca || '').trim())
 
     if (base.length === 0) {
@@ -1424,6 +1790,12 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.criarCardTreinoRevisao = criarCardTreinoRevisao
   globalThis.criarCardRevisao = criarCardRevisao
   globalThis.criarListaFilaPrioritaria = criarListaFilaPrioritaria
+  globalThis.criarControleQualidadeAcertoSm2 = criarControleQualidadeAcertoSm2
+  globalThis.criarDetalhesAgendaSm2 = criarDetalhesAgendaSm2
+  globalThis.montarRelatorioFilaRevisaoSm2 = montarRelatorioFilaRevisaoSm2
+  globalThis.questaoUsaSchedulerSm2 = questaoUsaSchedulerSm2
+  globalThis.normalizarConfiguracaoRevisao = normalizarConfiguracaoRevisao
+  globalThis.erroIndicaEstruturaSm2Ausente = erroIndicaEstruturaSm2Ausente
 }
 
 function criarAlternativasTreinoPegadinha(q) {
@@ -1461,6 +1833,13 @@ function renderizarTreinoRevisao(gabaritoVisivel = false) {
   lista.innerHTML = ''
   if (treinoRevisaoIndice === 0 && !gabaritoVisivel) {
     lista.appendChild(criarResumoInteligenteRevisao(treinoRevisaoQuestoes, true))
+  }
+  if (treinoRevisaoUltimoAgendamento && !gabaritoVisivel) {
+    const aviso = document.createElement('p')
+    aviso.className = 'texto-placeholder'
+    aviso.textContent = treinoRevisaoUltimoAgendamento
+    lista.appendChild(aviso)
+    treinoRevisaoUltimoAgendamento = ''
   }
   lista.appendChild(criarCardTreinoRevisao(q, gabaritoVisivel))
 }
@@ -1533,6 +1912,28 @@ function montarAcoesResumoFinalRevisao({ porMateria, porMotivo, porTopico, calib
   return acoes.slice(0, 4)
 }
 
+function criarControleQualidadeAcertoSm2(acertou) {
+  if (!acertou) return ''
+
+  const opcoes = [
+    ['dificil', 'Dificil'],
+    ['bom', 'Bom'],
+    ['facil', 'Facil']
+  ]
+
+  return `
+    <fieldset class="checklist-resposta" aria-label="Como foi lembrar a resposta?">
+      <legend class="campo-label">Como foi lembrar?</legend>
+      ${opcoes.map(([valor, rotulo]) => `
+        <label>
+          <input type="radio" name="treino-qualidade-acerto" value="${valor}" ${treinoRevisaoQualidadeAcerto === valor ? 'checked' : ''}>
+          ${rotulo}
+        </label>
+      `).join('')}
+    </fieldset>
+  `
+}
+
 function criarCardTreinoRevisao(q, gabaritoVisivel) {
   const card = document.createElement('div')
   card.className = 'treino-revisao-card'
@@ -1596,6 +1997,7 @@ function criarCardTreinoRevisao(q, gabaritoVisivel) {
         <span class="tag-estudo">Você marcou antes: ${escaparHtmlSeguro(q.alternativa_marcada)}</span>
         <span class="tag-estudo">Confiança agora: ${escaparHtmlSeguro(treinoRevisaoConfianca || '-')}</span>
       </div>
+      ${criarControleQualidadeAcertoSm2(acertou)}
       ${diagnostico}
     ` : '<p class="texto-placeholder treino-revisao-dica">Selecione uma alternativa e confirme para revelar o gabarito.</p>'}
     <p class="prompt-chatgpt-feedback prompt-chatgpt-feedback--erro" id="msg-treino-revisao"></p>
@@ -1624,6 +2026,11 @@ function criarCardTreinoRevisao(q, gabaritoVisivel) {
   card.querySelector('#treino-confianca-resposta')?.addEventListener('change', (e) => {
     treinoRevisaoConfianca = e.target.value
     atualizarBotaoConfirmarTreino(card)
+  })
+  card.querySelectorAll('[name="treino-qualidade-acerto"]').forEach(input => {
+    input.addEventListener('change', () => {
+      treinoRevisaoQualidadeAcerto = input.value
+    })
   })
   card.querySelector('#btn-confirmar-resposta-treino')?.addEventListener('click', confirmarRespostaTreinoRevisao)
   card.querySelector('#btn-sair-treino')?.addEventListener('click', filtrarRevisao)
@@ -1678,6 +2085,7 @@ function confirmarRespostaTreinoRevisao() {
     return
   }
 
+  obterTentativaTreinoRevisao()
   renderizarTreinoRevisao(true)
 }
 
@@ -1735,6 +2143,14 @@ function criarDiagnosticoTreino(q) {
 async function registrarTreinoRevisao(q, resultado) {
   const msg = document.getElementById('msg-treino-revisao')
   const acertou = resultado === 'Acertou'
+  const btn = document.getElementById('btn-registrar-treino')
+
+  if (btn) btn.disabled = true
+  if (questaoUsaSchedulerSm2(q)) {
+    await registrarTreinoRevisaoSm2(q, resultado, acertou, msg, btn)
+    return
+  }
+
   const hoje = dataHoje()
   const nivelConfianca = treinoRevisaoConfianca
   const proximaRevisao = calcularProximaRevisao24730(q, hoje, acertou, nivelConfianca)
@@ -1756,6 +2172,7 @@ async function registrarTreinoRevisao(q, resultado) {
 
   if (erroHistorico) {
     console.error(erroHistorico)
+    if (btn) btn.disabled = false
     msg.textContent = 'Não foi possível registrar a revisão. Verifique sua conexão e tente novamente.'
     return
   }
@@ -1777,6 +2194,7 @@ async function registrarTreinoRevisao(q, resultado) {
 
   if (erroQuestao) {
     console.error(erroQuestao)
+    if (btn) btn.disabled = false
     msg.textContent = 'Histórico salvo, mas não foi possível atualizar a fila. Recarregue a página para conferir o estado atual.'
     return
   }
@@ -1794,12 +2212,89 @@ async function registrarTreinoRevisao(q, resultado) {
   avancarTreinoRevisao()
 }
 
+async function registrarTreinoRevisaoSm2(q, resultado, acertou, msg, btn) {
+  if (!db?.rpc) {
+    msg.textContent = 'Scheduler sm2_v1 indisponivel. Recarregue a pagina e tente novamente.'
+    if (btn) btn.disabled = false
+    return
+  }
+
+  const nivelConfianca = treinoRevisaoConfianca
+  const grade = typeof mapearResultadoParaGradeQuestaoSm2 === 'function'
+    ? mapearResultadoParaGradeQuestaoSm2({
+      resultado,
+      wasCorrect: acertou,
+      qualidade: acertou ? treinoRevisaoQualidadeAcerto : null
+    })
+    : acertou ? 4 : 1
+
+  msg.textContent = 'Registrando agenda individual...'
+
+  const { data, error } = await db.rpc('registrar_revisao_questao_sm2', {
+    p_questao_id: q.id,
+    p_grade: grade,
+    p_was_correct: acertou,
+    p_reviewed_at: new Date().toISOString(),
+    p_source_attempt_id: obterTentativaTreinoRevisao(),
+    p_response_time_ms: null,
+    p_answer: treinoRevisaoRespostaSelecionada
+  })
+
+  if (error) {
+    console.error('Falha ao registrar revisao sm2_v1', {
+      questaoId: q?.id,
+      grade,
+      code: error.code,
+      message: error.message
+    })
+    msg.textContent = 'Nao foi possivel registrar a revisao individual. A sessao nao avancou; tente novamente.'
+    if (btn) btn.disabled = false
+    return
+  }
+
+  const proximaRevisao = data?.next_review_at || data?.state?.next_review_at || null
+  treinoRevisaoUltimoAgendamento = proximaRevisao
+    ? `Proxima revisao: ${formatarDataCurtaRevisao(proximaRevisao)}`
+    : ''
+
+  registrarResultadoTreinoRevisaoLocal(q, resultado, acertou, {
+    nivelConfianca,
+    grade,
+    qualidade: acertou ? treinoRevisaoQualidadeAcerto : null,
+    proximaRevisao,
+    schedulerMode: REVISAO_SCHEDULER_SM2
+  })
+
+  filaRevisaoInteligenteAtual = filaRevisaoInteligenteAtual.filter(item => item.id !== q.id)
+  filaRevisaoCompletaAtual = filaRevisaoCompletaAtual.filter(item => item.id !== q.id)
+
+  if (typeof atualizarTelasAposRegistro === 'function') {
+    atualizarTelasAposRegistro({ questaoNova: false })
+  }
+
+  avancarTreinoRevisao()
+}
+
+function registrarResultadoTreinoRevisaoLocal(q, resultado, acertou, extras = {}) {
+  if (acertou) treinoRevisaoAcertos += 1
+  else treinoRevisaoErros += 1
+
+  treinoRevisaoResultados.push({
+    questao: q,
+    resultado,
+    acertou,
+    nivelConfianca: extras.nivelConfianca || treinoRevisaoConfianca,
+    resposta: treinoRevisaoRespostaSelecionada,
+    grade: extras.grade,
+    qualidade: extras.qualidade,
+    proximaRevisao: extras.proximaRevisao,
+    schedulerMode: extras.schedulerMode
+  })
+}
+
 function avancarTreinoRevisao() {
   treinoRevisaoIndice += 1
-  treinoRevisaoRespostaSelecionada = null
-  treinoRevisaoPreResposta = ''
-  treinoRevisaoChecklist = { comando: false, pegadinha: false, tipo: false }
-  treinoRevisaoConfianca = ''
+  resetarQuestaoAtualTreinoRevisao()
   renderizarTreinoRevisao(false)
 }
 

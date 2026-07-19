@@ -409,6 +409,22 @@
       <p>Você escolhe seus próprios dias de revisão: sábado, domingo, quarta e sábado, todos os dias ou qualquer combinação. Também pode informar o tempo disponível para revisar.</p>
       <h3>Fila inteligente</h3>
       <p>A fila considera erros acumulados, revisões vencidas, matérias com mais erros, assuntos recorrentes, tipos de erro, pegadinhas, peso do edital, dificuldade e tempo sem contato.</p>
+      <h3>Repeticao individualizada</h3>
+      <p>Quando o scheduler <strong>sm2_v1</strong> estiver ativo, cada questao passa a ter uma agenda propria. O sistema guarda ultima revisao, proxima revisao, total de revisoes, sequencia de acertos, erros recorrentes, intervalo atual e versao do algoritmo.</p>
+      <p>Os dias escolhidos por voce continuam valendo como dias de entrada para estudar. A diferenca e que o vencimento real da questao nao e empurrado artificialmente. Se uma questao vence na terca e voce revisa apenas na quarta, ela aparece na quarta como atrasada.</p>
+      <h3>Atrasada, Hoje, Proxima e Sem agenda</h3>
+      <p><strong>Atrasada</strong> e a questao que ja venceu antes de hoje. <strong>Hoje</strong> vence dentro do dia atual no seu fuso. <strong>Proxima</strong> ainda esta programada para uma data futura. <strong>Sem agenda</strong> indica item sem data individual calculada, normalmente por migracao incompleta ou falta de registro do scheduler.</p>
+      <h3>Dificil, Bom e Facil</h3>
+      <p>Depois de acertar uma questao na revisao, voce pode marcar se lembrar foi dificil, normal ou facil. A escolha padrao e Bom. Essa classificacao e opcional e serve apenas para calibrar o proximo intervalo. Ela nao aparece quando voce erra, e um erro nunca vira acerto por classificacao manual.</p>
+      <h3>Questoes corretas tambem voltam</h3>
+      <p>Uma questao correta tambem pode ser esquecida depois. Por isso, no modo individualizado, acertos aumentam gradualmente o intervalo e erros reduzem o intervalo para a questao voltar mais cedo.</p>
+      <p>Acertos registrados apenas como quantidade total continuam sendo estatistica agregada. Para uma questao correta entrar na agenda individual, ela precisa estar salva como questao no caderno.</p>
+      <h3>Metricas do scheduler</h3>
+      <p>O painel mostra atrasadas, vencem hoje, proximas, sem agenda, itens na sessao, pendencias que ficam vencidas por limite diario e amostra dos ultimos 60 dias. Com pouca amostra, o sistema informa que ainda nao ha dados suficientes para comparacao.</p>
+      <h3>Limitacoes do sm2_v1</h3>
+      <p>O <strong>sm2_v1</strong> e uma versao conservadora baseada em SM-2. Ele nao e FSRS e nao tenta prever desempenho real de banca. Use as metricas como acompanhamento de revisao, nao como garantia de nota.</p>
+      <h3>Problemas comuns</h3>
+      <p>Se a agenda individual nao atualizar apos salvar ou revisar uma questao, tente novamente com conexao estavel. A questao nao deve ser marcada como concluida localmente sem confirmacao do banco. Se aparecerem itens sem agenda, mantenha a revisao pelo modo atual e solicite a migracao ou recalculo dos estados individuais.</p>
       <h3>Assuntos críticos e ritual semanal</h3>
       <p>O painel mostra os assuntos do edital que mais se repetiram nos erros e sugere um ritual curto para fechar o ciclo: refazer o assunto crítico, observar a causa raiz, treinar pegadinhas e melhorar diagnósticos fracos. O botão Revisar assunto crítico inicia um treino focado no assunto do edital que mais apareceu na fila.</p>
       <h3>Calibração de confiança</h3>

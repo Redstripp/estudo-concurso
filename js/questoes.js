@@ -2985,6 +2985,41 @@ async function recalcularTotalQuestoesSessao(sessaoId) {
 // ============================================
 // SALVAR QUESTÃO
 // ============================================
+async function registrarQuestaoNoSchedulerSm2SeAtivo(questaoId, dadosQuestao) {
+  if (!questaoId || !window.usuarioAtual?.id) return { ativo: false }
+  if (typeof obterConfiguracaoRevisaoUsuario !== 'function' || !db?.rpc) return { ativo: false }
+
+  try {
+    const config = await obterConfiguracaoRevisaoUsuario(window.usuarioAtual.id)
+    if (config.review_scheduler_mode !== 'sm2_v1') return { ativo: false }
+
+    const acertou = dadosQuestao.alternativaMarcada === dadosQuestao.alternativaCorreta
+    const grade = typeof mapearResultadoParaGradeQuestaoSm2 === 'function'
+      ? mapearResultadoParaGradeQuestaoSm2({ wasCorrect: acertou, resultado: acertou ? 'Acertou' : 'Errou' })
+      : acertou ? 4 : 1
+
+    const { error } = await db.rpc('registrar_revisao_questao_sm2', {
+      p_questao_id: questaoId,
+      p_grade: grade,
+      p_was_correct: acertou,
+      p_reviewed_at: new Date().toISOString(),
+      p_source_attempt_id: questaoId,
+      p_response_time_ms: null,
+      p_answer: dadosQuestao.alternativaMarcada
+    })
+
+    if (error) throw error
+    return { ativo: true, ok: true }
+  } catch (erro) {
+    console.warn('Questao salva, mas a agenda individual sm2_v1 nao foi atualizada.', {
+      questaoId,
+      code: erro?.code,
+      message: erro?.message
+    })
+    return { ativo: true, ok: false }
+  }
+}
+
 async function salvarQuestao(opcoes = {}) {
   const dadosQuestao = montarDadosQuestaoFormulario()
   const materiaId = dadosQuestao.materiaId
@@ -3153,6 +3188,11 @@ async function salvarQuestao(opcoes = {}) {
     })
   }
 
+  const resultadoSchedulerSm2 = await registrarQuestaoNoSchedulerSm2SeAtivo(questaoSalva?.id, {
+    alternativaMarcada,
+    alternativaCorreta
+  })
+
   await recalcularTotalQuestoesSessao(sessao.id)
 
   limparFormularioQuestaoAposSalvar()
@@ -3167,7 +3207,12 @@ async function salvarQuestao(opcoes = {}) {
     btn.textContent = textoBotaoSalvar
   }, 2000)
 
-  mostrarMsgQuestao('Questão salva com sucesso!', 'sucesso')
+  mostrarMsgQuestao(
+    resultadoSchedulerSm2.ativo && !resultadoSchedulerSm2.ok
+      ? 'Questao salva. Nao foi possivel atualizar a agenda individual agora; a revisao pode ser recalculada depois.'
+      : 'Questão salva com sucesso!',
+    'sucesso'
+  )
   setTimeout(() => mostrarMsgQuestao('', ''), 3000)
 
   questaoRecemSalvaId = questaoSalva?.id || null
