@@ -29,6 +29,7 @@ await import('../js/revisao.js')
 await import('../js/edital.js')
 await import('../js/estatisticas.js')
 await import('../js/plano.js')
+await import('../js/simulado-scoring.js')
 await import('../js/simulados.js')
 await import('../js/planejamento.js')
 

@@ -5,6 +5,9 @@ let simuladosInicializado = false
 const SIMULADO_SCHEDULER_LEGACY = 'legacy'
 const SIMULADO_SCHEDULER_SM2 = 'sm2_v1'
 const CAMPOS_QUESTOES_SIMULADO_REVISAO = 'id, enunciado, alternativas, alternativa_marcada, alternativa_correta, tipo_questao, status_revisao, revisar_novamente_em, revisao_total_acertos, revisao_total_erros, revisao_etapa, revisao_ultima_data, revisao_ultima_resultado, motivo_erro, nivel_confianca, comentario, conceito_chave, como_reconhecer, acao_corretiva, criado_em, materias(nome), edital_topicos(titulo, status), banca, pegadinha_banca'
+const SIMULADO_SCORING_STORAGE_KEY = 'estudoConcursoScoringProfiles:v1'
+const CAMPOS_SIMULADOS_LEGACY = 'id, data, nome, banca, total_questoes, certas, erradas, tempo_minutos, nota_percentual, comentario'
+const CAMPOS_SIMULADOS_SCORING = `${CAMPOS_SIMULADOS_LEGACY}, scoring_profile_id, scoring_profile_version, scoring_snapshot, score_raw, score_final, score_max, score_status, score_breakdown, blank_count, annulled_count`
 
 const NIVEIS_CONFIANCA_RESPOSTA_SIMULADO = ['Chutei', 'Dúvida', 'Confiante']
 const MOTIVOS_ERRO_RESPOSTA_SIMULADO = [
@@ -20,6 +23,9 @@ const MOTIVOS_ERRO_RESPOSTA_SIMULADO = [
   'Reconhecimento superficial do conteúdo'
 ]
 
+let perfisPontuacaoSimulado = []
+let blocosPontuacaoSimuladoTela = []
+
 function renderizarTextoSimuladoComMarkdownBasico(texto) {
   return typeof renderizarTextoComMarkdownBasicoSeguro === 'function'
     ? renderizarTextoComMarkdownBasicoSeguro(texto)
@@ -31,6 +37,7 @@ function inicializarSimulados() {
     simuladosInicializado = true
     const inputData = document.getElementById('simulado-data')
     if (inputData && !inputData.value) inputData.value = dataSimuladoHoje()
+    inicializarPontuacaoSimulado()
 
     document.getElementById('btn-salvar-simulado')
       ?.addEventListener('click', salvarSimulado)
@@ -39,6 +46,8 @@ function inicializarSimulados() {
 
     document.getElementById('simulado-total')?.addEventListener('input', preencherErradasSimulado)
     document.getElementById('simulado-certas')?.addEventListener('input', preencherErradasSimulado)
+    document.getElementById('simulado-erradas')?.addEventListener('input', atualizarPreviewPontuacaoSimulado)
+    document.getElementById('simulado-brancas')?.addEventListener('input', atualizarPreviewPontuacaoSimulado)
   }
 
   carregarQuestoesRecuperadas()
@@ -49,10 +58,386 @@ function preencherErradasSimulado() {
   const total = parseInt(document.getElementById('simulado-total').value)
   const certas = parseInt(document.getElementById('simulado-certas').value)
   const erradas = document.getElementById('simulado-erradas')
+  const brancas = document.getElementById('simulado-brancas')
 
   if (total >= 0 && certas >= 0 && certas <= total) {
     erradas.value = total - certas
+    if (brancas) brancas.value = 0
   }
+  atualizarPreviewPontuacaoSimulado()
+}
+
+function inicializarPontuacaoSimulado() {
+  perfisPontuacaoSimulado = carregarPerfisPontuacaoSimulado()
+  const seletor = document.getElementById('simulado-scoring-profile')
+  if (!seletor) return
+
+  renderizarSelectPerfisPontuacaoSimulado()
+  preencherFormularioPerfilPontuacaoSimulado(obterPerfilPontuacaoSelecionadoSimulado())
+
+  seletor.addEventListener('change', () => {
+    preencherFormularioPerfilPontuacaoSimulado(obterPerfilPontuacaoSelecionadoSimulado())
+    atualizarPreviewPontuacaoSimulado()
+  })
+
+  document.getElementById('btn-simulado-scoring-duplicar')
+    ?.addEventListener('click', duplicarPerfilPontuacaoSimulado)
+  document.getElementById('btn-simulado-scoring-nova-versao')
+    ?.addEventListener('click', criarNovaVersaoPerfilPontuacaoSimulado)
+  document.getElementById('btn-simulado-scoring-salvar')
+    ?.addEventListener('click', salvarPerfilPontuacaoSimulado)
+  document.getElementById('btn-simulado-scoring-add-bloco')
+    ?.addEventListener('click', adicionarBlocoPontuacaoSimulado)
+
+  document.querySelectorAll('#simulado-scoring-config input, #simulado-scoring-config select, #simulado-scoring-config textarea')
+    .forEach(campo => campo.addEventListener('input', atualizarPreviewPontuacaoSimulado))
+
+  atualizarPreviewPontuacaoSimulado()
+}
+
+function criarPerfilPontuacaoPadraoSimulado() {
+  return typeof criarPerfilPontuacaoLegadoSimulado === 'function'
+    ? criarPerfilPontuacaoLegadoSimulado()
+    : {
+        id: 'legacy_simple',
+        nome: 'Padrao atual',
+        versao: 1,
+        modo: 'simple',
+        valores: { correta: 1, errada: 0, branca: 0, anulada: 0 },
+        anuladas: { tratamento: 'zero', valorEspecifico: 0 },
+        arredondamento: { modo: 'matematico', casasDecimais: 2, etapa: 'final' },
+        pesos: { padrao: 1, questoes: {}, disciplinas: {}, blocos: {}, tipos: {} },
+        blocos: [],
+        minimos: {},
+        eliminacao: {}
+      }
+}
+
+function carregarPerfisPontuacaoSimulado() {
+  const padrao = criarPerfilPontuacaoPadraoSimulado()
+  try {
+    const salvos = JSON.parse(localStorage.getItem(SIMULADO_SCORING_STORAGE_KEY) || '[]')
+    const perfis = Array.isArray(salvos) ? salvos : []
+    return [padrao, ...perfis.filter(perfil => perfil?.id !== padrao.id)]
+  } catch (erro) {
+    console.warn('Nao foi possivel carregar perfis de pontuacao.', erro)
+    return [padrao]
+  }
+}
+
+function persistirPerfisPontuacaoSimulado() {
+  const customizados = perfisPontuacaoSimulado.filter(perfil => perfil.id !== 'legacy_simple')
+  localStorage.setItem(SIMULADO_SCORING_STORAGE_KEY, JSON.stringify(customizados))
+}
+
+function renderizarSelectPerfisPontuacaoSimulado() {
+  const seletor = document.getElementById('simulado-scoring-profile')
+  if (!seletor) return
+  const valorAtual = seletor.value || 'legacy_simple'
+  seletor.innerHTML = perfisPontuacaoSimulado
+    .filter(perfil => perfil.ativo !== false)
+    .map(perfil => `<option value="${escaparHtmlSeguro(perfil.id)}">${escaparHtmlSeguro(perfil.nome)} v${Number(perfil.versao || 1)}</option>`)
+    .join('')
+  seletor.value = perfisPontuacaoSimulado.some(perfil => perfil.id === valorAtual) ? valorAtual : 'legacy_simple'
+}
+
+function obterPerfilPontuacaoSelecionadoSimulado() {
+  const id = document.getElementById('simulado-scoring-profile')?.value || 'legacy_simple'
+  return perfisPontuacaoSimulado.find(perfil => perfil.id === id) || criarPerfilPontuacaoPadraoSimulado()
+}
+
+function valorCampoPontuacaoSimulado(id, fallback = null) {
+  const valor = document.getElementById(id)?.value
+  if (valor === '' || valor === null || valor === undefined) return fallback
+  const numero = Number(valor)
+  return Number.isFinite(numero) ? numero : fallback
+}
+
+function preencherFormularioPerfilPontuacaoSimulado(perfil) {
+  const normalizado = typeof normalizarPerfilPontuacaoSimulado === 'function'
+    ? normalizarPerfilPontuacaoSimulado(perfil)
+    : perfil
+  blocosPontuacaoSimuladoTela = [...(normalizado.blocos || [])]
+  const setValor = (id, valor) => {
+    const campo = document.getElementById(id)
+    if (campo) campo.value = valor ?? ''
+  }
+
+  setValor('simulado-scoring-nome', normalizado.nome)
+  setValor('simulado-scoring-descricao', normalizado.descricao || '')
+  setValor('simulado-scoring-modo', normalizado.modo)
+  setValor('simulado-scoring-correta', normalizado.valores?.correta ?? 1)
+  setValor('simulado-scoring-errada', normalizado.valores?.errada ?? 0)
+  setValor('simulado-scoring-branca', normalizado.valores?.branca ?? 0)
+  setValor('simulado-scoring-anulada', normalizado.anuladas?.tratamento || 'zero')
+  setValor('simulado-scoring-anulada-valor', normalizado.anuladas?.valorEspecifico ?? 0)
+  setValor('simulado-scoring-arredondamento', normalizado.arredondamento?.modo || 'matematico')
+  setValor('simulado-scoring-casas', normalizado.arredondamento?.casasDecimais ?? 2)
+  setValor('simulado-scoring-nota-maxima', normalizado.notaMaxima ?? '')
+  setValor('simulado-scoring-min-nota', normalizado.minimos?.notaTotal ?? '')
+  setValor('simulado-scoring-min-percentual', normalizado.minimos?.percentualTotal ?? '')
+  setValor('simulado-scoring-max-erros', normalizado.eliminacao?.maxErros ?? normalizado.minimos?.maxErros ?? '')
+  setValor('simulado-scoring-eliminar-negativa', normalizado.eliminacao?.notaNegativa ? 'true' : 'false')
+  renderizarBlocosPontuacaoSimulado()
+}
+
+function lerPerfilPontuacaoFormularioSimulado() {
+  const selecionado = obterPerfilPontuacaoSelecionadoSimulado()
+  const id = selecionado.id || `perfil-${Date.now()}`
+  const blocos = [...blocosPontuacaoSimuladoTela]
+  const pesosBlocos = {}
+  const minimosBlocos = {}
+
+  blocos.forEach(bloco => {
+    if (bloco.peso !== null && bloco.peso !== undefined && bloco.peso !== '') pesosBlocos[bloco.id] = Number(bloco.peso)
+    if (bloco.notaMinima !== null || bloco.percentualMinimo !== null) {
+      minimosBlocos[bloco.id] = {
+        nota: bloco.notaMinima,
+        percentual: bloco.percentualMinimo
+      }
+    }
+  })
+
+  return {
+    ...selecionado,
+    id,
+    nome: document.getElementById('simulado-scoring-nome')?.value.trim() || selecionado.nome || 'Perfil de pontuacao',
+    descricao: document.getElementById('simulado-scoring-descricao')?.value.trim() || '',
+    modo: document.getElementById('simulado-scoring-modo')?.value || 'simple',
+    valores: {
+      correta: valorCampoPontuacaoSimulado('simulado-scoring-correta', 1),
+      errada: valorCampoPontuacaoSimulado('simulado-scoring-errada', 0),
+      branca: valorCampoPontuacaoSimulado('simulado-scoring-branca', 0),
+      anulada: valorCampoPontuacaoSimulado('simulado-scoring-anulada-valor', 0)
+    },
+    anuladas: {
+      tratamento: document.getElementById('simulado-scoring-anulada')?.value || 'zero',
+      valorEspecifico: valorCampoPontuacaoSimulado('simulado-scoring-anulada-valor', 0)
+    },
+    arredondamento: {
+      modo: document.getElementById('simulado-scoring-arredondamento')?.value || 'matematico',
+      casasDecimais: valorCampoPontuacaoSimulado('simulado-scoring-casas', 2),
+      etapa: 'final'
+    },
+    notaMaxima: valorCampoPontuacaoSimulado('simulado-scoring-nota-maxima', null),
+    pesos: {
+      padrao: selecionado.pesos?.padrao ?? 1,
+      questoes: selecionado.pesos?.questoes || {},
+      disciplinas: selecionado.pesos?.disciplinas || {},
+      blocos: pesosBlocos,
+      tipos: selecionado.pesos?.tipos || {}
+    },
+    blocos,
+    minimos: {
+      ...(selecionado.minimos || {}),
+      notaTotal: valorCampoPontuacaoSimulado('simulado-scoring-min-nota', null),
+      percentualTotal: valorCampoPontuacaoSimulado('simulado-scoring-min-percentual', null),
+      maxErros: null,
+      blocos: minimosBlocos
+    },
+    eliminacao: {
+      ...(selecionado.eliminacao || {}),
+      notaNegativa: document.getElementById('simulado-scoring-eliminar-negativa')?.value === 'true',
+      maxErros: valorCampoPontuacaoSimulado('simulado-scoring-max-erros', null),
+      blocos: selecionado.eliminacao?.blocos || {}
+    }
+  }
+}
+
+function salvarPerfilPontuacaoSimulado() {
+  const perfil = lerPerfilPontuacaoFormularioSimulado()
+  const validacao = typeof validarPerfilPontuacaoSimulado === 'function'
+    ? validarPerfilPontuacaoSimulado(perfil)
+    : { ok: true, perfil }
+  if (!validacao.ok) {
+    mostrarMsgSimulado(validacao.erros.join(' '), 'erro')
+    return
+  }
+
+  const indice = perfisPontuacaoSimulado.findIndex(item => item.id === validacao.perfil.id)
+  if (indice >= 0) perfisPontuacaoSimulado[indice] = validacao.perfil
+  else perfisPontuacaoSimulado.push(validacao.perfil)
+  persistirPerfisPontuacaoSimulado()
+  renderizarSelectPerfisPontuacaoSimulado()
+  document.getElementById('simulado-scoring-profile').value = validacao.perfil.id
+  mostrarMsgSimulado('Perfil de pontuacao salvo localmente.', 'sucesso')
+  atualizarPreviewPontuacaoSimulado()
+}
+
+function duplicarPerfilPontuacaoSimulado() {
+  const base = lerPerfilPontuacaoFormularioSimulado()
+  const copia = {
+    ...base,
+    id: `perfil-${Date.now()}`,
+    nome: `${base.nome || 'Perfil'} - copia`,
+    metadados: { ...(base.metadados || {}), duplicadoDe: base.id }
+  }
+  perfisPontuacaoSimulado.push(copia)
+  persistirPerfisPontuacaoSimulado()
+  renderizarSelectPerfisPontuacaoSimulado()
+  document.getElementById('simulado-scoring-profile').value = copia.id
+  preencherFormularioPerfilPontuacaoSimulado(copia)
+  atualizarPreviewPontuacaoSimulado()
+}
+
+function criarNovaVersaoPerfilPontuacaoSimulado() {
+  const base = lerPerfilPontuacaoFormularioSimulado()
+  const nova = {
+    ...base,
+    id: `${base.id}-v${Number(base.versao || 1) + 1}-${Date.now()}`,
+    versao: Number(base.versao || 1) + 1,
+    nome: base.nome.replace(/\s+v\d+$/i, '')
+  }
+  perfisPontuacaoSimulado.push(nova)
+  persistirPerfisPontuacaoSimulado()
+  renderizarSelectPerfisPontuacaoSimulado()
+  document.getElementById('simulado-scoring-profile').value = nova.id
+  preencherFormularioPerfilPontuacaoSimulado(nova)
+  atualizarPreviewPontuacaoSimulado()
+}
+
+function adicionarBlocoPontuacaoSimulado() {
+  const id = document.getElementById('simulado-scoring-bloco-id')?.value.trim()
+  if (!id) {
+    mostrarMsgSimulado('Informe o codigo do bloco.', 'erro')
+    return
+  }
+  if (blocosPontuacaoSimuladoTela.some(bloco => bloco.id === id)) {
+    mostrarMsgSimulado('Ja existe um bloco com esse codigo.', 'erro')
+    return
+  }
+  const bloco = {
+    id,
+    nome: document.getElementById('simulado-scoring-bloco-nome')?.value.trim() || id,
+    peso: valorCampoPontuacaoSimulado('simulado-scoring-bloco-peso', 1),
+    notaMinima: valorCampoPontuacaoSimulado('simulado-scoring-bloco-minimo', null),
+    percentualMinimo: valorCampoPontuacaoSimulado('simulado-scoring-bloco-percentual', null)
+  }
+  blocosPontuacaoSimuladoTela.push(bloco)
+  ;['simulado-scoring-bloco-id', 'simulado-scoring-bloco-nome', 'simulado-scoring-bloco-peso', 'simulado-scoring-bloco-minimo', 'simulado-scoring-bloco-percentual']
+    .forEach(idCampo => {
+      const campo = document.getElementById(idCampo)
+      if (campo) campo.value = ''
+    })
+  renderizarBlocosPontuacaoSimulado()
+  atualizarPreviewPontuacaoSimulado()
+}
+
+function removerBlocoPontuacaoSimulado(id) {
+  blocosPontuacaoSimuladoTela = blocosPontuacaoSimuladoTela.filter(bloco => bloco.id !== id)
+  renderizarBlocosPontuacaoSimulado()
+  atualizarPreviewPontuacaoSimulado()
+}
+
+function renderizarBlocosPontuacaoSimulado() {
+  const lista = document.getElementById('simulado-scoring-blocos-lista')
+  if (!lista) return
+  if (blocosPontuacaoSimuladoTela.length === 0) {
+    lista.innerHTML = '<p class="texto-placeholder">Nenhum bloco configurado. O perfil usa o peso padrao.</p>'
+    return
+  }
+  lista.innerHTML = ''
+  blocosPontuacaoSimuladoTela.forEach(bloco => {
+    const item = document.createElement('div')
+    item.className = 'simulado-scoring-bloco-item'
+    item.innerHTML = `
+      <span><strong>${escaparHtmlSeguro(bloco.nome || bloco.id)}</strong> (${escaparHtmlSeguro(bloco.id)})</span>
+      <span>Peso ${Number(bloco.peso ?? 1)}</span>
+      <span>Min. ${bloco.notaMinima ?? '-'} / ${bloco.percentualMinimo ?? '-'}%</span>
+      <button class="btn-secundario" type="button">Remover</button>
+    `
+    item.querySelector('button').addEventListener('click', () => removerBlocoPontuacaoSimulado(bloco.id))
+    lista.appendChild(item)
+  })
+}
+
+function obterContagensFormularioSimulado() {
+  const total = parseInt(document.getElementById('simulado-total')?.value)
+  const certas = parseInt(document.getElementById('simulado-certas')?.value)
+  const erradas = parseInt(document.getElementById('simulado-erradas')?.value)
+  const brancasCampo = parseInt(document.getElementById('simulado-brancas')?.value)
+  const brancas = Number.isNaN(brancasCampo) && Number.isFinite(total) && Number.isFinite(certas) && Number.isFinite(erradas)
+    ? Math.max(0, total - certas - erradas)
+    : brancasCampo
+  return { total, certas, erradas, brancas: Number.isNaN(brancas) ? 0 : brancas, anuladas: 0 }
+}
+
+function atualizarPreviewPontuacaoSimulado() {
+  const preview = document.getElementById('simulado-scoring-preview')
+  if (!preview || typeof calcularPontuacaoAgregadaSimulado !== 'function') return
+  const contagens = obterContagensFormularioSimulado()
+  const perfil = lerPerfilPontuacaoFormularioSimulado()
+
+  if (!contagens.total || contagens.total < 1 || Number.isNaN(contagens.certas) || Number.isNaN(contagens.erradas)) {
+    preview.innerHTML = '<span class="texto-placeholder">Preencha total, certas e erradas para visualizar a pontuacao.</span>'
+    return
+  }
+
+  const resultado = calcularPontuacaoAgregadaSimulado(contagens, perfil)
+  if (!resultado.ok) {
+    preview.innerHTML = `<span class="texto-erro">${escaparHtmlSeguro(resultado.erros.join(' '))}</span>`
+    return
+  }
+
+  preview.innerHTML = `
+    <div class="simulado-score-breakdown-linha"><span>Nota final</span><strong>${formatarNumeroPontuacaoSimulado(resultado.notaFinal)} / ${formatarNumeroPontuacaoSimulado(resultado.notaMaxima)}</strong></div>
+    <div class="simulado-score-breakdown-linha"><span>Percentual</span><strong>${formatarNumeroPontuacaoSimulado(resultado.percentual)}%</strong></div>
+    <div class="simulado-score-breakdown-linha"><span>Positivos / penalidades</span><strong>${formatarNumeroPontuacaoSimulado(resultado.pontosPositivos)} / ${formatarNumeroPontuacaoSimulado(resultado.penalidades)}</strong></div>
+    <span class="simulado-status simulado-status--${escaparHtmlSeguro(resultado.status)}">${escaparHtmlSeguro(obterRotuloStatusPontuacaoSimulado(resultado.status))}</span>
+  `
+}
+
+function formatarNumeroPontuacaoSimulado(valor) {
+  const numero = Number(valor || 0)
+  return Number.isInteger(numero) ? String(numero) : numero.toFixed(2)
+}
+
+function obterRotuloStatusPontuacaoSimulado(status) {
+  if (status === 'aprovado') return 'Aprovado pelos criterios'
+  if (status === 'reprovado') return 'Reprovado pelos criterios'
+  if (status === 'eliminado') return 'Eliminado'
+  return 'Legado'
+}
+
+function obterIdPerfilPontuacaoPersistivelSimulado(id) {
+  const texto = String(id || '').trim()
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(texto)
+    ? texto
+    : null
+}
+
+function erroIndicaSchemaPontuacaoAusenteSimulado(error) {
+  const codigo = String(error?.code || '').toUpperCase()
+  const status = Number(error?.status || error?.statusCode || 0)
+  const texto = [error?.message, error?.details, error?.hint]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  const codigosBloqueados = new Set([
+    '42501',
+    '23502',
+    '23503',
+    '23505',
+    '23514',
+    '23P01',
+    '22001',
+    '22P02',
+    'PGRST116',
+    'PGRST301',
+    'PGRST302',
+    'PGRST303'
+  ])
+  const statusBloqueados = new Set([401, 403, 408, 409, 422, 423, 429, 500, 502, 503, 504])
+  const padraoBloqueado = /(row-level security|permission denied|jwt|auth|violates|constraint|duplicate|network|failed to fetch|timeout|timed out|server error|internal server error)/i
+
+  if (codigosBloqueados.has(codigo) || statusBloqueados.has(status) || padraoBloqueado.test(texto)) return false
+
+  const mencionaSchemaPontuacao = /(scoring_profile_id|scoring_profile_version|scoring_snapshot|score_raw|score_final|score_max|score_status|score_breakdown|blank_count|annulled_count|scoring_profiles|scoring_profile_versions|scoring_profile_blocks)/i
+  const indicaAusenciaSchema = /(schema cache|could not find|does not exist|column|relation|table|cache)/i
+  const codigosSchemaAusente = new Set(['42703', '42P01', 'PGRST204', 'PGRST205'])
+
+  return mencionaSchemaPontuacao.test(texto) && (indicaAusenciaSchema.test(texto) || codigosSchemaAusente.has(codigo))
 }
 
 async function gerarSimuladoRevisao() {
@@ -1030,6 +1415,7 @@ async function salvarSimulado() {
   const total = parseInt(document.getElementById('simulado-total').value)
   const certas = parseInt(document.getElementById('simulado-certas').value)
   const erradas = parseInt(document.getElementById('simulado-erradas').value)
+  const brancas = parseInt(document.getElementById('simulado-brancas')?.value)
   const tempo = parseInt(document.getElementById('simulado-tempo').value)
   const comentario = document.getElementById('simulado-comentario').value.trim()
 
@@ -1048,22 +1434,62 @@ async function salvarSimulado() {
     return
   }
 
-  const nota = Math.round((certas / total) * 10000) / 100
+  const totalBrancas = Number.isNaN(brancas) ? Math.max(0, total - certas - erradas) : brancas
+  if (totalBrancas < 0 || certas + erradas + totalBrancas > total) {
+    mostrarMsgSimulado('A soma de certas, erradas e brancas nao pode ultrapassar o total.', 'erro')
+    return
+  }
 
-  const { error } = await db
+  const perfil = lerPerfilPontuacaoFormularioSimulado()
+  const resultadoPontuacao = typeof calcularPontuacaoAgregadaSimulado === 'function'
+    ? calcularPontuacaoAgregadaSimulado({ total, certas, erradas, brancas: totalBrancas, anuladas: 0 }, perfil)
+    : { ok: false, erros: ['Motor de pontuacao indisponivel.'] }
+
+  if (!resultadoPontuacao.ok) {
+    mostrarMsgSimulado(resultadoPontuacao.erros.join(' '), 'erro')
+    return
+  }
+
+  const nota = Math.max(0, Math.min(100, resultadoPontuacao.percentual))
+  const payloadBase = {
+    user_id: window.usuarioAtual.id,
+    data,
+    nome,
+    banca: banca || null,
+    total_questoes: total,
+    certas,
+    erradas,
+    tempo_minutos: Number.isNaN(tempo) ? null : tempo,
+    nota_percentual: nota,
+    comentario: comentario || null
+  }
+  const payloadPontuacao = {
+    ...payloadBase,
+    scoring_profile_id: obterIdPerfilPontuacaoPersistivelSimulado(resultadoPontuacao.perfil.id),
+    scoring_profile_version: resultadoPontuacao.perfil.versao,
+    scoring_snapshot: resultadoPontuacao.snapshot,
+    score_raw: resultadoPontuacao.notaBruta,
+    score_final: resultadoPontuacao.notaFinal,
+    score_max: resultadoPontuacao.notaMaxima,
+    score_status: resultadoPontuacao.status,
+    score_breakdown: {
+      contagens: resultadoPontuacao.contagens,
+      blocos: resultadoPontuacao.blocos,
+      criterios: resultadoPontuacao.criterios
+    },
+    blank_count: totalBrancas,
+    annulled_count: 0
+  }
+
+  let { error } = await db
     .from('simulados')
-    .insert({
-      user_id: window.usuarioAtual.id,
-      data,
-      nome,
-      banca: banca || null,
-      total_questoes: total,
-      certas,
-      erradas,
-      tempo_minutos: Number.isNaN(tempo) ? null : tempo,
-      nota_percentual: nota,
-      comentario: comentario || null
-    })
+    .insert(payloadPontuacao)
+
+  if (error && erroIndicaSchemaPontuacaoAusenteSimulado(error)) {
+    ;({ error } = await db
+      .from('simulados')
+      .insert(payloadBase))
+  }
 
   if (error) {
     console.error(error)
@@ -1084,31 +1510,44 @@ async function carregarSimulados() {
 
   const { data, error } = await db
     .from('simulados')
-    .select('id, data, nome, banca, total_questoes, certas, erradas, tempo_minutos, nota_percentual, comentario')
+    .select(CAMPOS_SIMULADOS_SCORING)
     .eq('user_id', window.usuarioAtual.id)
     .order('data', { ascending: false })
     .order('criado_em', { ascending: false })
 
-  if (error) {
-    console.error(error)
+  let simulados = data || []
+  let erroFinal = error
+  if (error && erroIndicaSchemaPontuacaoAusenteSimulado(error)) {
+    const legado = await db
+      .from('simulados')
+      .select(CAMPOS_SIMULADOS_LEGACY)
+      .eq('user_id', window.usuarioAtual.id)
+      .order('data', { ascending: false })
+      .order('criado_em', { ascending: false })
+    simulados = legado.data || []
+    erroFinal = legado.error
+  }
+
+  if (erroFinal) {
+    console.error(erroFinal)
     lista.innerHTML = ''
     lista.appendChild(criarEstadoErroSimulado(
       'Não foi possível carregar os simulados',
       'Execute o arquivo supabase-melhoria-estudos.sql no Supabase e tente novamente.',
-      error.message
+      erroFinal.message
     ))
     return
   }
 
-  renderizarResumoSimulados(data || [])
+  renderizarResumoSimulados(simulados || [])
 
-  if (!data || data.length === 0) {
+  if (!simulados || simulados.length === 0) {
     lista.innerHTML = '<p class="texto-placeholder">Nenhum simulado registrado ainda.</p>'
     return
   }
 
   lista.innerHTML = ''
-  data.forEach(simulado => lista.appendChild(criarCardSimulado(simulado)))
+  simulados.forEach(simulado => lista.appendChild(criarCardSimulado(simulado)))
 }
 
 function criarCardSimulado(simulado) {
@@ -1116,10 +1555,18 @@ function criarCardSimulado(simulado) {
   card.className = 'simulado-card'
 
   const data = formatarDataSimulado(simulado.data)
-  const nota = Number(simulado.nota_percentual).toFixed(1)
+  const pontuacao = typeof restaurarResultadoPontuacaoSimulado === 'function'
+    ? restaurarResultadoPontuacaoSimulado(simulado)
+    : null
+  const nota = Number(pontuacao?.percentual ?? simulado.nota_percentual).toFixed(1)
   const tempo = simulado.tempo_minutos !== null
     ? `${simulado.tempo_minutos} min`
     : 'Sem tempo'
+  const contagens = pontuacao?.contagens || {}
+  const brancas = Number(contagens.brancas ?? simulado.blank_count ?? Math.max(0, Number(simulado.total_questoes || 0) - Number(simulado.certas || 0) - Number(simulado.erradas || 0)))
+  const status = pontuacao?.status || 'legado'
+  const pontosPositivos = simulado.scoring_snapshot?.valores?.pontosPositivos ?? pontuacao?.notaBruta ?? simulado.certas
+  const penalidades = simulado.scoring_snapshot?.valores?.penalidades ?? 0
 
   card.innerHTML = `
     <div class="simulado-card-topo">
@@ -1133,7 +1580,16 @@ function criarCardSimulado(simulado) {
       <span>${simulado.total_questoes} questões</span>
       <span class="resumo-certa-sessao">✅ ${simulado.certas}</span>
       <span class="resumo-errada-sessao">❌ ${simulado.erradas}</span>
+      <span>Brancas ${brancas}</span>
       <span>${tempo}</span>
+    </div>
+    <div class="simulado-score-breakdown">
+      <div class="simulado-score-breakdown-linha"><span>Perfil</span><strong>${escaparHtmlSeguro(pontuacao?.perfilNome || 'Padrao atual')} v${escaparHtmlSeguro(pontuacao?.perfilVersao || 1)}</strong></div>
+      <div class="simulado-score-breakdown-linha"><span>Nota final</span><strong>${formatarNumeroPontuacaoSimulado(pontuacao?.notaFinal ?? simulado.certas)} / ${formatarNumeroPontuacaoSimulado(pontuacao?.notaMaxima ?? simulado.total_questoes)}</strong></div>
+      <div class="simulado-score-breakdown-linha"><span>Positivos / penalidades</span><strong>${formatarNumeroPontuacaoSimulado(pontosPositivos)} / ${formatarNumeroPontuacaoSimulado(penalidades)}</strong></div>
+      <span class="simulado-status simulado-status--${escaparHtmlSeguro(status)}">${escaparHtmlSeguro(obterRotuloStatusPontuacaoSimulado(status))}</span>
+      ${pontuacao?.blocos?.length ? `<div>${pontuacao.blocos.map(bloco => `${escaparHtmlSeguro(bloco.nome)}: ${formatarNumeroPontuacaoSimulado(bloco.notaBruta)}/${formatarNumeroPontuacaoSimulado(bloco.notaMaxima)} (${formatarNumeroPontuacaoSimulado(bloco.percentual)}%)`).join('<br>')}</div>` : ''}
+      ${pontuacao?.criterios?.length ? `<div>${pontuacao.criterios.map(criterio => `${criterio.aprovado ? 'OK' : 'Falha'}: ${escaparHtmlSeguro(criterio.mensagem)}`).join('<br>')}</div>` : ''}
     </div>
     ${simulado.comentario ? `<p class="card-questao-comentario">${escaparHtmlSeguro(simulado.comentario)}</p>` : ''}
     <div class="card-questao-acoes">
@@ -1155,9 +1611,15 @@ function renderizarResumoSimulados(simulados) {
   }
 
   const total = simulados.length
-  const media = simulados.reduce((acc, s) => acc + Number(s.nota_percentual || 0), 0) / total
-  const melhor = Math.max(...simulados.map(s => Number(s.nota_percentual || 0)))
-  const ultimo = Number(simulados[0].nota_percentual || 0)
+  const notas = simulados.map(s => {
+    const restaurado = typeof restaurarResultadoPontuacaoSimulado === 'function'
+      ? restaurarResultadoPontuacaoSimulado(s)
+      : null
+    return Number((restaurado?.percentual ?? s.nota_percentual) || 0)
+  })
+  const media = notas.reduce((acc, nota) => acc + nota, 0) / total
+  const melhor = Math.max(...notas)
+  const ultimo = notas[0] || 0
 
   resumo.innerHTML = `
     <div class="resumo-card">
@@ -1205,8 +1667,10 @@ function limparFormularioSimulado() {
   document.getElementById('simulado-total').value = ''
   document.getElementById('simulado-certas').value = ''
   document.getElementById('simulado-erradas').value = ''
+  document.getElementById('simulado-brancas').value = '0'
   document.getElementById('simulado-tempo').value = ''
   document.getElementById('simulado-comentario').value = ''
+  atualizarPreviewPontuacaoSimulado()
 }
 
 function criarEstadoErroSimulado(titulo, mensagem, detalhe, aoTentarNovamente = carregarSimulados) {
@@ -1272,4 +1736,13 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.registrarResultadoRevisaoSm2 = registrarResultadoRevisaoSm2
   globalThis.salvarDiagnosticoSimulado = salvarDiagnosticoSimulado
   globalThis.abrirDiagnosticoSimulado = abrirDiagnosticoSimulado
+  globalThis.inicializarPontuacaoSimulado = inicializarPontuacaoSimulado
+  globalThis.lerPerfilPontuacaoFormularioSimulado = lerPerfilPontuacaoFormularioSimulado
+  globalThis.salvarPerfilPontuacaoSimulado = salvarPerfilPontuacaoSimulado
+  globalThis.atualizarPreviewPontuacaoSimulado = atualizarPreviewPontuacaoSimulado
+  globalThis.obterIdPerfilPontuacaoPersistivelSimulado = obterIdPerfilPontuacaoPersistivelSimulado
+  globalThis.erroIndicaSchemaPontuacaoAusenteSimulado = erroIndicaSchemaPontuacaoAusenteSimulado
+  globalThis.salvarSimulado = salvarSimulado
+  globalThis.criarCardSimulado = criarCardSimulado
+  globalThis.renderizarResumoSimulados = renderizarResumoSimulados
 }

@@ -799,9 +799,116 @@
           <input type="number" id="simulado-erradas" class="input-texto" min="0" max="999">
         </div>
         <div class="campo-form">
+          <label class="campo-label" for="simulado-brancas">Em branco</label>
+          <input type="number" id="simulado-brancas" class="input-texto" min="0" max="999" value="0">
+        </div>
+        <div class="campo-form">
           <label class="campo-label" for="simulado-tempo">Tempo (min)</label>
           <input type="number" id="simulado-tempo" class="input-texto" min="0" max="999">
         </div>
+        <div class="campo-form simulado-perfil-campo">
+          <label class="campo-label" for="simulado-scoring-profile">Perfil de pontuacao</label>
+          <select id="simulado-scoring-profile" class="input-texto"></select>
+        </div>
+      </div>
+      <div class="simulado-scoring-toolbar">
+        <button class="btn-secundario" id="btn-simulado-scoring-duplicar" type="button">Duplicar perfil</button>
+        <button class="btn-secundario" id="btn-simulado-scoring-nova-versao" type="button">Nova versao</button>
+        <button class="btn-secundario" id="btn-simulado-scoring-salvar" type="button">Salvar perfil</button>
+      </div>
+      <div class="simulado-scoring-config" id="simulado-scoring-config">
+        <div class="simulado-scoring-grid">
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-nome">Nome do perfil</label>
+            <input type="text" id="simulado-scoring-nome" class="input-texto">
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-modo">Modo</label>
+            <select id="simulado-scoring-modo" class="input-texto">
+              <option value="simple">Simples</option>
+              <option value="negative_marking">Penalizacao</option>
+              <option value="weighted">Ponderado</option>
+              <option value="hybrid">Hibrido</option>
+            </select>
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-correta">Correta</label>
+            <input type="number" step="0.01" id="simulado-scoring-correta" class="input-texto">
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-errada">Errada</label>
+            <input type="number" step="0.01" id="simulado-scoring-errada" class="input-texto">
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-branca">Branco</label>
+            <input type="number" step="0.01" id="simulado-scoring-branca" class="input-texto">
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-anulada">Anulada</label>
+            <select id="simulado-scoring-anulada" class="input-texto">
+              <option value="grant_correct">Creditar acerto</option>
+              <option value="exclude">Excluir da base</option>
+              <option value="zero">Atribuir zero</option>
+              <option value="specific">Valor especifico</option>
+            </select>
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-anulada-valor">Valor especifico</label>
+            <input type="number" step="0.01" id="simulado-scoring-anulada-valor" class="input-texto">
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-arredondamento">Arredondamento</label>
+            <select id="simulado-scoring-arredondamento" class="input-texto">
+              <option value="none">Sem alteracao</option>
+              <option value="matematico">Matematico</option>
+              <option value="truncar">Truncar</option>
+              <option value="cima">Para cima</option>
+            </select>
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-casas">Casas decimais</label>
+            <input type="number" id="simulado-scoring-casas" class="input-texto" min="0" max="6">
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-nota-maxima">Nota maxima</label>
+            <input type="number" step="0.01" id="simulado-scoring-nota-maxima" class="input-texto" placeholder="Opcional">
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-min-nota">Minimo total</label>
+            <input type="number" step="0.01" id="simulado-scoring-min-nota" class="input-texto" placeholder="Opcional">
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-min-percentual">Minimo percentual</label>
+            <input type="number" step="0.01" id="simulado-scoring-min-percentual" class="input-texto" placeholder="Opcional">
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-max-erros">Maximo de erros</label>
+            <input type="number" id="simulado-scoring-max-erros" class="input-texto" placeholder="Opcional">
+          </div>
+          <div class="campo-form">
+            <label class="campo-label" for="simulado-scoring-eliminar-negativa">Nota negativa</label>
+            <select id="simulado-scoring-eliminar-negativa" class="input-texto">
+              <option value="false">Nao elimina</option>
+              <option value="true">Elimina</option>
+            </select>
+          </div>
+        </div>
+        <div class="campo-form">
+          <label class="campo-label" for="simulado-scoring-descricao">Descricao</label>
+          <textarea id="simulado-scoring-descricao" class="input-texto input-textarea" rows="2"></textarea>
+        </div>
+        <div class="simulado-scoring-blocos">
+          <div class="simulado-scoring-blocos-form">
+            <input type="text" id="simulado-scoring-bloco-id" class="input-texto" placeholder="Codigo do bloco">
+            <input type="text" id="simulado-scoring-bloco-nome" class="input-texto" placeholder="Nome do bloco">
+            <input type="number" step="0.01" id="simulado-scoring-bloco-peso" class="input-texto" placeholder="Peso">
+            <input type="number" step="0.01" id="simulado-scoring-bloco-minimo" class="input-texto" placeholder="Minimo">
+            <input type="number" step="0.01" id="simulado-scoring-bloco-percentual" class="input-texto" placeholder="Min. %">
+            <button class="btn-secundario" id="btn-simulado-scoring-add-bloco" type="button">Adicionar bloco</button>
+          </div>
+          <div id="simulado-scoring-blocos-lista" class="simulado-scoring-blocos-lista"></div>
+        </div>
+        <div class="simulado-scoring-preview" id="simulado-scoring-preview"></div>
       </div>
       <div class="campo-form">
         <label class="campo-label" for="simulado-comentario">Observações</label>
@@ -1342,6 +1449,7 @@
   <script src="js/flashcards.js"></script>
   <script src="js/estatisticas.js"></script>
   <script src="js/plano.js"></script>
+  <script src="js/simulado-scoring.js"></script>
   <script src="js/simulados.js"></script>
   <script src="js/planejamento.js"></script>
   <script src="js/anotacoes.js"></script>
