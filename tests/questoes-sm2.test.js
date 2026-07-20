@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 const {
   classificarEstadoFilaQuestaoSm2,
+  avaliarAgendaQuestaoSm2,
+  calcularProximaSessaoPermitidaQuestaoSm2,
   converterDiaSemanaQuestaoSm2,
   criarEstadoInicialQuestaoSm2,
   mapearResultadoParaGradeQuestaoSm2,
+  normalizarDiasRevisaoQuestaoSm2,
   obterJanelaDiaFusoQuestaoSm2,
   ordenarFilaQuestaoSm2,
   scheduleQuestionReview
@@ -224,6 +227,125 @@ describe('datas e fila do scheduler de questoes', () => {
     expect(classificarEstadoFilaQuestaoSm2({ next_review_at: '2026-07-17T12:00:00.000Z' }, janela)).toBe('hoje')
     expect(classificarEstadoFilaQuestaoSm2({ next_review_at: '2026-07-18T12:00:00.000Z' }, janela)).toBe('proxima')
     expect(classificarEstadoFilaQuestaoSm2({}, janela)).toBe('sem_agendamento')
+  })
+})
+
+describe('dias escolhidos no scheduler SM-2', () => {
+  const configRecife = (dias) => ({
+    dias_revisao: dias,
+    review_timezone: 'America/Recife'
+  })
+
+  it('normaliza dias invalidos e preserva ordem numerica', () => {
+    expect(normalizarDiasRevisaoQuestaoSm2([6, 3, 3, 9, 0])).toEqual([3, 6])
+    expect(normalizarDiasRevisaoQuestaoSm2('', [1])).toEqual([1])
+  })
+
+  it('usa quarta como proxima sessao quando SM-2 vence na terca e dias sao quarta e sabado', () => {
+    const sessao = calcularProximaSessaoPermitidaQuestaoSm2(
+      '2026-07-21T12:00:00.000Z',
+      configRecife([3, 6]),
+      '2026-07-20T12:00:00.000Z'
+    )
+
+    expect(sessao.dataISO).toBe('2026-07-22')
+    expect(sessao.diaSemana).toBe(3)
+  })
+
+  it('usa o proprio vencimento quando todos os dias estao permitidos', () => {
+    const sessao = calcularProximaSessaoPermitidaQuestaoSm2(
+      '2026-07-21T12:00:00.000Z',
+      configRecife([1, 2, 3, 4, 5, 6, 7]),
+      '2026-07-20T12:00:00.000Z'
+    )
+
+    expect(sessao.dataISO).toBe('2026-07-21')
+    expect(sessao.diaSemana).toBe(2)
+  })
+
+  it('espera ate sabado quando somente sabado esta permitido', () => {
+    const sessao = calcularProximaSessaoPermitidaQuestaoSm2(
+      '2026-07-21T12:00:00.000Z',
+      configRecife([6]),
+      '2026-07-20T12:00:00.000Z'
+    )
+
+    expect(sessao.dataISO).toBe('2026-07-25')
+    expect(sessao.diaSemana).toBe(6)
+  })
+
+  it('usa quarta para configuracao segunda quarta sexta quando o vencimento cai na terca', () => {
+    const sessao = calcularProximaSessaoPermitidaQuestaoSm2(
+      '2026-07-21T12:00:00.000Z',
+      configRecife([1, 3, 5]),
+      '2026-07-20T12:00:00.000Z'
+    )
+
+    expect(sessao.dataISO).toBe('2026-07-22')
+  })
+
+  it('mantem questao vencida pendente quando usuario perde o dia permitido', () => {
+    const sessao = calcularProximaSessaoPermitidaQuestaoSm2(
+      '2026-07-21T12:00:00.000Z',
+      configRecife([3, 6]),
+      '2026-07-23T12:00:00.000Z'
+    )
+
+    expect(sessao.dataISO).toBe('2026-07-25')
+    expect(sessao.diaSemana).toBe(6)
+  })
+
+  it('classifica state futuro, vencido em dia permitido e vencido aguardando dia de estudo', () => {
+    const futuro = avaliarAgendaQuestaoSm2(
+      { next_review_at: '2026-07-21T12:00:00.000Z' },
+      configRecife([1, 3]),
+      '2026-07-20T12:00:00.000Z'
+    )
+    const vencidaHoje = avaliarAgendaQuestaoSm2(
+      { next_review_at: '2026-07-19T12:00:00.000Z' },
+      configRecife([1, 3]),
+      '2026-07-20T12:00:00.000Z'
+    )
+    const aguardando = avaliarAgendaQuestaoSm2(
+      { next_review_at: '2026-07-19T12:00:00.000Z' },
+      configRecife([3, 6]),
+      '2026-07-20T12:00:00.000Z'
+    )
+
+    expect(futuro.situacao).toBe('futura')
+    expect(futuro.elegivelHoje).toBe(false)
+    expect(vencidaHoje.situacao).toBe('vencida')
+    expect(vencidaHoje.elegivelHoje).toBe(true)
+    expect(aguardando.situacao).toBe('aguardando_dia_de_estudo')
+    expect(aguardando.elegivelHoje).toBe(false)
+  })
+
+  it('respeita virada UTC que pertence ao dia local anterior em America Recife', () => {
+    const sessao = calcularProximaSessaoPermitidaQuestaoSm2(
+      '2026-07-20T00:00:00.000Z',
+      configRecife([3, 6]),
+      '2026-07-20T02:24:46.000Z'
+    )
+
+    expect(sessao.dataISO).toBe('2026-07-22')
+    expect(sessao.diaSemana).toBe(3)
+  })
+
+  it('mantem proximas sessoes em dias permitidos para intervalos comuns do SM-2', () => {
+    const intervalos = [1, 2, 3, 4, 7, 15, 30]
+
+    intervalos.forEach(intervalo => {
+      const revisao = new Date('2026-07-20T12:00:00.000Z')
+      revisao.setUTCDate(revisao.getUTCDate() + intervalo)
+      const sessao = calcularProximaSessaoPermitidaQuestaoSm2(
+        revisao.toISOString(),
+        configRecife([3, 6]),
+        '2026-07-20T12:00:00.000Z'
+      )
+
+      expect([3, 6]).toContain(sessao.diaSemana)
+      expect(sessao.dataISO >= revisao.toISOString().substring(0, 10)).toBe(true)
+    })
   })
 })
 

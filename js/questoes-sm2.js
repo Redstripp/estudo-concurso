@@ -245,6 +245,112 @@ function converterDiaSemanaQuestaoSm2(dataISO, timeZone = QUESTAO_SM2_TIMEZONE_P
   return { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 }[dia] || 1
 }
 
+function normalizarDiasRevisaoQuestaoSm2(dias, fallback = [6]) {
+  const valores = Array.isArray(dias)
+    ? dias
+    : String(dias || '')
+      .split(',')
+      .map(valor => Number(valor.trim()))
+  const normalizados = [...new Set(valores
+    .map(Number)
+    .filter(valor => Number.isInteger(valor) && valor >= 1 && valor <= 7))]
+    .sort((a, b) => a - b)
+
+  return normalizados.length ? normalizados : [...fallback]
+}
+
+function compararDatasISOQuestaoSm2(a, b) {
+  return String(a || '').localeCompare(String(b || ''))
+}
+
+function calcularProximaSessaoPermitidaQuestaoSm2(nextReviewAt, config = {}, referencia = new Date()) {
+  const timeZone = validarTimeZoneQuestaoSm2(config.review_timezone || config.timeZone || QUESTAO_SM2_TIMEZONE_PADRAO)
+  const diasPermitidos = normalizarDiasRevisaoQuestaoSm2(config.dias_revisao || config.diasRevisao)
+  const vencimento = validarDataIsoQuestaoSm2(nextReviewAt, 'next_review_at')
+  const dataReferencia = referencia instanceof Date ? referencia : validarDataIsoQuestaoSm2(referencia, 'referencia')
+  const vencimentoLocalISO = dataLocalISOQuestaoSm2(vencimento, timeZone)
+  const hojeLocalISO = dataLocalISOQuestaoSm2(dataReferencia, timeZone)
+  const baseISO = vencimento.getTime() <= dataReferencia.getTime() && compararDatasISOQuestaoSm2(hojeLocalISO, vencimentoLocalISO) > 0
+    ? hojeLocalISO
+    : vencimentoLocalISO
+
+  for (let deslocamento = 0; deslocamento <= 14; deslocamento += 1) {
+    const dataISO = adicionarDiasDataISOQuestaoSm2(baseISO, deslocamento)
+    const diaSemana = converterDiaSemanaQuestaoSm2(dataISO, timeZone)
+    if (diasPermitidos.includes(diaSemana)) {
+      return {
+        dataISO,
+        diaSemana,
+        diasEspera: deslocamento,
+        diasPermitidos,
+        timeZone
+      }
+    }
+  }
+
+  return {
+    dataISO: baseISO,
+    diaSemana: converterDiaSemanaQuestaoSm2(baseISO, timeZone),
+    diasEspera: 0,
+    diasPermitidos,
+    timeZone
+  }
+}
+
+function avaliarAgendaQuestaoSm2(estado = {}, config = {}, referencia = new Date()) {
+  const nextReviewAt = estado.next_review_at || estado.review_state?.next_review_at
+  const timeZone = validarTimeZoneQuestaoSm2(config.review_timezone || config.timeZone || QUESTAO_SM2_TIMEZONE_PADRAO)
+  const diasPermitidos = normalizarDiasRevisaoQuestaoSm2(config.dias_revisao || config.diasRevisao)
+  const dataReferencia = referencia instanceof Date ? referencia : validarDataIsoQuestaoSm2(referencia, 'referencia')
+  const janela = obterJanelaDiaFusoQuestaoSm2(dataReferencia, timeZone)
+  const diaHoje = converterDiaSemanaQuestaoSm2(janela.dataISO, timeZone)
+  const hojePermitido = diasPermitidos.includes(diaHoje)
+
+  if (!nextReviewAt) {
+    return {
+      situacao: 'sem_agendamento',
+      elegivelHoje: false,
+      hojePermitido,
+      diaHoje,
+      diasPermitidos,
+      timeZone,
+      janela,
+      nextReviewAt: null,
+      vencimentoTecnicoISO: null,
+      vencimentoTecnicoLocalISO: null,
+      proximaSessaoPermitida: null
+    }
+  }
+
+  const vencimento = validarDataIsoQuestaoSm2(nextReviewAt, 'next_review_at')
+  const vencido = vencimento.getTime() <= dataReferencia.getTime()
+  const proximaSessaoPermitida = calcularProximaSessaoPermitidaQuestaoSm2(nextReviewAt, {
+    dias_revisao: diasPermitidos,
+    review_timezone: timeZone
+  }, dataReferencia)
+  const situacao = !vencido
+    ? 'futura'
+    : hojePermitido
+      ? 'vencida'
+      : 'aguardando_dia_de_estudo'
+
+  return {
+    situacao,
+    elegivelHoje: vencido && hojePermitido,
+    vencido,
+    hojePermitido,
+    diaHoje,
+    diasPermitidos,
+    timeZone,
+    janela,
+    nextReviewAt: vencimento.toISOString(),
+    vencimentoTecnicoISO: vencimento.toISOString(),
+    vencimentoTecnicoLocalISO: dataLocalISOQuestaoSm2(vencimento, timeZone),
+    proximaSessaoPermitida,
+    diasAtraso: calcularDiasAtrasoQuestaoSm2(vencimento.toISOString(), dataReferencia)
+  }
+}
+
 function calcularDiasAtrasoQuestaoSm2(nextReviewAt, referencia = new Date()) {
   const vencimento = validarDataIsoQuestaoSm2(nextReviewAt, 'next_review_at')
   const dataReferencia = referencia instanceof Date ? referencia : validarDataIsoQuestaoSm2(referencia, 'referencia')
@@ -300,6 +406,9 @@ if (typeof globalThis !== 'undefined') {
   globalThis.validarTimeZoneQuestaoSm2 = validarTimeZoneQuestaoSm2
   globalThis.obterJanelaDiaFusoQuestaoSm2 = obterJanelaDiaFusoQuestaoSm2
   globalThis.converterDiaSemanaQuestaoSm2 = converterDiaSemanaQuestaoSm2
+  globalThis.normalizarDiasRevisaoQuestaoSm2 = normalizarDiasRevisaoQuestaoSm2
+  globalThis.calcularProximaSessaoPermitidaQuestaoSm2 = calcularProximaSessaoPermitidaQuestaoSm2
+  globalThis.avaliarAgendaQuestaoSm2 = avaliarAgendaQuestaoSm2
   globalThis.calcularDiasAtrasoQuestaoSm2 = calcularDiasAtrasoQuestaoSm2
   globalThis.ordenarFilaQuestaoSm2 = ordenarFilaQuestaoSm2
   globalThis.classificarEstadoFilaQuestaoSm2 = classificarEstadoFilaQuestaoSm2

@@ -107,8 +107,10 @@ Filtro principal:
 
 ```text
 user_id = usuario atual
-next_review_at <= fim do dia atual no fuso configurado
+next_review_at <= instante atual
 ```
+
+Os dias escolhidos nao reescrevem `next_review_at`. Eles calculam a proxima sessao permitida em ou depois do vencimento tecnico. Se o SM-2 vencer na terca e `dias_revisao = [3,6]`, o vencimento tecnico permanece terca e a sessao permitida passa a ser quarta. Se o usuario faltar na quarta, a mesma pendencia continua atrasada e a proxima oportunidade passa a ser sabado.
 
 Ordenacao deterministica:
 
@@ -120,6 +122,16 @@ Ordenacao deterministica:
 6. `questao_id`.
 
 O frontend mostra atrasadas, vencem hoje, proximas, sem agenda, limite da sessao e pendencias alem do limite.
+
+## Simulados e SM-2
+
+Simulados normais ou avaliativos nao registram revisao individual. Eles salvam desempenho agregado em `simulados` e nao devem criar event, alterar state ou reagendar questao.
+
+O Simulado de revisao conta como fluxo de revisao. Em `legacy`, ele mantem o comportamento historico com `questoes`, `questoes_revisoes` e ciclo 24h/7d/30d. Em `sm2_v1`, ele lista por `questao_review_states`, filtra apenas states vencidos do usuario atual e respeita `dias_revisao`.
+
+Ao responder no Simulado de revisao em `sm2_v1`, o frontend reconsulta o state antes de escrever. Se o state ja ficou futuro por causa de outra aba ou outro fluxo, a resposta e bloqueada sem RPC e sem qualquer update. Se ainda estiver elegivel, o frontend chama `registrar_revisao_questao_sm2` com `source_attempt_id`; idempotencia e atualizacao de state ficam centralizadas na RPC.
+
+O diagnostico do Simulados salva apenas campos auxiliares. Em `sm2_v1`, ele pode complementar uma linha de compatibilidade existente em `questoes_revisoes` somente quando ela pertence a mesma tentativa (`source_attempt_id`) e tem `scheduler_algorithm = sm2_v1`. Ele nao cria linha plain, nao cria event, nao altera `next_review_at` e nao incrementa `total_reviews`.
 
 ## Feature flag
 

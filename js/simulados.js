@@ -2,6 +2,10 @@
 
 let simuladosInicializado = false
 
+const SIMULADO_SCHEDULER_LEGACY = 'legacy'
+const SIMULADO_SCHEDULER_SM2 = 'sm2_v1'
+const CAMPOS_QUESTOES_SIMULADO_REVISAO = 'id, enunciado, alternativas, alternativa_marcada, alternativa_correta, tipo_questao, status_revisao, revisar_novamente_em, revisao_total_acertos, revisao_total_erros, revisao_etapa, revisao_ultima_data, revisao_ultima_resultado, motivo_erro, nivel_confianca, comentario, conceito_chave, como_reconhecer, acao_corretiva, criado_em, materias(nome), edital_topicos(titulo, status), banca, pegadinha_banca'
+
 const NIVEIS_CONFIANCA_RESPOSTA_SIMULADO = ['Chutei', 'Dúvida', 'Confiante']
 const MOTIVOS_ERRO_RESPOSTA_SIMULADO = [
   'Falta de conteúdo',
@@ -67,15 +71,12 @@ async function gerarSimuladoRevisao() {
   mostrarMsgSimuladoRevisao('', '')
   container.innerHTML = '<p class="texto-placeholder">⏳ Montando simulado de revisão...</p>'
 
-  let query = db
-    .from('questoes')
-    .select('id, enunciado, alternativas, alternativa_marcada, alternativa_correta, tipo_questao, status_revisao, revisar_novamente_em, revisao_total_acertos, revisao_total_erros, revisao_etapa, revisao_ultima_data, revisao_ultima_resultado, motivo_erro, nivel_confianca, comentario, conceito_chave, como_reconhecer, acao_corretiva, criado_em, materias(nome), edital_topicos(titulo, status), banca, pegadinha_banca')
-    .eq('user_id', window.usuarioAtual.id)
-    .eq('status_revisao', 'pendente')
-    .order('revisar_novamente_em', { ascending: true, nullsFirst: false })
-    .limit(500)
+  const config = await obterConfiguracaoSimuladoRevisao()
+  const resultadoBusca = config.review_scheduler_mode === SIMULADO_SCHEDULER_SM2
+    ? await buscarQuestoesSimuladoRevisaoSm2(window.usuarioAtual.id, config, 500)
+    : await buscarQuestoesSimuladoRevisaoLegacy(window.usuarioAtual.id)
 
-  const { data, error } = await query
+  const { data, error, hojePermitido, proximaSessaoPermitida } = resultadoBusca
 
   if (error) {
     console.error(error)
@@ -84,12 +85,24 @@ async function gerarSimuladoRevisao() {
     return
   }
 
+  if (config.review_scheduler_mode === SIMULADO_SCHEDULER_SM2 && hojePermitido === false) {
+    const proximoDia = (proximaSessaoPermitida || obterProximaSessaoPermitidaSimulado(config))?.dataISO
+    container.innerHTML = proximoDia
+      ? `<p class="texto-placeholder">Hoje não é um dia configurado para revisão. Próxima sessão permitida: ${escaparHtmlSeguro(formatarDataSimulado(proximoDia))}.</p>`
+      : '<p class="texto-placeholder">Hoje não é um dia configurado para revisão.</p>'
+    return
+  }
+
   let questoes = (data || []).map(q => ({
     ...q,
     tipoNormalizado: normalizarTipoQuestaoSimulado(q)
   }))
 
-  questoes = filtrarQuestoesPorPeriodoRevisao(questoes, periodo)
+  if (config.review_scheduler_mode === SIMULADO_SCHEDULER_SM2) {
+    questoes = questoes.filter(q => q.agenda_sm2?.elegivelHoje)
+  } else {
+    questoes = filtrarQuestoesPorPeriodoRevisao(questoes, periodo)
+  }
 
   if (tipoFiltro !== 'all') {
     questoes = questoes.filter(q => q.tipoNormalizado === tipoFiltro)
@@ -103,6 +116,175 @@ async function gerarSimuladoRevisao() {
   const selecionadas = embaralharQuestoes(questoes).slice(0, limite)
   renderizarSimuladoRevisao(selecionadas, periodo, tipoFiltro)
   mostrarMsgSimuladoRevisao(`Simulado gerado com ${formatarQuantidadeQuestoes(selecionadas.length)}.`, 'sucesso')
+}
+
+async function obterConfiguracaoSimuladoRevisao() {
+  if (typeof obterConfiguracaoRevisaoUsuario === 'function') {
+    return normalizarConfiguracaoSimuladoRevisao(await obterConfiguracaoRevisaoUsuario(window.usuarioAtual?.id))
+  }
+
+  if (typeof db !== 'undefined' && window.usuarioAtual?.id) {
+    try {
+      const { data, error } = await db
+        .from('configuracoes_revisao')
+        .select('*')
+        .eq('user_id', window.usuarioAtual.id)
+        .maybeSingle()
+
+      if (error) throw error
+      return normalizarConfiguracaoSimuladoRevisao(data)
+    } catch (erro) {
+      console.warn('Configuracao de revisao do Simulados usando padrao local.', erro)
+    }
+  }
+
+  return normalizarConfiguracaoSimuladoRevisao()
+}
+
+function normalizarConfiguracaoSimuladoRevisao(config = {}) {
+  if (typeof normalizarConfiguracaoRevisao === 'function') {
+    return normalizarConfiguracaoRevisao(config, window.usuarioAtual?.id)
+  }
+
+  const dias = typeof normalizarDiasRevisaoQuestaoSm2 === 'function'
+    ? normalizarDiasRevisaoQuestaoSm2(config?.dias_revisao, [6])
+    : (Array.isArray(config?.dias_revisao) && config.dias_revisao.length ? config.dias_revisao : [6])
+  const modo = [SIMULADO_SCHEDULER_LEGACY, SIMULADO_SCHEDULER_SM2].includes(config?.review_scheduler_mode)
+    ? config.review_scheduler_mode
+    : SIMULADO_SCHEDULER_LEGACY
+  const timeZone = typeof validarTimeZoneQuestaoSm2 === 'function'
+    ? validarTimeZoneQuestaoSm2(config?.review_timezone || 'America/Recife')
+    : (config?.review_timezone || 'America/Recife')
+
+  return {
+    user_id: window.usuarioAtual?.id || config?.user_id || null,
+    dias_revisao: dias,
+    tempo_revisao_minutos: Number(config?.tempo_revisao_minutos || 60),
+    ultima_revisao_geral: config?.ultima_revisao_geral || null,
+    review_scheduler_mode: modo,
+    review_timezone: timeZone,
+    review_max_interval_days: Number(config?.review_max_interval_days || 365)
+  }
+}
+
+async function buscarQuestoesSimuladoRevisaoLegacy(userId) {
+  return db
+    .from('questoes')
+    .select(CAMPOS_QUESTOES_SIMULADO_REVISAO)
+    .eq('user_id', userId)
+    .eq('status_revisao', 'pendente')
+    .order('revisar_novamente_em', { ascending: true, nullsFirst: false })
+    .limit(500)
+}
+
+async function buscarQuestoesSimuladoRevisaoSm2(userId, config, limite = 500) {
+  const agora = new Date()
+  const agendaHoje = typeof avaliarAgendaQuestaoSm2 === 'function'
+    ? avaliarAgendaQuestaoSm2({}, config, agora)
+    : { hojePermitido: true }
+
+  if (agendaHoje.hojePermitido === false) {
+    return {
+      data: [],
+      error: null,
+      hojePermitido: false,
+      proximaSessaoPermitida: obterProximaSessaoPermitidaSimulado(config, agora)
+    }
+  }
+
+  const limiteSeguro = Math.min(Math.max(Number(limite) || 500, 1), 500)
+  const { data, error } = await db
+    .from('questao_review_states')
+    .select(`*, questoes!inner(${CAMPOS_QUESTOES_SIMULADO_REVISAO})`)
+    .eq('user_id', userId)
+    .lte('next_review_at', agora.toISOString())
+    .order('next_review_at', { ascending: true })
+    .order('lapse_count', { ascending: false })
+    .order('easiness_factor', { ascending: true })
+    .order('correct_streak', { ascending: true })
+    .order('last_reviewed_at', { ascending: true, nullsFirst: true })
+    .order('questao_id', { ascending: true })
+    .limit(limiteSeguro)
+
+  if (error) return { data: null, error, hojePermitido: true }
+
+  const questoes = (data || [])
+    .map(item => normalizarQuestaoSimuladoSm2(item, config))
+    .filter(q => q.review_state?.user_id === userId && q.status_revisao === 'pendente' && q.agenda_sm2?.elegivelHoje)
+
+  return { data: questoes, error: null, hojePermitido: true }
+}
+
+function normalizarEstadoSimuladoSm2(item = {}) {
+  return {
+    id: item.id,
+    user_id: item.user_id,
+    questao_id: item.questao_id,
+    algorithm_version: item.algorithm_version,
+    easiness_factor: item.easiness_factor,
+    repetition_count: item.repetition_count,
+    interval_days: item.interval_days,
+    lapse_count: item.lapse_count,
+    correct_streak: item.correct_streak,
+    total_reviews: item.total_reviews,
+    next_review_at: item.next_review_at,
+    last_reviewed_at: item.last_reviewed_at,
+    last_grade: item.last_grade,
+    last_result: item.last_result,
+    state_origin: item.state_origin
+  }
+}
+
+function normalizarQuestaoSimuladoSm2(item, config) {
+  const questao = item.questoes || item.questao || item.question || {}
+  const estado = normalizarEstadoSimuladoSm2(item)
+  const agenda = typeof avaliarAgendaQuestaoSm2 === 'function'
+    ? avaliarAgendaQuestaoSm2(estado, config, new Date())
+    : null
+
+  return {
+    ...questao,
+    scheduler_mode: SIMULADO_SCHEDULER_SM2,
+    review_state: estado,
+    agenda_sm2: agenda,
+    revisar_novamente_em: estado.next_review_at || questao.revisar_novamente_em
+  }
+}
+
+function questaoUsaSchedulerSm2Simulado(q, config = {}) {
+  return config.review_scheduler_mode === SIMULADO_SCHEDULER_SM2 ||
+    q?.scheduler_mode === SIMULADO_SCHEDULER_SM2 ||
+    q?.review_state?.algorithm_version === SIMULADO_SCHEDULER_SM2
+}
+
+function obterProximaSessaoPermitidaSimulado(config, referencia = new Date()) {
+  if (typeof calcularProximaSessaoPermitidaQuestaoSm2 !== 'function') return null
+  return calcularProximaSessaoPermitidaQuestaoSm2(referencia.toISOString(), config, referencia)
+}
+
+function formatarDataCurtaSimulado(dataISO) {
+  if (!dataISO) return '-'
+  const [ano, mes, dia] = String(dataISO).substring(0, 10).split('-')
+  return `${dia}/${mes}`
+}
+
+function criarTextoAgendaSimulado(q) {
+  if (questaoUsaSchedulerSm2Simulado(q, { review_scheduler_mode: q?.scheduler_mode })) {
+    const agenda = q.agenda_sm2
+    const vencimento = agenda?.vencimentoTecnicoLocalISO || q.review_state?.next_review_at?.substring(0, 10)
+    const sessao = agenda?.proximaSessaoPermitida?.dataISO
+
+    if (vencimento && sessao) {
+      return `Venceu em ${formatarDataCurtaSimulado(vencimento)}. Próxima sessão permitida: ${formatarDataCurtaSimulado(sessao)}.`
+    }
+
+    if (vencimento) return `Venceu em ${formatarDataCurtaSimulado(vencimento)}.`
+    return 'Agenda SM-2 indisponível.'
+  }
+
+  return q.revisar_novamente_em
+    ? `Revisar: ${formatarDataSimulado(q.revisar_novamente_em)}`
+    : 'Revisar: Disponível'
 }
 
 function renderizarSimuladoRevisao(questoes, periodo, tipoFiltro) {
@@ -132,7 +314,7 @@ function criarCardSimuladoRevisao(q, numero) {
   const tipo = q.tipoNormalizado || normalizarTipoQuestaoSimulado(q)
   const nomeMateria = q.materias?.nome || 'Sem matéria'
   const data = new Date(q.criado_em).toLocaleDateString('pt-BR')
-  const dataRevisao = q.revisar_novamente_em ? formatarDataSimulado(q.revisar_novamente_em) : 'Disponível'
+  const textoAgenda = criarTextoAgendaSimulado(q)
   const totalErros = Number(q.revisao_total_erros || 0)
   const totalAcertos = Number(q.revisao_total_acertos || 0)
   const alternativas = q.alternativas && typeof q.alternativas === 'object'
@@ -153,7 +335,7 @@ function criarCardSimuladoRevisao(q, numero) {
         <span class="tag-materia">${escaparHtmlSeguro(nomeMateria)}</span>
         <span class="tag-tipo-questao ${obterClasseTipoQuestaoSimulado(tipo)}">${obterRotuloTipoQuestaoSimulado(tipo)}</span>
         <span class="card-questao-data">${data}</span>
-        <span class="tag-estudo">Revisar: ${escaparHtmlSeguro(dataRevisao)}</span>
+        <span class="tag-estudo">${escaparHtmlSeguro(textoAgenda)}</span>
         ${q.edital_topicos?.titulo ? `<span class="tag-estudo">Edital: ${escaparHtmlSeguro(q.edital_topicos.titulo)}</span>` : ''}
         ${q.banca ? `<span class="tag-estudo">Banca: ${escaparHtmlSeguro(q.banca)}</span>` : ''}
         ${Number(q.revisao_etapa || 0) > 0 ? `<span class="tag-estudo">Ciclo 24/7/30: etapa ${Number(q.revisao_etapa || 0)}</span>` : ''}
@@ -334,6 +516,16 @@ function marcarGabaritoNoCard(card, q) {
 }
 
 async function registrarResultadoRevisao(q, resultado, card, respostaMarcada, nivelConfianca) {
+  const config = await obterConfiguracaoSimuladoRevisao()
+
+  if (questaoUsaSchedulerSm2Simulado(q, config)) {
+    return registrarResultadoRevisaoSm2(q, resultado, card, respostaMarcada, nivelConfianca, config)
+  }
+
+  return registrarResultadoRevisaoLegacy(q, resultado, card, respostaMarcada, nivelConfianca)
+}
+
+async function registrarResultadoRevisaoLegacy(q, resultado, card, respostaMarcada, nivelConfianca) {
   const acertou = resultado === 'Acertou'
   const hoje = dataSimuladoHoje()
   const proximaRevisao = calcularProximaRevisaoSimulado(hoje, q, acertou, nivelConfianca)
@@ -411,6 +603,153 @@ async function registrarResultadoRevisao(q, resultado, card, respostaMarcada, ni
   if (typeof atualizarTelasAposRegistro === 'function') await atualizarTelasAposRegistro()
 }
 
+function criarUuidTentativaSimulado() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c =>
+    (Number(c) ^ Math.random() * 16 >> Number(c) / 4).toString(16)
+  )
+}
+
+function obterTentativaSimulado(card) {
+  if (!card.dataset.sourceAttemptId) {
+    card.dataset.sourceAttemptId = criarUuidTentativaSimulado()
+  }
+
+  return card.dataset.sourceAttemptId
+}
+
+function mapearRespostaSimuladoParaGradeSm2(acertou, nivelConfianca) {
+  if (!acertou) return 1
+  if (nivelConfianca === 'Confiante') return 4
+  return 3
+}
+
+async function buscarEstadoAtualSimuladoSm2(q, config) {
+  const { data, error } = await db
+    .from('questao_review_states')
+    .select('*')
+    .eq('user_id', window.usuarioAtual.id)
+    .eq('questao_id', q.id)
+    .maybeSingle()
+
+  if (error) throw error
+
+  const estado = data ? normalizarEstadoSimuladoSm2(data) : null
+  const agenda = estado && typeof avaliarAgendaQuestaoSm2 === 'function'
+    ? avaliarAgendaQuestaoSm2(estado, config, new Date())
+    : null
+
+  return { estado, agenda }
+}
+
+function montarMensagemAgendaSm2Simulado(estado, config) {
+  const agenda = estado && typeof avaliarAgendaQuestaoSm2 === 'function'
+    ? avaliarAgendaQuestaoSm2(estado, config, new Date())
+    : null
+  const vencimento = agenda?.vencimentoTecnicoLocalISO || estado?.next_review_at?.substring(0, 10)
+  const sessao = agenda?.proximaSessaoPermitida?.dataISO
+
+  if (vencimento && sessao) {
+    return `Vencimento técnico: ${formatarDataCurtaSimulado(vencimento)}. Próxima sessão permitida: ${formatarDataCurtaSimulado(sessao)}.`
+  }
+
+  if (vencimento) return `Vencimento técnico: ${formatarDataCurtaSimulado(vencimento)}.`
+  return 'Agenda SM-2 indisponível.'
+}
+
+function bloquearRespostaSimuladoSm2(card, feedback, estado, config) {
+  card.classList.add('simulado-revisao-card--resolvido')
+  feedback.textContent = `Esta questão já foi revisada ou ainda não está elegível. ${montarMensagemAgendaSm2Simulado(estado, config)}`
+  feedback.className = 'simulado-revisao-feedback simulado-revisao-feedback--ciclo'
+}
+
+async function registrarResultadoRevisaoSm2(q, resultado, card, respostaMarcada, nivelConfianca, config) {
+  if (card.dataset.registroSm2EmAndamento === '1') return
+
+  const acertou = resultado === 'Acertou'
+  const grade = mapearRespostaSimuladoParaGradeSm2(acertou, nivelConfianca)
+  const feedback = card.querySelector('.simulado-revisao-feedback')
+  const botoesResultado = card.querySelectorAll('.btn-registrar-resposta, .simulado-resposta-opcao, .simulado-confianca-resposta')
+
+  card.dataset.registroSm2EmAndamento = '1'
+  botoesResultado.forEach(btn => { btn.disabled = true })
+  feedback.textContent = 'Validando agenda SM-2...'
+  feedback.className = 'simulado-revisao-feedback'
+
+  let estadoAtual
+  let agendaAtual
+  try {
+    const atual = await buscarEstadoAtualSimuladoSm2(q, config)
+    estadoAtual = atual.estado
+    agendaAtual = atual.agenda
+  } catch (erro) {
+    console.error(erro)
+    feedback.textContent = 'Não foi possível confirmar a agenda SM-2 antes de registrar. Tente novamente.'
+    feedback.className = 'simulado-revisao-feedback simulado-revisao-feedback--erro'
+    botoesResultado.forEach(btn => { btn.disabled = false })
+    delete card.dataset.registroSm2EmAndamento
+    return
+  }
+
+  if (!estadoAtual || !agendaAtual?.elegivelHoje) {
+    bloquearRespostaSimuladoSm2(card, feedback, estadoAtual || q.review_state, config)
+    delete card.dataset.registroSm2EmAndamento
+    return
+  }
+
+  const sourceAttemptId = obterTentativaSimulado(card)
+  feedback.textContent = 'Registrando revisão SM-2...'
+
+  const { data, error } = await db.rpc('registrar_revisao_questao_sm2', {
+    p_questao_id: q.id,
+    p_grade: grade,
+    p_was_correct: acertou,
+    p_reviewed_at: new Date().toISOString(),
+    p_source_attempt_id: sourceAttemptId,
+    p_response_time_ms: null,
+    p_answer: respostaMarcada
+  })
+
+  if (error) {
+    console.error(error)
+    feedback.textContent = 'Não foi possível registrar a revisão SM-2. Nada foi avançado; tente novamente.'
+    feedback.className = 'simulado-revisao-feedback simulado-revisao-feedback--erro'
+    botoesResultado.forEach(btn => { btn.disabled = false })
+    delete card.dataset.registroSm2EmAndamento
+    return
+  }
+
+  const retorno = Array.isArray(data) ? data[0] : data
+  const novoEstado = retorno?.state || {
+    ...estadoAtual,
+    next_review_at: retorno?.next_review_at || estadoAtual.next_review_at,
+    interval_days: retorno?.interval_days ?? estadoAtual.interval_days,
+    total_reviews: Number(estadoAtual.total_reviews || 0) + 1
+  }
+
+  q.scheduler_mode = SIMULADO_SCHEDULER_SM2
+  q.review_state = novoEstado
+  q.agenda_sm2 = typeof avaliarAgendaQuestaoSm2 === 'function'
+    ? avaliarAgendaQuestaoSm2(novoEstado, config, new Date())
+    : null
+  q.revisar_novamente_em = novoEstado.next_review_at || retorno?.next_review_at || q.revisar_novamente_em
+
+  card.classList.add('simulado-revisao-card--resolvido')
+  card.querySelector('.simulado-revisao-gabarito')?.classList.remove('escondido')
+  marcarGabaritoNoCard(card, q)
+  feedback.textContent = `Revisão SM-2 registrada. ${montarMensagemAgendaSm2Simulado(novoEstado, config)}`
+  feedback.className = `simulado-revisao-feedback ${acertou ? 'simulado-revisao-feedback--ciclo' : 'simulado-revisao-feedback--erro'}`
+  card.querySelector('.btn-registrar-resposta')?.classList.add('btn-resultado-ativo')
+  abrirDiagnosticoSimulado(card, nivelConfianca, null, {
+    schedulerAlgorithm: SIMULADO_SCHEDULER_SM2,
+    sourceAttemptId
+  })
+
+  delete card.dataset.registroSm2EmAndamento
+  await carregarQuestoesRecuperadas()
+  if (typeof atualizarTelasAposRegistro === 'function') await atualizarTelasAposRegistro()
+}
+
 function calcularProximaRevisaoSimulado(hoje, q, acertou, nivelConfianca) {
   if (!acertou) return adicionarDiasDataISO(hoje, 1)
 
@@ -445,12 +784,14 @@ function calcularEtapaRevisaoSimulado24730(q, acertou, nivelConfianca, proximaRe
   return Math.min(Number(q.revisao_etapa || 0) + 1, 3)
 }
 
-function abrirDiagnosticoSimulado(card, nivelConfianca, revisaoId) {
+function abrirDiagnosticoSimulado(card, nivelConfianca, revisaoId, opcoes = {}) {
   const painel = card.querySelector('.simulado-diagnostico')
   if (!painel) return
 
   painel.classList.remove('escondido')
   painel.dataset.revisaoId = revisaoId || ''
+  painel.dataset.sourceAttemptId = opcoes.sourceAttemptId || ''
+  painel.dataset.schedulerAlgorithm = opcoes.schedulerAlgorithm || ''
 
   const campoConfianca = painel.querySelector('.simulado-diagnostico-confianca')
   if (campoConfianca) campoConfianca.value = nivelConfianca
@@ -501,7 +842,20 @@ async function salvarDiagnosticoSimulado(q, card) {
   }
 
   const revisaoId = painel.dataset.revisaoId
-  if (revisaoId) {
+  const sourceAttemptId = painel.dataset.sourceAttemptId
+  const schedulerAlgorithm = painel.dataset.schedulerAlgorithm
+
+  if (schedulerAlgorithm === SIMULADO_SCHEDULER_SM2 && sourceAttemptId) {
+    const { error: erroRevisaoSm2 } = await db
+      .from('questoes_revisoes')
+      .update(payload)
+      .eq('questao_id', q.id)
+      .eq('source_attempt_id', sourceAttemptId)
+      .eq('scheduler_algorithm', SIMULADO_SCHEDULER_SM2)
+      .eq('user_id', window.usuarioAtual.id)
+
+    if (erroRevisaoSm2) console.error(erroRevisaoSm2)
+  } else if (revisaoId) {
     const { error: erroRevisao } = await db
       .from('questoes_revisoes')
       .update(payload)
@@ -906,4 +1260,16 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.adicionarDiasDataISO = adicionarDiasDataISO
   globalThis.embaralharQuestoes = embaralharQuestoes
   globalThis.formatarDataSimulado = formatarDataSimulado
+  globalThis.obterConfiguracaoSimuladoRevisao = obterConfiguracaoSimuladoRevisao
+  globalThis.normalizarConfiguracaoSimuladoRevisao = normalizarConfiguracaoSimuladoRevisao
+  globalThis.buscarQuestoesSimuladoRevisaoSm2 = buscarQuestoesSimuladoRevisaoSm2
+  globalThis.normalizarQuestaoSimuladoSm2 = normalizarQuestaoSimuladoSm2
+  globalThis.questaoUsaSchedulerSm2Simulado = questaoUsaSchedulerSm2Simulado
+  globalThis.criarTextoAgendaSimulado = criarTextoAgendaSimulado
+  globalThis.mapearRespostaSimuladoParaGradeSm2 = mapearRespostaSimuladoParaGradeSm2
+  globalThis.buscarEstadoAtualSimuladoSm2 = buscarEstadoAtualSimuladoSm2
+  globalThis.registrarResultadoRevisao = registrarResultadoRevisao
+  globalThis.registrarResultadoRevisaoSm2 = registrarResultadoRevisaoSm2
+  globalThis.salvarDiagnosticoSimulado = salvarDiagnosticoSimulado
+  globalThis.abrirDiagnosticoSimulado = abrirDiagnosticoSimulado
 }
