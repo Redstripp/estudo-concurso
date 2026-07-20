@@ -19,7 +19,7 @@ A fila inteligente usa `filaRevisaoInteligenteAtual`.
 
 No modo legado, ela prioriza questoes do ciclo e pode considerar sinais como pendencias, qualidade do diagnostico, confianca, pegadinhas, recorrencia e outros criterios existentes no modulo de revisao.
 
-No modo `sm2_v1`, a fila passa a vir de `questao_review_states`. A consulta filtra no banco por `user_id` e por `next_review_at <= fim do dia atual no fuso do usuario`, respeitando os dias de revisao configurados como porta de entrada da sessao. O fuso padrao inicial e `America/Recife`, mas ele fica em `configuracoes_revisao.review_timezone` para permitir configuracao por usuario.
+No modo `sm2_v1`, a fila passa a vir de `questao_review_states`. A consulta filtra no banco por `user_id` e por `next_review_at <= instante atual`, respeitando os dias de revisao configurados como porta de entrada da sessao. O fuso padrao inicial e `America/Recife`, mas ele fica em `configuracoes_revisao.review_timezone` para permitir configuracao por usuario.
 
 Quando disponivel, o caminho "Iniciar fila nos flashcards" treina essa fila priorizada em formato de cards. Apesar do nome historico, esse fluxo continua sendo revisao de questoes; ele nao usa as tabelas `flashcards` e `flashcard_reviews`.
 
@@ -32,6 +32,25 @@ No modo legado, esse caminho usa `buscarQuestoesRevisao()` e respeita os filtros
 Por isso, ele pode mostrar lista vazia mesmo quando a fila inteligente possui itens priorizados. Isso nao indica erro necessariamente: significa que a lista filtrada atual nao tem questoes pendentes para treino.
 
 No modo `sm2_v1`, o botao deixa de montar uma segunda fila legada e inicia a fila individualizada de questoes vencidas. Essa decisao evita duplicacao entre `questoes` antigas e `questao_review_states`.
+
+## Simulados
+
+A aba Simulados tem dois tipos de comportamento:
+
+- Simulados normais ou avaliativos: registram desempenho agregado em `simulados`; nao contam como revisao individual e nao devem reagendar questao automaticamente.
+- Simulado de revisao: apresenta questoes pendentes para resposta e diagnostico; por isso integra o scheduler quando o usuario esta em `sm2_v1`.
+
+No modo `legacy`, o Simulado de revisao preserva o fluxo antigo: lista `questoes` pendentes pelos campos legados, registra historico em `questoes_revisoes` e recalcula o ciclo 24h/7d/30d.
+
+No modo `sm2_v1`, o Simulado de revisao usa `questao_review_states` como fonte oficial da agenda. States futuros nao entram na lista. States vencidos entram somente se hoje for um dos `dias_revisao`; se o usuario faltar ao dia permitido, a questao continua pendente e reaparece no proximo dia permitido.
+
+Responder uma questao de revisao no Simulados em `sm2_v1` chama a RPC `registrar_revisao_questao_sm2` com `source_attempt_id`. O cliente nao insere uma linha plain em `questoes_revisoes`, nao atualiza `questao_review_states` diretamente e nao faz um segundo reagendamento legado paralelo. A linha de compatibilidade SM-2 em `questoes_revisoes`, quando criada, vem da RPC.
+
+Antes de chamar a RPC, o Simulados reconsulta o state atual. Se uma aba antiga tentar registrar uma questao que ja foi revisada em outra aba e agora esta futura, a tentativa e bloqueada sem escrita e a interface mostra a proxima revisao.
+
+O diagnostico do Simulados salva somente campos auxiliares da questao: motivo, confianca, conceito, como reconhecer e acao corretiva. Em `sm2_v1`, ele pode atualizar a linha de compatibilidade da mesma tentativa somente quando houver `source_attempt_id` e `scheduler_algorithm = sm2_v1`; se nao houver linha segura, salva apenas os campos auxiliares da questao. Diagnostico nao cria event, nao altera state, nao incrementa `total_reviews` e nao reagenda.
+
+Para exibicao em `sm2_v1`, a interface mostra dois conceitos separados: vencimento tecnico vindo de `questao_review_states.next_review_at` e proxima sessao permitida calculada por `dias_revisao`. Exemplo: se o SM-2 vence na terca e os dias sao quarta e sabado, o vencimento tecnico continua terca e a oportunidade exibida e quarta.
 
 ## Scheduler individualizado de questoes (`sm2_v1`)
 

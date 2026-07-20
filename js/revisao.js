@@ -723,6 +723,7 @@ async function buscarContagemEstadosSm2(userId, operador, valor, valorFinal = nu
     .eq('user_id', userId)
 
   if (operador === 'lt') query = query.lt('next_review_at', valor)
+  if (operador === 'lte') query = query.lte('next_review_at', valor)
   if (operador === 'gte_lt') query = query.gte('next_review_at', valor).lt('next_review_at', valorFinal)
   if (operador === 'gt') query = query.gt('next_review_at', valor)
   if (operador === 'is_null') query = query.is('next_review_at', null)
@@ -736,12 +737,14 @@ async function buscarDadosFilaRevisaoSm2(userId, config) {
   const janela = obterJanelaRevisaoConfig(config)
   const hojePermitido = diaRevisaoPermitidoSm2(config, janela)
   const limite = obterLimiteSessaoRevisao(config)
+  const agora = new Date().toISOString()
 
-  const [atrasadas, hoje, proximas, semAgendamento, metricasResp] = await Promise.all([
+  const [atrasadas, hoje, proximas, semAgendamento, vencidasAgora, metricasResp] = await Promise.all([
     buscarContagemEstadosSm2(userId, 'lt', janela.inicio),
     buscarContagemEstadosSm2(userId, 'gte_lt', janela.inicio, janela.fimExclusivo),
-    buscarContagemEstadosSm2(userId, 'gt', janela.fimExclusivo),
+    buscarContagemEstadosSm2(userId, 'gt', agora),
     buscarContagemEstadosSm2(userId, 'is_null', null),
+    buscarContagemEstadosSm2(userId, 'lte', agora),
     db.rpc ? db.rpc('obter_metricas_revisao_sm2', { p_days: 60 }) : Promise.resolve({ data: null, error: null })
   ])
 
@@ -767,7 +770,7 @@ async function buscarDadosFilaRevisaoSm2(userId, config) {
         questoes!inner(${CAMPOS_QUESTOES_FILA_REVISAO})
       `)
       .eq('user_id', userId)
-      .lte('next_review_at', janela.fimInclusivo)
+      .lte('next_review_at', agora)
       .order('next_review_at', { ascending: true })
       .order('lapse_count', { ascending: false })
       .order('easiness_factor', { ascending: true })
@@ -780,7 +783,7 @@ async function buscarDadosFilaRevisaoSm2(userId, config) {
     estados = data || []
   }
 
-  const questoes = estados.map(item => normalizarQuestaoSm2(item, janela))
+  const questoes = estados.map(item => normalizarQuestaoSm2(item, janela, config))
   const editalResp = await db
     .from('edital_config')
     .select('data_prova, concurso_alvo')
@@ -801,13 +804,13 @@ async function buscarDadosFilaRevisaoSm2(userId, config) {
       hoje,
       proximas,
       semAgendamento,
-      totalVencidas: atrasadas + hoje,
-      pendentesAlemLimite: Math.max(0, atrasadas + hoje - questoes.length)
+      totalVencidas: vencidasAgora,
+      pendentesAlemLimite: Math.max(0, vencidasAgora - questoes.length)
     }
   }
 }
 
-function normalizarQuestaoSm2(item, janela) {
+function normalizarQuestaoSm2(item, janela, config = revisaoConfiguracaoAtual) {
   const questao = item.questoes || {}
   const reviewState = {
     id: item.id,
@@ -831,11 +834,15 @@ function normalizarQuestaoSm2(item, janela) {
   const diasAtraso = reviewState.next_review_at && typeof calcularDiasAtrasoQuestaoSm2 === 'function'
     ? calcularDiasAtrasoQuestaoSm2(reviewState.next_review_at, janela.fimInclusivo)
     : 0
+  const agendaSm2 = typeof avaliarAgendaQuestaoSm2 === 'function'
+    ? avaliarAgendaQuestaoSm2(reviewState, config || {}, new Date())
+    : null
 
   return {
     ...questao,
     review_state: reviewState,
     scheduler_mode: REVISAO_SCHEDULER_SM2,
+    agenda_sm2: agendaSm2,
     status_fila_sm2: statusFila,
     dias_atraso_sm2: diasAtraso,
     prioridade_revisao: Math.round(diasAtraso * 10 + reviewState.lapse_count * 4 + Math.max(0, 5 - reviewState.easiness_factor)),
