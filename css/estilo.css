@@ -6655,6 +6655,16 @@ body.modo-foco .conteudo-principal {
   margin: 0.75rem 0;
 }
 
+.simulado-scoring-status {
+  color: var(--cor-texto-secundario);
+  font-size: 0.9rem;
+  margin: -0.25rem 0 0.75rem;
+}
+
+.simulado-scoring-status.erro {
+  color: var(--cor-erro);
+}
+
 .simulado-scoring-config {
   border: 1px solid var(--cor-borda);
   border-radius: 8px;

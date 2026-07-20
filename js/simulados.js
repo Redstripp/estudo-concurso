@@ -25,6 +25,8 @@ const MOTIVOS_ERRO_RESPOSTA_SIMULADO = [
 
 let perfisPontuacaoSimulado = []
 let blocosPontuacaoSimuladoTela = []
+let pontuacaoSimuladoCarregandoRemoto = false
+let pontuacaoSimuladoOperacaoEmAndamento = false
 
 function renderizarTextoSimuladoComMarkdownBasico(texto) {
   return typeof renderizarTextoComMarkdownBasicoSeguro === 'function'
@@ -75,24 +77,32 @@ function inicializarPontuacaoSimulado() {
   renderizarSelectPerfisPontuacaoSimulado()
   preencherFormularioPerfilPontuacaoSimulado(obterPerfilPontuacaoSelecionadoSimulado())
 
-  seletor.addEventListener('change', () => {
-    preencherFormularioPerfilPontuacaoSimulado(obterPerfilPontuacaoSelecionadoSimulado())
-    atualizarPreviewPontuacaoSimulado()
-  })
+  if (seletor.dataset.pontuacaoEventosRegistrados !== 'true') {
+    seletor.dataset.pontuacaoEventosRegistrados = 'true'
+    seletor.addEventListener('change', () => {
+      preencherFormularioPerfilPontuacaoSimulado(obterPerfilPontuacaoSelecionadoSimulado())
+      atualizarPreviewPontuacaoSimulado()
+    })
 
-  document.getElementById('btn-simulado-scoring-duplicar')
-    ?.addEventListener('click', duplicarPerfilPontuacaoSimulado)
-  document.getElementById('btn-simulado-scoring-nova-versao')
-    ?.addEventListener('click', criarNovaVersaoPerfilPontuacaoSimulado)
-  document.getElementById('btn-simulado-scoring-salvar')
-    ?.addEventListener('click', salvarPerfilPontuacaoSimulado)
-  document.getElementById('btn-simulado-scoring-add-bloco')
-    ?.addEventListener('click', adicionarBlocoPontuacaoSimulado)
+    document.getElementById('btn-simulado-scoring-duplicar')
+      ?.addEventListener('click', duplicarPerfilPontuacaoSimulado)
+    document.getElementById('btn-simulado-scoring-nova-versao')
+      ?.addEventListener('click', criarNovaVersaoPerfilPontuacaoSimulado)
+    document.getElementById('btn-simulado-scoring-ativo')
+      ?.addEventListener('click', alternarAtivoPerfilPontuacaoSimulado)
+    document.getElementById('btn-simulado-scoring-importar-local')
+      ?.addEventListener('click', importarPerfilLocalPontuacaoSimulado)
+    document.getElementById('btn-simulado-scoring-salvar')
+      ?.addEventListener('click', salvarPerfilPontuacaoSimulado)
+    document.getElementById('btn-simulado-scoring-add-bloco')
+      ?.addEventListener('click', adicionarBlocoPontuacaoSimulado)
 
-  document.querySelectorAll('#simulado-scoring-config input, #simulado-scoring-config select, #simulado-scoring-config textarea')
-    .forEach(campo => campo.addEventListener('input', atualizarPreviewPontuacaoSimulado))
+    document.querySelectorAll('#simulado-scoring-config input, #simulado-scoring-config select, #simulado-scoring-config textarea')
+      .forEach(campo => campo.addEventListener('input', atualizarPreviewPontuacaoSimulado))
+  }
 
   atualizarPreviewPontuacaoSimulado()
+  carregarPerfisPontuacaoRemotosSimulado()
 }
 
 function criarPerfilPontuacaoPadraoSimulado() {
@@ -115,10 +125,38 @@ function criarPerfilPontuacaoPadraoSimulado() {
 
 function carregarPerfisPontuacaoSimulado() {
   const padrao = criarPerfilPontuacaoPadraoSimulado()
+  padrao.metadados = {
+    ...(padrao.metadados || {}),
+    origem: 'virtual',
+    sistema: true,
+    remoto: false,
+    local: false,
+    bloqueado: true
+  }
+
+  if (typeof carregarPerfisLocaisScoringProfileService === 'function') {
+    return [padrao, ...carregarPerfisLocaisScoringProfileService()]
+  }
+
   try {
     const salvos = JSON.parse(localStorage.getItem(SIMULADO_SCORING_STORAGE_KEY) || '[]')
     const perfis = Array.isArray(salvos) ? salvos : []
-    return [padrao, ...perfis.filter(perfil => perfil?.id !== padrao.id)]
+    return [
+      padrao,
+      ...perfis
+        .filter(perfil => perfil?.id !== padrao.id)
+        .map(perfil => ({
+          ...perfil,
+          id: `local:${perfil.id}`,
+          metadados: {
+            ...(perfil.metadados || {}),
+            origem: 'local',
+            local: true,
+            remoto: false,
+            localId: perfil.id
+          }
+        }))
+    ]
   } catch (erro) {
     console.warn('Nao foi possivel carregar perfis de pontuacao.', erro)
     return [padrao]
@@ -126,24 +164,124 @@ function carregarPerfisPontuacaoSimulado() {
 }
 
 function persistirPerfisPontuacaoSimulado() {
-  const customizados = perfisPontuacaoSimulado.filter(perfil => perfil.id !== 'legacy_simple')
+  const customizados = perfisPontuacaoSimulado
+    .filter(perfil => perfil.metadados?.origem === 'local')
+    .map(perfil => ({
+      ...perfil,
+      id: perfil.metadados?.localId || String(perfil.id).replace(/^local:/, '')
+    }))
   localStorage.setItem(SIMULADO_SCORING_STORAGE_KEY, JSON.stringify(customizados))
 }
 
-function renderizarSelectPerfisPontuacaoSimulado() {
+async function carregarPerfisPontuacaoRemotosSimulado(opcoes = {}) {
+  if (pontuacaoSimuladoCarregandoRemoto || typeof listarPerfisPontuacao !== 'function') return
+
+  pontuacaoSimuladoCarregandoRemoto = true
+  atualizarStatusPontuacaoSimulado('Carregando perfis remotos...')
+  atualizarEstadoControlesPontuacaoSimulado()
+
+  const seletor = document.getElementById('simulado-scoring-profile')
+  const valorAnterior = opcoes.selecionar || seletor?.value || 'legacy_simple'
+
+  try {
+    perfisPontuacaoSimulado = await listarPerfisPontuacao()
+    renderizarSelectPerfisPontuacaoSimulado(valorAnterior)
+    const perfilSelecionado = obterPerfilPontuacaoSelecionadoSimulado()
+    preencherFormularioPerfilPontuacaoSimulado(perfilSelecionado)
+    atualizarStatusPontuacaoSimulado(obterTextoStatusPerfilPontuacaoSimulado(perfilSelecionado))
+  } catch (erro) {
+    console.error(erro)
+    const mensagem = typeof obterMensagemErroScoringProfileService === 'function'
+      ? obterMensagemErroScoringProfileService(erro)
+      : 'Nao foi possivel carregar os perfis remotos.'
+    atualizarStatusPontuacaoSimulado(mensagem, 'erro')
+  } finally {
+    pontuacaoSimuladoCarregandoRemoto = false
+    atualizarEstadoControlesPontuacaoSimulado()
+    atualizarPreviewPontuacaoSimulado()
+  }
+}
+
+function renderizarSelectPerfisPontuacaoSimulado(valorPreferido = null) {
   const seletor = document.getElementById('simulado-scoring-profile')
   if (!seletor) return
-  const valorAtual = seletor.value || 'legacy_simple'
+  const valorAtual = valorPreferido || seletor.value || 'legacy_simple'
   seletor.innerHTML = perfisPontuacaoSimulado
-    .filter(perfil => perfil.ativo !== false)
-    .map(perfil => `<option value="${escaparHtmlSeguro(perfil.id)}">${escaparHtmlSeguro(perfil.nome)} v${Number(perfil.versao || 1)}</option>`)
+    .map(perfil => {
+      const origem = perfil.metadados?.origem
+      const sufixos = []
+      if (origem === 'sistema' || origem === 'virtual') sufixos.push('sistema')
+      if (origem === 'local') sufixos.push('local')
+      if (perfil.ativo === false) sufixos.push('inativo')
+      if (perfil.metadados?.bloqueado) sufixos.push('usado')
+      const sufixo = sufixos.length ? ` (${sufixos.join(', ')})` : ''
+      return `<option value="${escaparHtmlSeguro(perfil.id)}">${escaparHtmlSeguro(perfil.nome)} v${Number(perfil.versao || 1)}${escaparHtmlSeguro(sufixo)}</option>`
+    })
     .join('')
   seletor.value = perfisPontuacaoSimulado.some(perfil => perfil.id === valorAtual) ? valorAtual : 'legacy_simple'
+  atualizarEstadoControlesPontuacaoSimulado()
 }
 
 function obterPerfilPontuacaoSelecionadoSimulado() {
   const id = document.getElementById('simulado-scoring-profile')?.value || 'legacy_simple'
   return perfisPontuacaoSimulado.find(perfil => perfil.id === id) || criarPerfilPontuacaoPadraoSimulado()
+}
+
+function atualizarStatusPontuacaoSimulado(texto, tipo = '') {
+  const status = document.getElementById('simulado-scoring-status')
+  if (!status) return
+  status.textContent = texto || ''
+  status.className = `simulado-scoring-status ${tipo}`.trim()
+}
+
+function obterTextoStatusPerfilPontuacaoSimulado(perfil) {
+  const origem = perfil?.metadados?.origem || 'remoto'
+  if (origem === 'virtual') return 'Perfil padrao virtual. Salvar cria uma copia remota na sua conta.'
+  if (origem === 'sistema') return 'Perfil de sistema somente leitura. Duplique ou salve uma copia para editar.'
+  if (origem === 'local') {
+    if (perfil.metadados?.importadoPara) return 'Perfil local antigo ja importado; ele foi preservado no navegador.'
+    return 'Perfil local antigo. Use Salvar na conta para sincronizar com seu login.'
+  }
+  if (perfil?.ativo === false) return 'Perfil remoto inativo. Ele pode ser editado ou reativado, mas nao finaliza simulado.'
+  if (perfil?.metadados?.bloqueado) return 'Versao remota ja usada em simulado. Crie nova versao para alterar regras.'
+  return 'Perfil remoto carregado da sua conta.'
+}
+
+function perfilPontuacaoEhRemotoProprioSimulado(perfil) {
+  return perfil?.metadados?.origem === 'remoto' && perfil.metadados?.sistema !== true
+}
+
+function atualizarEstadoControlesPontuacaoSimulado() {
+  const perfil = obterPerfilPontuacaoSelecionadoSimulado()
+  const origem = perfil?.metadados?.origem
+  const remotoProprio = perfilPontuacaoEhRemotoProprioSimulado(perfil)
+  const ocupado = pontuacaoSimuladoCarregandoRemoto || pontuacaoSimuladoOperacaoEmAndamento
+
+  const btnSalvar = document.getElementById('btn-simulado-scoring-salvar')
+  const btnDuplicar = document.getElementById('btn-simulado-scoring-duplicar')
+  const btnNovaVersao = document.getElementById('btn-simulado-scoring-nova-versao')
+  const btnAtivo = document.getElementById('btn-simulado-scoring-ativo')
+  const btnImportar = document.getElementById('btn-simulado-scoring-importar-local')
+
+  if (btnSalvar) {
+    btnSalvar.disabled = ocupado || (remotoProprio && perfil.metadados?.bloqueado)
+    btnSalvar.textContent = remotoProprio ? 'Salvar perfil' : 'Salvar copia remota'
+  }
+  if (btnDuplicar) btnDuplicar.disabled = ocupado
+  if (btnNovaVersao) btnNovaVersao.disabled = ocupado || !remotoProprio
+  if (btnAtivo) {
+    btnAtivo.hidden = !remotoProprio
+    btnAtivo.disabled = ocupado
+    btnAtivo.textContent = perfil?.ativo === false ? 'Ativar' : 'Desativar'
+  }
+  if (btnImportar) {
+    btnImportar.hidden = origem !== 'local'
+    btnImportar.disabled = ocupado || Boolean(perfil?.metadados?.importadoPara)
+  }
+
+  if (!pontuacaoSimuladoCarregandoRemoto) {
+    atualizarStatusPontuacaoSimulado(obterTextoStatusPerfilPontuacaoSimulado(perfil))
+  }
 }
 
 function valorCampoPontuacaoSimulado(id, fallback = null) {
@@ -179,6 +317,7 @@ function preencherFormularioPerfilPontuacaoSimulado(perfil) {
   setValor('simulado-scoring-max-erros', normalizado.eliminacao?.maxErros ?? normalizado.minimos?.maxErros ?? '')
   setValor('simulado-scoring-eliminar-negativa', normalizado.eliminacao?.notaNegativa ? 'true' : 'false')
   renderizarBlocosPontuacaoSimulado()
+  atualizarEstadoControlesPontuacaoSimulado()
 }
 
 function lerPerfilPontuacaoFormularioSimulado() {
@@ -244,7 +383,23 @@ function lerPerfilPontuacaoFormularioSimulado() {
   }
 }
 
-function salvarPerfilPontuacaoSimulado() {
+function obterMensagemErroPontuacaoSimulado(erro, fallback = 'Nao foi possivel salvar o perfil de pontuacao.') {
+  if (erro?.name !== 'ScoringProfileServiceError' && erro?.message) return erro.message
+  return typeof obterMensagemErroScoringProfileService === 'function'
+    ? obterMensagemErroScoringProfileService(erro)
+    : fallback
+}
+
+function servicoPontuacaoRemotaDisponivelSimulado() {
+  if (typeof ScoringProfileService !== 'undefined' && ScoringProfileService) return true
+  mostrarMsgSimulado('Servico remoto de perfis de pontuacao indisponivel.', 'erro')
+  return false
+}
+
+async function salvarPerfilPontuacaoSimulado() {
+  if (pontuacaoSimuladoOperacaoEmAndamento || !servicoPontuacaoRemotaDisponivelSimulado()) return
+
+  const selecionado = obterPerfilPontuacaoSelecionadoSimulado()
   const perfil = lerPerfilPontuacaoFormularioSimulado()
   const validacao = typeof validarPerfilPontuacaoSimulado === 'function'
     ? validarPerfilPontuacaoSimulado(perfil)
@@ -254,46 +409,147 @@ function salvarPerfilPontuacaoSimulado() {
     return
   }
 
-  const indice = perfisPontuacaoSimulado.findIndex(item => item.id === validacao.perfil.id)
-  if (indice >= 0) perfisPontuacaoSimulado[indice] = validacao.perfil
-  else perfisPontuacaoSimulado.push(validacao.perfil)
-  persistirPerfisPontuacaoSimulado()
-  renderizarSelectPerfisPontuacaoSimulado()
-  document.getElementById('simulado-scoring-profile').value = validacao.perfil.id
-  mostrarMsgSimulado('Perfil de pontuacao salvo localmente.', 'sucesso')
-  atualizarPreviewPontuacaoSimulado()
+  if (perfilPontuacaoEhRemotoProprioSimulado(selecionado) && selecionado.metadados?.bloqueado) {
+    mostrarMsgSimulado('Esta versao ja foi usada. Crie nova versao antes de alterar regras ou blocos.', 'erro')
+    return
+  }
+
+  pontuacaoSimuladoOperacaoEmAndamento = true
+  atualizarEstadoControlesPontuacaoSimulado()
+
+  try {
+    const salvo = perfilPontuacaoEhRemotoProprioSimulado(selecionado)
+      ? await ScoringProfileService.salvarPerfilPontuacao(validacao.perfil)
+      : await ScoringProfileService.criarPerfilPontuacao({
+          ...validacao.perfil,
+          id: undefined,
+          versao: 1,
+          metadados: {
+            ...(validacao.perfil.metadados || {}),
+            criadoAPartirDe: selecionado.metadados?.localId || selecionado.id,
+            origemOriginal: selecionado.metadados?.origem || 'virtual'
+          }
+        })
+
+    await carregarPerfisPontuacaoRemotosSimulado({ selecionar: salvo.id })
+    mostrarMsgSimulado('Perfil de pontuacao salvo na conta.', 'sucesso')
+  } catch (erro) {
+    console.error(erro)
+    mostrarMsgSimulado(obterMensagemErroPontuacaoSimulado(erro), 'erro')
+  } finally {
+    pontuacaoSimuladoOperacaoEmAndamento = false
+    atualizarEstadoControlesPontuacaoSimulado()
+    atualizarPreviewPontuacaoSimulado()
+  }
 }
 
-function duplicarPerfilPontuacaoSimulado() {
+async function duplicarPerfilPontuacaoSimulado() {
+  if (pontuacaoSimuladoOperacaoEmAndamento || !servicoPontuacaoRemotaDisponivelSimulado()) return
+
   const base = lerPerfilPontuacaoFormularioSimulado()
-  const copia = {
-    ...base,
-    id: `perfil-${Date.now()}`,
-    nome: `${base.nome || 'Perfil'} - copia`,
-    metadados: { ...(base.metadados || {}), duplicadoDe: base.id }
+  pontuacaoSimuladoOperacaoEmAndamento = true
+  atualizarEstadoControlesPontuacaoSimulado()
+
+  try {
+    const copia = await ScoringProfileService.duplicarPerfilPontuacao(base, `${base.nome || 'Perfil'} - copia`)
+    await carregarPerfisPontuacaoRemotosSimulado({ selecionar: copia.id })
+    mostrarMsgSimulado('Perfil duplicado na conta.', 'sucesso')
+  } catch (erro) {
+    console.error(erro)
+    mostrarMsgSimulado(obterMensagemErroPontuacaoSimulado(erro, 'Nao foi possivel duplicar o perfil.'), 'erro')
+  } finally {
+    pontuacaoSimuladoOperacaoEmAndamento = false
+    atualizarEstadoControlesPontuacaoSimulado()
+    atualizarPreviewPontuacaoSimulado()
   }
-  perfisPontuacaoSimulado.push(copia)
-  persistirPerfisPontuacaoSimulado()
-  renderizarSelectPerfisPontuacaoSimulado()
-  document.getElementById('simulado-scoring-profile').value = copia.id
-  preencherFormularioPerfilPontuacaoSimulado(copia)
-  atualizarPreviewPontuacaoSimulado()
 }
 
-function criarNovaVersaoPerfilPontuacaoSimulado() {
-  const base = lerPerfilPontuacaoFormularioSimulado()
-  const nova = {
-    ...base,
-    id: `${base.id}-v${Number(base.versao || 1) + 1}-${Date.now()}`,
-    versao: Number(base.versao || 1) + 1,
-    nome: base.nome.replace(/\s+v\d+$/i, '')
+async function criarNovaVersaoPerfilPontuacaoSimulado() {
+  if (pontuacaoSimuladoOperacaoEmAndamento || !servicoPontuacaoRemotaDisponivelSimulado()) return
+
+  const selecionado = obterPerfilPontuacaoSelecionadoSimulado()
+  if (!perfilPontuacaoEhRemotoProprioSimulado(selecionado)) {
+    mostrarMsgSimulado('Crie ou duplique um perfil remoto antes de versionar.', 'erro')
+    return
   }
-  perfisPontuacaoSimulado.push(nova)
-  persistirPerfisPontuacaoSimulado()
-  renderizarSelectPerfisPontuacaoSimulado()
-  document.getElementById('simulado-scoring-profile').value = nova.id
-  preencherFormularioPerfilPontuacaoSimulado(nova)
-  atualizarPreviewPontuacaoSimulado()
+
+  const base = lerPerfilPontuacaoFormularioSimulado()
+  const validacao = typeof validarPerfilPontuacaoSimulado === 'function'
+    ? validarPerfilPontuacaoSimulado(base)
+    : { ok: true, perfil: base }
+  if (!validacao.ok) {
+    mostrarMsgSimulado(validacao.erros.join(' '), 'erro')
+    return
+  }
+
+  pontuacaoSimuladoOperacaoEmAndamento = true
+  atualizarEstadoControlesPontuacaoSimulado()
+
+  try {
+    const nova = await ScoringProfileService.criarNovaVersaoPontuacao(validacao.perfil)
+    await carregarPerfisPontuacaoRemotosSimulado({ selecionar: nova.id })
+    mostrarMsgSimulado(`Nova versao v${Number(nova.versao || 1)} criada.`, 'sucesso')
+  } catch (erro) {
+    console.error(erro)
+    mostrarMsgSimulado(obterMensagemErroPontuacaoSimulado(erro, 'Nao foi possivel criar nova versao.'), 'erro')
+  } finally {
+    pontuacaoSimuladoOperacaoEmAndamento = false
+    atualizarEstadoControlesPontuacaoSimulado()
+    atualizarPreviewPontuacaoSimulado()
+  }
+}
+
+async function alternarAtivoPerfilPontuacaoSimulado() {
+  if (pontuacaoSimuladoOperacaoEmAndamento || !servicoPontuacaoRemotaDisponivelSimulado()) return
+
+  const selecionado = obterPerfilPontuacaoSelecionadoSimulado()
+  if (!perfilPontuacaoEhRemotoProprioSimulado(selecionado)) {
+    mostrarMsgSimulado('Apenas perfis proprios remotos podem ser ativados ou desativados.', 'erro')
+    return
+  }
+
+  pontuacaoSimuladoOperacaoEmAndamento = true
+  atualizarEstadoControlesPontuacaoSimulado()
+
+  try {
+    const atualizado = selecionado.ativo === false
+      ? await ScoringProfileService.ativarPerfilPontuacao(selecionado.id)
+      : await ScoringProfileService.desativarPerfilPontuacao(selecionado.id)
+    await carregarPerfisPontuacaoRemotosSimulado({ selecionar: atualizado.id })
+    mostrarMsgSimulado(atualizado.ativo === false ? 'Perfil desativado.' : 'Perfil ativado.', 'sucesso')
+  } catch (erro) {
+    console.error(erro)
+    mostrarMsgSimulado(obterMensagemErroPontuacaoSimulado(erro, 'Nao foi possivel alterar o status do perfil.'), 'erro')
+  } finally {
+    pontuacaoSimuladoOperacaoEmAndamento = false
+    atualizarEstadoControlesPontuacaoSimulado()
+  }
+}
+
+async function importarPerfilLocalPontuacaoSimulado() {
+  if (pontuacaoSimuladoOperacaoEmAndamento || !servicoPontuacaoRemotaDisponivelSimulado()) return
+
+  const selecionado = obterPerfilPontuacaoSelecionadoSimulado()
+  if (selecionado.metadados?.origem !== 'local') {
+    mostrarMsgSimulado('Selecione um perfil local antigo para importar.', 'erro')
+    return
+  }
+
+  pontuacaoSimuladoOperacaoEmAndamento = true
+  atualizarEstadoControlesPontuacaoSimulado()
+
+  try {
+    const remoto = await ScoringProfileService.importarPerfilLocalPontuacao(selecionado.id)
+    await carregarPerfisPontuacaoRemotosSimulado({ selecionar: remoto.id })
+    mostrarMsgSimulado('Perfil local salvo na conta. O original local foi preservado.', 'sucesso')
+  } catch (erro) {
+    console.error(erro)
+    mostrarMsgSimulado(obterMensagemErroPontuacaoSimulado(erro, 'Nao foi possivel importar o perfil local.'), 'erro')
+  } finally {
+    pontuacaoSimuladoOperacaoEmAndamento = false
+    atualizarEstadoControlesPontuacaoSimulado()
+    atualizarPreviewPontuacaoSimulado()
+  }
 }
 
 function adicionarBlocoPontuacaoSimulado() {
@@ -399,7 +655,9 @@ function obterRotuloStatusPontuacaoSimulado(status) {
   return 'Legado'
 }
 
-function obterIdPerfilPontuacaoPersistivelSimulado(id) {
+function obterIdPerfilPontuacaoPersistivelSimulado(id, perfil = null) {
+  const origem = perfil?.metadados?.origem
+  if (origem === 'local' || origem === 'virtual') return null
   const texto = String(id || '').trim()
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(texto)
     ? texto
@@ -1408,6 +1666,64 @@ function criarCardQuestaoRecuperada(q) {
   return card
 }
 
+function perfilPontuacaoTemOrigemRemotaSimulado(perfil) {
+  const origem = perfil?.metadados?.origem
+  return (origem === 'remoto' || origem === 'sistema') && obterIdPerfilPontuacaoPersistivelSimulado(perfil?.id, perfil)
+}
+
+function projetarPerfilComparacaoPontuacaoSimulado(perfil) {
+  const normalizado = typeof normalizarPerfilPontuacaoSimulado === 'function'
+    ? normalizarPerfilPontuacaoSimulado(perfil)
+    : perfil
+
+  return JSON.stringify({
+    id: normalizado.id,
+    nome: normalizado.nome,
+    descricao: normalizado.descricao || '',
+    versao: Number(normalizado.versao || 1),
+    modo: normalizado.modo,
+    valores: normalizado.valores || {},
+    anuladas: normalizado.anuladas || {},
+    arredondamento: normalizado.arredondamento || {},
+    notaMaxima: normalizado.notaMaxima ?? null,
+    pesos: normalizado.pesos || {},
+    blocos: normalizado.blocos || [],
+    minimos: normalizado.minimos || {},
+    eliminacao: normalizado.eliminacao || {}
+  })
+}
+
+function perfisPontuacaoEquivalentesSimulado(a, b) {
+  return projetarPerfilComparacaoPontuacaoSimulado(a) === projetarPerfilComparacaoPontuacaoSimulado(b)
+}
+
+async function prepararPerfilPontuacaoParaFinalizarSimulado() {
+  const selecionado = obterPerfilPontuacaoSelecionadoSimulado()
+  const rascunho = lerPerfilPontuacaoFormularioSimulado()
+
+  if (perfilPontuacaoTemOrigemRemotaSimulado(selecionado)) {
+    if (!perfisPontuacaoEquivalentesSimulado(rascunho, selecionado)) {
+      throw new Error('Salve o perfil ou crie uma nova versao antes de finalizar o simulado.')
+    }
+
+    if (typeof ScoringProfileService === 'undefined' || !ScoringProfileService?.carregarVersaoCompleta) {
+      throw new Error('Servico remoto de perfis de pontuacao indisponivel.')
+    }
+
+    const remoto = await ScoringProfileService.carregarVersaoCompleta(selecionado.id, selecionado.versao)
+    if (remoto.ativo === false) {
+      throw new Error('O perfil selecionado esta inativo. Reative ou selecione outro perfil antes de finalizar.')
+    }
+    return remoto
+  }
+
+  if (selecionado.ativo === false) {
+    throw new Error('O perfil selecionado esta inativo. Reative ou selecione outro perfil antes de finalizar.')
+  }
+
+  return rascunho
+}
+
 async function salvarSimulado() {
   const data = document.getElementById('simulado-data').value
   const nome = document.getElementById('simulado-nome').value.trim()
@@ -1440,7 +1756,14 @@ async function salvarSimulado() {
     return
   }
 
-  const perfil = lerPerfilPontuacaoFormularioSimulado()
+  let perfil
+  try {
+    perfil = await prepararPerfilPontuacaoParaFinalizarSimulado()
+  } catch (erro) {
+    mostrarMsgSimulado(obterMensagemErroPontuacaoSimulado(erro, erro.message), 'erro')
+    return
+  }
+
   const resultadoPontuacao = typeof calcularPontuacaoAgregadaSimulado === 'function'
     ? calcularPontuacaoAgregadaSimulado({ total, certas, erradas, brancas: totalBrancas, anuladas: 0 }, perfil)
     : { ok: false, erros: ['Motor de pontuacao indisponivel.'] }
@@ -1465,7 +1788,7 @@ async function salvarSimulado() {
   }
   const payloadPontuacao = {
     ...payloadBase,
-    scoring_profile_id: obterIdPerfilPontuacaoPersistivelSimulado(resultadoPontuacao.perfil.id),
+    scoring_profile_id: obterIdPerfilPontuacaoPersistivelSimulado(resultadoPontuacao.perfil.id, resultadoPontuacao.perfil),
     scoring_profile_version: resultadoPontuacao.perfil.versao,
     scoring_snapshot: resultadoPontuacao.snapshot,
     score_raw: resultadoPontuacao.notaBruta,
@@ -1739,6 +2062,11 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.window === 'undefined
   globalThis.inicializarPontuacaoSimulado = inicializarPontuacaoSimulado
   globalThis.lerPerfilPontuacaoFormularioSimulado = lerPerfilPontuacaoFormularioSimulado
   globalThis.salvarPerfilPontuacaoSimulado = salvarPerfilPontuacaoSimulado
+  globalThis.duplicarPerfilPontuacaoSimulado = duplicarPerfilPontuacaoSimulado
+  globalThis.criarNovaVersaoPerfilPontuacaoSimulado = criarNovaVersaoPerfilPontuacaoSimulado
+  globalThis.alternarAtivoPerfilPontuacaoSimulado = alternarAtivoPerfilPontuacaoSimulado
+  globalThis.importarPerfilLocalPontuacaoSimulado = importarPerfilLocalPontuacaoSimulado
+  globalThis.prepararPerfilPontuacaoParaFinalizarSimulado = prepararPerfilPontuacaoParaFinalizarSimulado
   globalThis.atualizarPreviewPontuacaoSimulado = atualizarPreviewPontuacaoSimulado
   globalThis.obterIdPerfilPontuacaoPersistivelSimulado = obterIdPerfilPontuacaoPersistivelSimulado
   globalThis.erroIndicaSchemaPontuacaoAusenteSimulado = erroIndicaSchemaPontuacaoAusenteSimulado
