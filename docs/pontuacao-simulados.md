@@ -128,6 +128,18 @@ As RPCs usam `auth.uid()`, nao recebem `user_id` editavel da interface, possuem 
 
 Cada RPC mutavel recebe um `operation_id` gerado no cliente. A tabela interna `scoring_profile_operations` guarda o tipo, hash do payload e resultado confirmado. Repetir a mesma operacao com o mesmo payload retorna o mesmo resultado sem criar novas linhas; repetir o mesmo `operation_id` com dados diferentes falha com conflito de idempotencia. O cliente mantem o `operation_id` pendente no armazenamento local da sessao ate recarregar a versao remota com sucesso, para cobrir timeout/retry sem duplicar perfil, versao ou blocos.
 
+## Privilegios das funcoes
+
+As funcoes do CRUD se dividem em tres grupos:
+
+- RPC publica autenticada: entrada do frontend, com `EXECUTE` somente para `authenticated`;
+- helper interno: usado apenas por RPCs `security definer`, sem `EXECUTE` para `PUBLIC`, `anon`, `authenticated` ou `service_role`;
+- administrativa/trigger: chamada pelo banco, tambem sem chamada direta por roles de API.
+
+A migration `20260720153100_harden_scoring_crud_function_privileges.sql` e obrigatoria depois da migration das RPCs. Ela revoga explicitamente, por assinatura completa, qualquer `PUBLIC EXECUTE` ou grant herdado para roles da API nos helpers internos e nas funcoes de trigger, e concede novamente apenas as RPCs publicas para `authenticated`. A feature nao altera `DEFAULT PRIVILEGES` globalmente porque isso poderia afetar funcoes fora do escopo de pontuacao; o hardening fica restrito as funcoes desta entrega.
+
+Valide os privilegios finais por duas vias: SQL com `SET ROLE` e chamadas PostgREST/RPC. Helpers internos devem falhar para cliente anonimo e autenticado quando chamados diretamente, mas continuar funcionando quando invocados pelas RPCs publicas.
+
 ## Ordem de implantacao
 
 A ordem segura de publicacao e:
@@ -135,8 +147,9 @@ A ordem segura de publicacao e:
 1. aplicar `20260720131000_add_configurable_exam_scoring.sql`;
 2. validar schema, triggers e RLS;
 3. aplicar `20260720143000_add_scoring_profile_crud_rpcs.sql`;
-4. validar RPCs com usuario A, usuario B, anonimo e perfil de sistema;
-5. publicar o frontend.
+4. aplicar `20260720153100_harden_scoring_crud_function_privileges.sql`;
+5. validar RPCs, helpers bloqueados, RLS e idempotencia com usuario A, usuario B, anonimo e perfil de sistema;
+6. publicar o frontend.
 
 O frontend nao deve ser publicado antes das migrations necessarias. Se as RPCs ainda nao existirem, a interface mostra erro de migration pendente e nao registra sucesso local. O fallback legado de simulado existe apenas para cache de schema ou rollback operacional, quando o erro comprova ausencia das novas colunas/tabelas.
 

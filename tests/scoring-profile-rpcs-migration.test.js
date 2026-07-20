@@ -5,6 +5,29 @@ const migrationSql = readFileSync(
   new URL('../supabase/migrations/20260720143000_add_scoring_profile_crud_rpcs.sql', import.meta.url),
   'utf8'
 )
+const hardeningSql = readFileSync(
+  new URL('../supabase/migrations/20260720153100_harden_scoring_crud_function_privileges.sql', import.meta.url),
+  'utf8'
+)
+const hardeningNormalizada = hardeningSql.toLowerCase().replace(/\s+/g, ' ')
+
+const funcoesInternasScoringProfile = [
+  'reserve_scoring_profile_operation(uuid, text, uuid, text)',
+  'complete_scoring_profile_operation(uuid, text, uuid, text, jsonb)',
+  'insert_scoring_profile_blocks_from_json(uuid, uuid, jsonb)',
+  'lock_scoring_profile_version_from_simulado()',
+  'prevent_used_scoring_profile_delete()',
+  'prevent_used_scoring_profile_version_changes()',
+  'prevent_used_scoring_profile_block_changes()'
+]
+
+const rpcsPublicasScoringProfile = [
+  'create_scoring_profile_with_version(uuid, text, text, text, boolean, jsonb, jsonb, jsonb)',
+  'save_scoring_profile_current_version(uuid, uuid, text, text, boolean, jsonb, jsonb, jsonb)',
+  'duplicate_scoring_profile(uuid, uuid, integer, text, text, text, boolean)',
+  'create_scoring_profile_new_version(uuid, uuid, text, text, boolean, jsonb, jsonb, jsonb)',
+  'replace_scoring_profile_blocks(uuid, uuid, integer, jsonb)'
+]
 
 describe('migration local de RPCs de perfis de pontuacao', () => {
   it('cria RPCs transacionais para operacoes multietapas', () => {
@@ -60,5 +83,31 @@ describe('migration local de RPCs de perfis de pontuacao', () => {
     expect(migrationSql).toContain("reserve_scoring_profile_operation(v_uid, 'duplicate_profile'")
     expect(migrationSql).toContain("reserve_scoring_profile_operation(v_uid, 'create_version'")
     expect(migrationSql).toContain("reserve_scoring_profile_operation(v_uid, 'replace_blocks'")
+  })
+
+  it('endurece helpers internos por assinatura completa', () => {
+    for (const assinatura of funcoesInternasScoringProfile) {
+      expect(hardeningNormalizada).toContain(
+        `revoke execute on function public.${assinatura} from public, anon, authenticated, service_role;`
+      )
+      expect(hardeningNormalizada).not.toContain(`grant execute on function public.${assinatura}`)
+    }
+  })
+
+  it('mantem apenas RPCs publicas para authenticated', () => {
+    for (const assinatura of rpcsPublicasScoringProfile) {
+      expect(hardeningNormalizada).toContain(
+        `revoke execute on function public.${assinatura} from public, anon, authenticated, service_role;`
+      )
+      expect(hardeningNormalizada).toContain(
+        `grant execute on function public.${assinatura} to authenticated;`
+      )
+      expect(hardeningNormalizada).not.toContain(
+        `grant execute on function public.${assinatura} to anon`
+      )
+      expect(hardeningNormalizada).not.toContain(
+        `grant execute on function public.${assinatura} to service_role`
+      )
+    }
   })
 })
