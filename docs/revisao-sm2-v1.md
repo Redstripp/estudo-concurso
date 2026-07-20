@@ -18,6 +18,8 @@ Nao foram implementados nesta etapa:
 
 Migration: `supabase/migrations/20260717113000_add_question_sm2_scheduler.sql`.
 
+Bootstrap de ativacao: `supabase/migrations/20260719211000_bootstrap_sm2_states_on_activation.sql`.
+
 Campos adicionados a `configuracoes_revisao`:
 
 - `review_scheduler_mode`: `legacy` ou `sm2_v1`; o default da migration e `legacy` para evitar ativacao global automatica;
@@ -131,12 +133,30 @@ O frontend preserva o caminho legado como retorno temporario.
 Ordem segura de implantacao:
 
 1. aplicar a migration;
-2. validar schema, RLS, grants, RPC e backfill;
+2. validar schema, RLS, grants, RPC, backfill e bootstrap de ativacao;
 3. ativar `sm2_v1` para um usuario controlado;
 4. monitorar revisoes, eventos e estados;
 5. ampliar a ativacao gradualmente.
 
 Antes da migration, se uma configuracao local tentar usar `sm2_v1` e a estrutura ainda nao existir, o frontend volta para a fila legada em vez de consultar tabelas inexistentes indefinidamente.
+
+## Bootstrap na ativacao
+
+A transicao individual de `review_scheduler_mode` para `sm2_v1` dispara uma trigger em `public.configuracoes_revisao`. A trigger cria, na mesma transacao da ativacao, estados ausentes para questoes pendentes daquele usuario. Ela usa apenas `NEW.user_id`, nao recebe UUID do cliente e nao cria eventos.
+
+O bootstrap e idempotente: `questao_review_states` continua tendo uma linha unica por `user_id + questao_id`, e a insercao usa `on conflict do nothing`. Se a questao ja tiver state, ele nao e sobrescrito. Se a ativacao falhar durante o bootstrap, a transacao inteira falha e o modo nao deve permanecer em `sm2_v1`.
+
+Somente questoes com `status_revisao = 'pendente'` recebem state. Questao `recuperada` fica fora porque nao participa da fila pendente. Como o schema atual nao possui estados de arquivamento, remocao logica ou cancelamento em `questoes`, nao ha outras categorias elegiveis.
+
+A data inicial do state respeita dados legados nesta ordem:
+
+1. `questoes_revisoes.revisar_novamente_em` da ultima revisao legada da questao, quando existir;
+2. `questoes.revisar_novamente_em`;
+3. `questoes.criado_em::date`.
+
+Os dias em `dias_revisao` nao reescrevem `next_review_at`; eles continuam controlando quando a sessao pode ser iniciada. Assim, uma questao vencida em dia nao permitido permanece atrasada e aparece no proximo dia permitido.
+
+Voltar para `legacy` preserva states e events. Reativar depois nao duplica states existentes. Questoes criadas quando o usuario ja esta em `sm2_v1` continuam passando pela RPC do frontend, que cria ou reutiliza o state de forma idempotente.
 
 ## Backfill
 
@@ -193,5 +213,5 @@ npm.cmd run check:dist
 Teste especifico:
 
 ```powershell
-npm.cmd test -- tests/questoes-sm2.test.js tests/questoes-sm2-migration.test.js tests/revisao.test.js tests/sm2.test.js
+npm.cmd test -- tests/questoes-sm2.test.js tests/questoes-sm2-migration.test.js tests/questoes-sm2-activation-bootstrap.test.js tests/revisao.test.js tests/sm2.test.js
 ```
