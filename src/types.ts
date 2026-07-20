@@ -171,6 +171,16 @@ export interface Simulado {
   tempo_minutos?: number | null;
   nota_percentual: number | string;
   comentario?: string | null;
+  scoring_profile_id?: Id | null;
+  scoring_profile_version?: number | null;
+  scoring_snapshot?: Json | null;
+  score_raw?: number | string | null;
+  score_final?: number | string | null;
+  score_max?: number | string | null;
+  score_status?: 'aprovado' | 'reprovado' | 'eliminado' | 'legado' | null;
+  score_breakdown?: Json | null;
+  blank_count?: number;
+  annulled_count?: number;
   criado_em?: ISODateTime;
 }
 
